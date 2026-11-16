@@ -1,0 +1,140 @@
+.testata {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.filtri {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filtri label, .etichetta-filtro { display: inline-flex; align-items: center; gap: 0.3rem; }
+.filtri select { min-width: 7rem; text-transform: none; }
+
+.filtro-attivo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #e7f5ff;
+  border: 1px solid #a5d8ff;
+  border-radius: 6px;
+  padding: 0.4rem 0.75rem;
+  button { padding: 2px 8px; }
+}
+
+.skill-trovate { display: block; margin-top: 2px; font-weight: normal; white-space: normal; max-width: 14rem; }
+
+.espandi-tutti { margin-left: auto; white-space: nowrap; }
+
+.legenda {
+  color: var(--testo-tenue);
+  font-size: 0.85rem;
+  p { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin: 0.4rem 0; }
+  .valore { min-width: 2.5rem; }
+  .esempio { display: inline-grid; width: auto; cursor: default; &:hover { outline: none; } }
+  .esempio:not(:has(.progetto)) { grid-template-columns: auto; }
+  .esempio .progetto { min-width: 3.5rem; }
+}
+
+.scorrimento {
+  overflow-x: auto;
+  border: 1px solid var(--bordo);
+  border-radius: 8px;
+}
+
+.griglia {
+  border-collapse: collapse;
+  width: 100%;
+  th, td { padding: 4px; text-align: center; border-bottom: 1px solid var(--bordo); }
+  thead th { font-size: 0.8rem; color: var(--testo-tenue); white-space: nowrap; }
+  .nome {
+    text-align: left;
+    white-space: nowrap;
+    position: sticky;
+    left: 0;
+    background: var(--sfondo);
+    padding-right: 1rem;
+  }
+}
+
+.griglia td { vertical-align: top; }
+
+.cella {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  min-width: 12.5rem;
+  padding: 2px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+}
+
+/* Una riga per progetto: nome, % allocata, % pesata */
+.attivita {
+  font: inherit;
+  font-size: 0.9rem;
+  width: 100%;
+  background: none;
+  cursor: pointer;
+  &:hover { background: none; outline: 2px solid var(--accento); outline-offset: 1px; }
+  display: grid;
+  grid-template-columns: 1fr 2.6rem 2.6rem;
+  align-items: center;
+  gap: 2px;
+  padding: 1px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  .progetto {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
+    font-size: 0.75rem;
+    color: var(--testo-tenue);
+    padding-left: 2px;
+  }
+  /* Importanza strategica della singola attività */
+  &.oro { border-color: #d4af37; box-shadow: 0 0 0 1px #f3d36b inset; }
+  &.argento { border-color: #a8a9ad; box-shadow: 0 0 0 1px #d9dadd inset; }
+  /* Intestazione dell'accordion: totale del mese e numero di progetti */
+  &.totale {
+    .progetto { font-weight: 600; color: var(--testo); }
+    .freccia { display: inline-block; transition: transform 0.15s; color: var(--testo-tenue); }
+    &.aperta { border-bottom: 1px dashed var(--bordo); border-radius: 6px 6px 0 0; }
+    &.aperta .freccia { transform: rotate(90deg); }
+  }
+}
+
+/* Colore per fascia di percentuale: usato sia per la % allocata sia per la % pesata. */
+.valore {
+  display: block;
+  padding: 3px 4px;
+  border-radius: 4px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  &.libero { background: #f1f3f5; color: #868e96; }
+  &.basso { background: #dff3fe; color: #1c5d85; }  // >0% e <50%: azzurro chiaro
+  &.meta { background: #a2dbfb; color: #0b4a6f; }   // 50%
+  &.medio { background: #a2fbdb; color: #0b6b4a; }  // >50% e <100%
+  &.pieno { background: #82fb8b; color: #13661a; }  // 100%
+  &.sovra { background: #ffc9c9; color: #c92a2a; font-weight: 600; }
+}
+
+.dettaglio {
+  margin-top: 1.5rem;
+  border: 1px solid var(--bordo);
+  border-radius: 8px;
+  padding: 1rem;
+  header { display: flex; justify-content: space-between; align-items: center; }
+  h2 { margin: 0 0 0.5rem; font-size: 1.1rem; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--bordo); }
+  .chiudi { font-size: 1.3rem; line-height: 1; padding: 0 0.5rem; }
+}

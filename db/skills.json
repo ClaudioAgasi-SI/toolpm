@@ -1,0 +1,40 @@
+[{
+  "skillName": "j2ee",
+  "skillType": "tecnico"
+},
+{
+  "skillName": "springBoot",
+  "skillType": "tecnico"
+},
+{
+  "skillName": "devOps",
+  "skillType": "tecnico"
+},
+{
+  "skillName": "Angular",
+  "skillType": "tecnico"
+},
+{
+  "skillName": "Adobe AEM",
+  "skillType": "tecnico"
+},
+{
+  "skillName": "React",
+  "skillType": "tecnico"
+},
+{
+  "skillName": "documentale",
+  "skillType": "ambito"
+},
+{
+  "skillName": "crypting",
+  "skillType": "ambito"
+},
+{
+  "skillName": "cartelle cliniche",
+  "skillType": "funzionale"
+},
+{
+  "skillName": "transazioni bancarie",
+  "skillType": "funzionale"
+}]

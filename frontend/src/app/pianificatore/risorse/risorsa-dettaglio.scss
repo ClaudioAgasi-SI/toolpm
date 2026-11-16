@@ -1,0 +1,47 @@
+.testata {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.azioni { display: flex; align-items: center; gap: 0.5rem; }
+.ok { color: #2b8a3e; }
+
+.anagrafica {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--testo-tenue); }
+}
+
+.skill {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+  fieldset { border: 1px solid var(--bordo); border-radius: 8px; padding: 0.75rem; }
+  legend { font-weight: 600; padding: 0 0.25rem; }
+}
+
+.riga-skill {
+  display: grid;
+  grid-template-columns: 1fr 8rem auto;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.scorrimento { overflow-x: auto; }
+
+.pianificazione {
+  border-collapse: collapse;
+  margin-bottom: 0.5rem;
+  th { font-size: 0.8rem; color: var(--testo-tenue); text-align: left; padding: 4px; }
+  td { padding: 2px; }
+  input { width: 8.5rem; }
+  input[type='month'] { width: 9.5rem; }
+  .perc { width: 4.5rem; }
+}
+
+.vuoto { color: var(--testo-tenue); font-size: 0.9rem; }
+.rimuovi { padding: 2px 8px; }

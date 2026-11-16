@@ -1,0 +1,193 @@
+<header class="testata">
+  <h1>Pianificazione</h1>
+  <div class="filtri">
+    <label>Da <input type="month" [ngModel]="aInputMese(da())" (ngModelChange)="impostaDa($event)" /></label>
+    <label>A <input type="month" [ngModel]="aInputMese(a())" (ngModelChange)="impostaA($event)" /></label>
+    <input type="search" placeholder="Filtra per nome…" [ngModel]="filtro()" (ngModelChange)="filtro.set($event)" />
+    <label>
+      Tipo skill
+      <select [ngModel]="tipoScelto()" (ngModelChange)="scegliTipo($event)">
+        <option value="">Tutti</option>
+        @for (t of tipiSkill(); track t) {
+          <option [value]="t">{{ t }}</option>
+        }
+      </select>
+    </label>
+    <span class="etichetta-filtro">
+      Skill
+      <app-multi-select
+        [opzioni]="skillDelTipo()"
+        [(selezionate)]="skillScelte"
+        [disabilitata]="!tipoScelto()"
+      />
+    </span>
+    <button type="button" class="primario" (click)="carica()">Aggiorna</button>
+  </div>
+</header>
+
+<div class="legenda">
+  <p>
+    <span class="attivita esempio">
+      <span class="progetto">progetto</span>
+      <span class="valore basso">30</span>
+      <span class="valore basso">15</span>
+    </span>
+    <span>
+      Per ogni progetto: <strong>% allocata</strong> e <strong>% pesata per probabilità</strong>
+      (sicura 100%, probabile 75%, forse 50%, improbabile 25%, nessuna 0%).
+      Se nel mese i progetti sono più di uno, compare il totale con il numero di progetti:
+      clicca per vedere il dettaglio.
+    </span>
+    <button type="button" class="espandi-tutti" [disabled]="!celleMultiple().length" (click)="alternaTutti()">
+      {{ tutteEspanse() ? '▴ Chiudi tutti i progetti' : '▾ Mostra tutti i progetti' }}
+    </button>
+  </p>
+  <p>
+    <span class="valore libero">0</span> libero
+    <span class="valore basso">&lt;50</span>
+    <span class="valore meta">50</span>
+    <span class="valore medio">&gt;50</span>
+    <span class="valore pieno">100</span> pieno
+    <span class="valore sovra">&gt;100</span> sovrallocato
+  </p>
+  <p>
+    Bordo del progetto: <span class="attivita esempio oro"><span class="valore libero">&nbsp;</span></span> importanza
+    <strong>chiave</strong>
+    <span class="attivita esempio argento"><span class="valore libero">&nbsp;</span></span> importanza
+    <strong>importante</strong>
+  </p>
+</div>
+
+<!-- Riga di un singolo progetto: click per il dettaglio del mese -->
+<ng-template #riga let-al let-r="r" let-m="m" let-c="c">
+  <button
+    type="button"
+    class="attivita {{ importanza(al) }}"
+    [title]="descrizione(al)"
+    (click)="apri(r.cognome + ' ' + r.nome, m, c)"
+  >
+    <span class="progetto">{{ al.progetto || al.cliente || '—' }}</span>
+    <span class="valore {{ livello(al.percentualeAllocazione ?? 0) }}">{{ al.percentualeAllocazione }}</span>
+    <span class="valore {{ livello(al.pesato) }}">{{ al.pesato }}</span>
+  </button>
+</ng-template>
+
+@if (errore()) {
+  <p class="errore">{{ errore() }}</p>
+}
+
+@if (filtroSkillApplicato(); as f) {
+  <p class="filtro-attivo">
+    @if (f.skill.length) {
+      Risorse con {{ f.skill.length > 1 ? 'almeno una delle skill' : 'la skill' }}
+      <strong>{{ f.skill.join(', ') }}</strong> ({{ f.tipo }}):
+    } @else {
+      Risorse con almeno una skill di tipo <strong>{{ f.tipo }}</strong>:
+    }
+    {{ dati()?.righe?.length ?? 0 }} trovate.
+    <button type="button" (click)="scegliTipo(''); carica()">Rimuovi filtro</button>
+  </p>
+}
+
+@if (dati(); as d) {
+  <div class="scorrimento">
+    <table class="griglia">
+      <thead>
+        <tr>
+          <th class="nome">Risorsa</th>
+          @for (m of d.mesi; track m) {
+            <th>{{ etichettaMese(m) }}</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of righe(); track r._id) {
+          <tr>
+            <th class="nome">
+              <a [routerLink]="['/pianificatore/risorse', r._id]">{{ r.cognome }} {{ r.nome }}</a>
+              @if (r.skillTrovate?.length) {
+                <span class="skill-trovate">
+                  @for (s of r.skillTrovate; track $index) {
+                    <span class="etichetta">{{ s.skillName }} <small>{{ s.rate }}</small></span>
+                  }
+                </span>
+              }
+            </th>
+            @for (m of d.mesi; track m) {
+              <td>
+                @let c = r.mesi[m];
+                <div class="cella">
+                  @if (c.allocazioni.length > 1) {
+                    <!-- Più progetti: totale in testa, progetti nell'accordion -->
+                    @let aperta = espansa(r._id, m);
+                    <button
+                      type="button"
+                      class="attivita totale"
+                      [class.aperta]="aperta"
+                      [attr.aria-expanded]="aperta"
+                      [title]="aperta ? 'Nascondi i progetti' : 'Mostra i progetti'"
+                      (click)="alterna(r._id, m)"
+                    >
+                      <span class="progetto"><span class="freccia">▸</span> {{ c.allocazioni.length }} progetti</span>
+                      <span class="valore {{ livello(c.totale) }}">{{ c.totale }}</span>
+                      <span class="valore {{ livello(c.pesato) }}">{{ c.pesato }}</span>
+                    </button>
+                    @if (aperta) {
+                      @for (al of c.allocazioni; track $index) {
+                        <ng-container *ngTemplateOutlet="riga; context: { $implicit: al, r: r, m: m, c: c }" />
+                      }
+                    }
+                  } @else if (c.allocazioni.length === 1) {
+                    <ng-container *ngTemplateOutlet="riga; context: { $implicit: c.allocazioni[0], r: r, m: m, c: c }" />
+                  } @else {
+                    <span class="attivita">
+                      <span class="progetto"></span>
+                      <span class="valore libero">0</span>
+                      <span class="valore libero">0</span>
+                    </span>
+                  }
+                </div>
+              </td>
+            }
+          </tr>
+        } @empty {
+          <tr><td [attr.colspan]="d.mesi.length + 1">Nessuna risorsa corrisponde ai filtri.</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+} @else if (caricamento()) {
+  <p>Caricamento…</p>
+}
+
+@if (selezione(); as s) {
+  <section class="dettaglio">
+    <header>
+      <h2>{{ s.nome }} — {{ etichettaMese(s.mese) }}</h2>
+      <button type="button" class="chiudi" (click)="selezione.set(null)" aria-label="Chiudi">×</button>
+    </header>
+    <table>
+      <thead>
+        <tr>
+          <th>Cliente</th><th>Progetto</th><th>%</th><th>Probabilità</th><th>% pesata</th><th>Importanza</th>
+          <th>Tecnica</th><th>Ambito</th><th>Funzionale</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (al of s.cella.allocazioni; track $index) {
+          <tr>
+            <td>{{ al.cliente }}</td>
+            <td>{{ al.progetto }}</td>
+            <td>{{ al.percentualeAllocazione }}</td>
+            <td>{{ al.probabilitaAllocazione }}</td>
+            <td>{{ al.pesato }}</td>
+            <td>{{ al.importanzaStrategica }}</td>
+            <td>{{ al.competenzaTecnica }}</td>
+            <td>{{ al.conoscenzaAmbito }}</td>
+            <td>{{ al.conoscenzaFunzionale }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </section>
+}

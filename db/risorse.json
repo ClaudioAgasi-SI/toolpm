@@ -1,0 +1,866 @@
+[{
+  "cognome": "Agasi",
+  "nome": "Claudio",
+  "skillTecnici": [
+    {
+      "skillName": "j2ee",
+      "rate": "ottimo"
+    },
+    {
+      "skillName": "springBoot",
+      "rate": "buono"
+    },
+    {
+      "skillName": "devOps",
+      "rate": "sufficiente"
+    }
+  ],
+  "skillAmbiti": [],
+  "skillFunzionali": [],
+  "certificazioni": [],
+  "planned": [
+	  {
+		"mese": "202701",
+        "cliente": "TIM",
+        "progetto": "TIMBUFE",
+        "competenzaTecnica": "buono",
+        "conoscenzaAmbito": "buono",
+        "conoscenzaFunzionale": "buono",
+        "importanzaStrategica": "imprescindibile",
+        "probabilitaAllocazione": "sicura",
+        "percentualeAllocazione": 30
+      },
+      {
+		"mese": "202701",
+        "cliente": "TIM",
+        "progetto": "TIMENTFE",
+        "competenzaTecnica": "buono",
+        "conoscenzaAmbito": "buono",
+        "conoscenzaFunzionale": "sufficiente",
+        "importanzaStrategica": "importante",
+        "probabilitaAllocazione": "forse",
+        "percentualeAllocazione": 30
+      },
+      {
+		"mese": "202701",
+        "cliente": "TIM",
+        "progetto": "TIMBUSINESS",
+        "competenzaTecnica": "sufficiente",
+        "conoscenzaAmbito": "buono",
+        "conoscenzaFunzionale": "sufficiente",
+        "importanzaStrategica": "utile",
+        "probabilitaAllocazione": "forse",
+        "percentualeAllocazione": 10
+      },
+      {
+		"mese": "202702",
+        "cliente": "TIM",
+        "progetto": "TIMBUFE",
+        "competenzaTecnica": "buono",
+        "conoscenzaAmbito": "buono",
+        "conoscenzaFunzionale": "buono",
+        "importanzaStrategica": "imprescindibile",
+        "probabilitaAllocazione": "sicura",
+        "percentualeAllocazione": 30
+      },
+      {
+		"mese": "202702",
+        "cliente": "TIM",
+        "progetto": "TIMENTFE",
+        "competenzaTecnica": "buono",
+        "conoscenzaAmbito": "buono",
+        "conoscenzaFunzionale": "sufficiente",
+        "importanzaStrategica": "importante",
+        "probabilitaAllocazione": "forse",
+        "percentualeAllocazione": 30
+      },
+      {
+		"mese": "202702",
+        "cliente": "TIM",
+        "progetto": "TIMBUSINESS",
+        "competenzaTecnica": "sufficiente",
+        "conoscenzaAmbito": "buono",
+        "conoscenzaFunzionale": "sufficiente",
+        "importanzaStrategica": "utile",
+        "probabilitaAllocazione": "nessuna",
+        "percentualeAllocazione": 10
+      }
+    ]
+},
+{
+  "cognome": "Reddavide",
+  "nome": "Alessandro",
+  "skillTecnici": [
+    {
+      "skillName": "Angular",
+      "rate": "buono"
+    },
+    {
+      "skillName": "Adobe AEM",
+      "rate": "sufficiente"
+    }
+  ],
+  "skillAmbiti": [],
+  "skillFunzionali": [],
+  "certificazioni": [],
+  "planned": [
+      {
+		"mese": "202701",
+        "cliente": "TIM",
+        "progetto": "TIMBUFE",
+        "competenzaTecnica": "buono",
+        "conoscenzaAmbito": "buono",
+        "conoscenzaFunzionale": "buono",
+        "importanzaStrategica": "importante",
+        "probabilitaAllocazione": "sicura",
+        "percentualeAllocazione": 50
+      },
+      {
+		"mese": "202701",
+        "cliente": "TIM",
+        "progetto": "TIMENTFE",
+        "competenzaTecnica": "buono",
+        "conoscenzaAmbito": "buono",
+        "conoscenzaFunzionale": "sufficiente",
+        "importanzaStrategica": "imprescindibile",
+        "probabilitaAllocazione": "sicura",
+        "percentualeAllocazione": 50
+      },
+      {
+		"mese": "202702",
+        "cliente": "TIM",
+        "progetto": "TIMBUFE",
+        "competenzaTecnica": "buono",
+        "conoscenzaAmbito": "buono",
+        "conoscenzaFunzionale": "buono",
+        "importanzaStrategica": "imprescindibile",
+        "probabilitaAllocazione": "forse",
+        "percentualeAllocazione": 30
+      },
+      {
+		"mese": "202702",
+        "cliente": "TIM",
+        "progetto": "TIMENTFE",
+        "competenzaTecnica": "buono",
+        "conoscenzaAmbito": "buono",
+        "conoscenzaFunzionale": "sufficiente",
+        "importanzaStrategica": "imprescindibile",
+        "probabilitaAllocazione": "sicura",
+        "percentualeAllocazione": 30
+      }
+    ]
+},
+{
+  "cognome": "Prisco",
+  "nome": "Francesco",
+  "skillTecnici": [
+    {
+      "skillName": "j2ee",
+      "rate": "buono"
+    },
+    {
+      "skillName": "springBoot",
+      "rate": "buono"
+    }
+  ],  
+  "skillAmbiti": [],
+  "skillFunzionali": [],
+  "certificazioni": [],
+  "planned": [
+      {
+ 		"mese": "202701",
+        "cliente": "TIM",
+        "progetto": "TIMBUFE",
+        "competenzaTecnica": "buono",
+        "conoscenzaAmbito": "buono",
+        "conoscenzaFunzionale": "buono",
+        "importanzaStrategica": "imprescindibile",
+        "probabilitaAllocazione": "sicura",
+        "percentualeAllocazione": 50
+      },
+      {
+		"mese": "202701",
+        "cliente": "TIM",
+        "progetto": "TIMENTFE",
+        "competenzaTecnica": "buono",
+        "conoscenzaAmbito": "buono",
+        "conoscenzaFunzionale": "sufficiente",
+        "importanzaStrategica": "utile",
+        "probabilitaAllocazione": "forse",
+        "percentualeAllocazione": 50
+      },
+      {
+		"mese": "202702",
+        "cliente": "TIM",
+        "progetto": "TIMBUFE",
+        "competenzaTecnica": "buono",
+        "conoscenzaAmbito": "buono",
+        "conoscenzaFunzionale": "buono",
+        "importanzaStrategica": "imprescindibile",
+        "probabilitaAllocazione": "sicura",
+        "percentualeAllocazione": 30
+      },
+      {
+		"mese": "202702",
+        "cliente": "TIM",
+        "progetto": "TIMENTFE",
+        "competenzaTecnica": "buono",
+        "conoscenzaAmbito": "buono",
+        "conoscenzaFunzionale": "sufficiente",
+        "importanzaStrategica": "utile",
+        "probabilitaAllocazione": "forse",
+        "percentualeAllocazione": 30
+      }
+    ]
+},
+{
+  "cognome": "Disney",
+  "nome": "Pippo",
+  "skillTecnici": [
+    {
+      "skillName": "j2ee",
+      "rate": "ottimo"
+    },
+    {
+      "skillName": "springBoot",
+      "rate": "sufficiente"
+    },
+    {
+      "skillName": "Angular",
+      "rate": "sufficiente"
+    }
+  ],
+  "skillAmbiti": [],
+  "skillFunzionali": [],
+  "certificazioni": [],
+  "planned": [
+    {
+      "mese": "202701",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202702",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202703",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202704",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202705",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202706",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202707",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202708",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202709",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202710",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202711",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202712",
+      "probabilitaAllocazione": "nessuna"
+    }
+  ]
+},
+{
+  "cognome": "Disney",
+  "nome": "Minny",
+  "skillTecnici": [
+    {
+      "skillName": "j2ee",
+      "rate": "ottimo"
+    },
+    {
+      "skillName": "springBoot",
+      "rate": "buono"
+    },
+    {
+      "skillName": "devOps",
+      "rate": "buono"
+    }
+  ],
+  "skillAmbiti": [],
+  "skillFunzionali": [],
+  "certificazioni": [],
+  "planned": [
+      {
+		"mese": "202701",
+        "cliente": "Ebitemp",
+        "progetto": "PortaleWeb",
+        "competenzaTecnica": "ottimo",
+        "conoscenzaAmbito": "buono",
+        "conoscenzaFunzionale": "buono",
+        "importanzaStrategica": "imprescindibile",
+        "probabilitaAllocazione": "sicura",
+        "percentualeAllocazione": 50
+      },
+      {
+		"mese": "202701",
+        "cliente": "Agocm",
+        "progetto": "Reigegnerizzazione ROC",
+        "competenzaTecnica": "buono",
+        "conoscenzaAmbito": "buono",
+        "conoscenzaFunzionale": "sufficiente",
+        "importanzaStrategica": "importante",
+        "probabilitaAllocazione": "forse",
+        "percentualeAllocazione": 50
+      },
+      {
+		"mese": "202702",
+        "cliente": "Ebitemp",
+        "progetto": "PortaleWeb",
+        "competenzaTecnica": "ottimo",
+        "conoscenzaAmbito": "buono",
+        "conoscenzaFunzionale": "buono",
+        "importanzaStrategica": "imprescindibile",
+        "probabilitaAllocazione": "sicura",
+        "percentualeAllocazione": 50
+      },
+      {
+		"mese": "202702",
+        "cliente": "Agocm",
+        "progetto": "Reigegnerizzazione ROC",
+        "competenzaTecnica": "buono",
+        "conoscenzaAmbito": "buono",
+        "conoscenzaFunzionale": "sufficiente",
+        "importanzaStrategica": "importante",
+        "probabilitaAllocazione": "forse",
+        "percentualeAllocazione": 50
+      },
+      {
+		"mese": "202703",
+        "cliente": "Ebitemp",
+        "progetto": "PortaleWeb",
+        "competenzaTecnica": "ottimo",
+        "conoscenzaAmbito": "buono",
+        "conoscenzaFunzionale": "buono",
+        "importanzaStrategica": "utile",
+        "probabilitaAllocazione": "forse",
+        "percentualeAllocazione": 50
+      },
+      {
+		"mese": "202703",
+        "cliente": "Agocm",
+        "progetto": "Reigegnerizzazione ROC",
+        "competenzaTecnica": "buono",
+        "conoscenzaAmbito": "buono",
+        "conoscenzaFunzionale": "buono",
+        "importanzaStrategica": "sostituibile",
+        "probabilitaAllocazione": "forse",
+        "percentualeAllocazione": 50
+      }
+    ]
+},
+{
+  "cognome": "Disney",
+  "nome": "Paperoga",
+  "skillTecnici": [
+    {
+      "skillName": "j2ee",
+      "rate": "buono"
+    },
+    {
+      "skillName": "springBoot",
+      "rate": "buono"
+    },
+    {
+      "skillName": "devOps",
+      "rate": "sufficiente"
+    }
+  ],
+  "skillAmbiti": [],
+  "skillFunzionali": [],
+  "certificazioni": [],
+  "planned": [
+    {
+      "mese": "202701",
+      "cliente": "Ebitemp",
+      "progetto": "PortaleWeb",
+      "competenzaTecnica": "ottimo",
+      "conoscenzaAmbito": "buono",
+      "conoscenzaFunzionale": "buono",
+      "importanzaStrategica": "imprescindibile",
+      "probabilitaAllocazione": "sicura",
+      "percentualeAllocazione": 50
+    },
+    {
+      "mese": "202702",
+      "cliente": "Agocm",
+      "progetto": "Reigegnerizzazione ROC",
+      "competenzaTecnica": "buono",
+      "conoscenzaAmbito": "buono",
+      "conoscenzaFunzionale": "sufficiente",
+      "importanzaStrategica": "importante",
+      "probabilitaAllocazione": "improbabile",
+      "percentualeAllocazione": 50
+    },
+    {
+      "mese": "202703",
+      "cliente": "Ebitemp",
+      "progetto": "PortaleWeb",
+      "competenzaTecnica": "ottimo",
+      "conoscenzaAmbito": "buono",
+      "conoscenzaFunzionale": "buono",
+      "importanzaStrategica": "utile",
+      "probabilitaAllocazione": "improbabile",
+      "percentualeAllocazione": 50
+    },
+    {
+      "mese": "202704",
+      "cliente": "Agocm",
+      "progetto": "Reigegnerizzazione ROC",
+      "competenzaTecnica": "buono",
+      "conoscenzaAmbito": "buono",
+      "conoscenzaFunzionale": "buono",
+      "importanzaStrategica": "sostituibile",
+      "probabilitaAllocazione": "nessuna",
+      "percentualeAllocazione": 50
+    }
+  ]
+},
+{
+  "cognome": "Disney",
+  "nome": "Agata",
+  "skillTecnici": [
+    {
+      "skillName": "j2ee",
+      "rate": "ottimo"
+    },
+    {
+      "skillName": "springBoot",
+      "rate": "ottimo"
+    },
+    {
+      "skillName": "devOps",
+      "rate": "n.a."
+    }
+  ],
+  "skillAmbiti": [],
+  "skillFunzionali": [],
+  "certificazioni": [],
+  "planned": [
+    {
+      "mese": "202701",
+      "cliente": "Ebitemp",
+      "progetto": "PortaleWeb",
+      "competenzaTecnica": "ottimo",
+      "conoscenzaAmbito": "buono",
+      "conoscenzaFunzionale": "buono",
+      "importanzaStrategica": "imprescindibile",
+      "probabilitaAllocazione": "nessuna",
+      "percentualeAllocazione": 50
+    },
+    {
+      "mese": "202702",
+      "cliente": "Agocm",
+      "progetto": "Reigegnerizzazione ROC",
+      "competenzaTecnica": "buono",
+      "conoscenzaAmbito": "buono",
+      "conoscenzaFunzionale": "sufficiente",
+      "importanzaStrategica": "importante",
+      "probabilitaAllocazione": "nessuna",
+      "percentualeAllocazione": 50
+    },
+    {
+      "mese": "202703",
+      "cliente": "Ebitemp",
+      "progetto": "PortaleWeb",
+      "competenzaTecnica": "ottimo",
+      "conoscenzaAmbito": "buono",
+      "conoscenzaFunzionale": "buono",
+      "importanzaStrategica": "utile",
+      "probabilitaAllocazione": "nessuna",
+      "percentualeAllocazione": 50
+    },
+    {
+      "mese": "202704",
+      "cliente": "Agocm",
+      "progetto": "Reigegnerizzazione ROC",
+      "competenzaTecnica": "buono",
+      "conoscenzaAmbito": "buono",
+      "conoscenzaFunzionale": "buono",
+      "importanzaStrategica": "sostituibile",
+      "probabilitaAllocazione": "improbabile",
+      "percentualeAllocazione": 50
+    }
+  ]
+},
+{
+  "cognome": "Disney",
+  "nome": "Topolino",
+  "skillTecnici": [
+    {
+      "skillName": "j2ee",
+      "rate": "ottimo"
+    },
+    {
+      "skillName": "springBoot",
+      "rate": "sufficiente"
+    },
+    {
+      "skillName": "devOps",
+      "rate": "ottimo"
+    }
+  ],
+  "skillAmbiti": [],
+  "skillFunzionali": [],
+  "certificazioni": [],
+  "planned": [
+    {
+      "mese": "202701",
+      "cliente": "Ebitemp",
+      "progetto": "PortaleWeb",
+      "competenzaTecnica": "ottimo",
+      "conoscenzaAmbito": "buono",
+      "conoscenzaFunzionale": "buono",
+      "importanzaStrategica": "imprescindibile",
+      "probabilitaAllocazione": "sicura",
+      "percentualeAllocazione": 50
+    },
+    {
+      "mese": "202701",
+      "cliente": "Agocm",
+      "progetto": "Reigegnerizzazione ROC",
+      "competenzaTecnica": "buono",
+      "conoscenzaAmbito": "buono",
+      "conoscenzaFunzionale": "sufficiente",
+      "importanzaStrategica": "importante",
+      "probabilitaAllocazione": "probabile",
+      "percentualeAllocazione": 50
+    },
+    {
+      "mese": "202702",
+      "cliente": "Ebitemp",
+      "progetto": "PortaleWeb",
+      "competenzaTecnica": "ottimo",
+      "conoscenzaAmbito": "buono",
+      "conoscenzaFunzionale": "buono",
+      "importanzaStrategica": "utile",
+      "probabilitaAllocazione": "sicura",
+      "percentualeAllocazione": 50
+    },
+    {
+      "mese": "202702",
+      "cliente": "Agocm",
+      "progetto": "Reigegnerizzazione ROC",
+      "competenzaTecnica": "buono",
+      "conoscenzaAmbito": "buono",
+      "conoscenzaFunzionale": "buono",
+      "importanzaStrategica": "sostituibile",
+      "probabilitaAllocazione": "probabile",
+      "percentualeAllocazione": 50
+    }
+  ]
+},
+{
+  "cognome": "Disney",
+  "nome": "Pluto",
+  "skillTecnici": [],
+  "skillAmbiti": [],
+  "skillFunzionali": [],
+  "certificazioni": [],
+  "planned": [
+    {
+      "mese": "202701",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202702",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202703",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202704",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202705",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202706",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202707",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202708",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202709",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202710",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202711",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202712",
+      "probabilitaAllocazione": "nessuna"
+    }
+  ]
+},
+{
+  "cognome": "Disney",
+  "nome": "Gastone",
+  "skillTecnici": [],
+  "skillAmbiti": [],
+  "skillFunzionali": [],
+  "certificazioni": [],
+  "planned": [
+    {
+      "mese": "202701",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202702",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202703",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202704",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202705",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202706",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202707",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202708",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202709",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202710",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202711",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202712",
+      "probabilitaAllocazione": "nessuna"
+    }
+  ]
+},
+{
+  "cognome": "Disney",
+  "nome": "Cip",
+  "skillTecnici": [],
+  "skillAmbiti": [],
+  "skillFunzionali": [],
+  "certificazioni": [],
+  "planned": [
+    {
+      "mese": "202701",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202702",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202703",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202704",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202705",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202706",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202707",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202708",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202709",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202710",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202711",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202712",
+      "probabilitaAllocazione": "nessuna"
+    }
+  ]
+},
+{
+  "cognome": "Disney",
+  "nome": "Ciop",
+  "skillTecnici": [],
+  "skillAmbiti": [],
+  "skillFunzionali": [],
+  "certificazioni": [],
+  "planned": [
+    {
+      "mese": "202701",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202702",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202703",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202704",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202705",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202706",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202707",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202708",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202709",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202710",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202711",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202712",
+      "probabilitaAllocazione": "nessuna"
+    }
+  ]
+},
+{
+  "cognome": "Disney",
+  "nome": "Gambalunga",
+  "skillTecnici": [],
+  "skillAmbiti": [],
+  "skillFunzionali": [],
+  "certificazioni": [],
+  "planned": [
+    {
+      "mese": "202701",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202702",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202703",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202704",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202705",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202706",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202707",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202708",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202709",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202710",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202711",
+      "probabilitaAllocazione": "nessuna"
+    },
+    {
+      "mese": "202712",
+      "probabilitaAllocazione": "nessuna"
+    }
+  ]
+}]

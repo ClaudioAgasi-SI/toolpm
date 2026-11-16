@@ -1,0 +1,20 @@
+[{
+  "certName": "Oracle 123",
+  "certType": "developer"
+},
+{
+  "certName": "Oracle ABC",
+  "certType": "architect"
+},
+{
+  "certName": "MySql",
+  "certType": "DBA"
+},
+{
+  "certName": "PMP",
+  "certType": "project management"
+},
+{
+  "certName": "Scrum Master",
+  "certType": "project management"
+}]

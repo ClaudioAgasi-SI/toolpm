@@ -1,0 +1,81 @@
+[{
+  "rateType": "skillTecnici",
+  "rate": [
+    "ottimo",
+    "buono",
+    "sufficiente",
+    "elementare",
+    "n.a."
+  ]
+},
+{
+  "rateType": "skillFunzionali",
+  "rate": [
+    "ottimo",
+    "buono",
+    "sufficiente",
+    "elementare",
+    "n.a."
+  ]
+},
+{
+  "rateType": "skillAmbiti",
+  "rate": [
+    "ottimo",
+    "buono",
+    "sufficiente",
+    "elementare",
+    "n.a."
+  ]
+},
+{
+  "rateType": "importanzaStrategica",
+  "rate": [
+    "imprescindibile",
+    "importante",
+    "utile",
+    "sostituibile",
+    "non idoneo"
+  ]
+},
+{
+  "rateType": "probabilitaAllocazione",
+  "rate": [
+    "sicura",
+    "probabile",
+    "forse",
+    "improbabile",
+    "nessuna"
+  ]
+},  
+{
+  "rateType": "competenzaTecnica",
+  "rate": [
+     "ottimo",
+    "buono",
+    "sufficiente",
+    "elementare",
+    "n.a."
+  ]
+},  
+{
+  "rateType": "conoscenzaAmbito",
+  "rate": [
+     "ottimo",
+    "buono",
+    "sufficiente",
+    "elementare",
+    "n.a."
+  ]
+},  
+{
+  "rateType": "conoscenzaFunzionale",
+  "rate": [
+     "ottimo",
+    "buono",
+    "sufficiente",
+    "elementare",
+    "n.a."
+  ]
+}  
+]

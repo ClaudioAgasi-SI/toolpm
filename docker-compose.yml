@@ -1,0 +1,27 @@
+# Avvio: docker compose up -d --build
+# Usa il MongoDB già presente su Docker Desktop (porta 27017 del PC).
+name: toolpm
+
+services:
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      # Dentro un container "localhost" è il container stesso: il PC si raggiunge come host.docker.internal.
+      MONGODB_URI: ${MONGODB_URI:-mongodb://host.docker.internal:27017/toolpm}
+      SEED_DIR: /db
+    volumes:
+      # Dati di esempio, usati solo dallo script di import (scripts/seed.mjs).
+      - ./db:/db:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "3000:3000"
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "4200:80"

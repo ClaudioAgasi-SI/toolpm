@@ -1,0 +1,9 @@
+<nav class="barra">
+  <a class="marchio" routerLink="/">ToolPM</a>
+  @for (s of sezioni; track s.percorso) {
+    <a [routerLink]="['/', s.percorso]" routerLinkActive="attivo">{{ s.nome }}</a>
+  }
+</nav>
+<main>
+  <router-outlet />
+</main>
