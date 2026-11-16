@@ -10,6 +10,7 @@ tenendo conto di skill, importanza strategica e probabilità di allocazione.
 | [frontend.md](frontend.md) | Applicazione Angular: struttura, pagine, componenti, servizi, stile, build e test |
 | [backend.md](backend.md) | API NestJS: moduli, endpoint, regole di calcolo, validazione, Swagger, configurazione |
 | [database.md](database.md) | MongoDB: collection, schema dei documenti, regole sui dati, indici, import dei dati |
+| [analisi-consuntivazione.md](analisi-consuntivazione.md) | Sezione Consuntivazione (in analisi): analisi funzionale e tecnica, attività di progetto, integrazioni future, proposte di database MongoDB e relazionale a confronto |
 
 ## In breve
 
