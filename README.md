@@ -26,7 +26,7 @@ docker compose up -d --build
 
 Poi apri:
 
-- applicazione: http://localhost:4200 (Pianificatore: http://localhost:4200/pianificatore)
+- applicazione: http://localhost:4200/toolpm (Pianificatore: http://localhost:4200/toolpm/pianificatore); http://localhost:4200 reindirizza lì
 - documentazione delle API (Swagger): http://localhost:3000/api/docs
 - verifica del backend: http://localhost:3000/api/health (deve rispondere `"mongodb": "connesso"`)
 
@@ -74,7 +74,7 @@ Servono Node.js 22 e MongoDB su `localhost:27017`.
 cd backend && npm install && npm run start:dev      # http://localhost:3000/api
 
 # terminale 2
-cd frontend && npm install && npm start             # http://localhost:4200
+cd frontend && npm install && npm start             # http://localhost:4200/toolpm
 ```
 
 In sviluppo `ng serve` inoltra le chiamate `/api` al backend tramite `frontend/proxy.conf.json`.
