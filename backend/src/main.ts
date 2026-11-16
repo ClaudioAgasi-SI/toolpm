@@ -7,7 +7,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
   app.useGlobalFilters(new MongooseErrorsFilter());
-  // In sviluppo il frontend gira su un'altra porta (ng serve su 4200).
+  // In sviluppo il frontend gira su un'altra porta (ng serve su 4201).
   app.enableCors({ origin: process.env.CORS_ORIGIN?.split(',') ?? true });
 
   // Documentazione Swagger: http://localhost:3000/api/docs (JSON OpenAPI su /api/docs-json)

@@ -168,7 +168,7 @@ Variabili in `styles.scss`: `--sfondo`, `--testo`, `--testo-tenue`, `--bordo`, `
 ```bash
 cd frontend
 npm install
-npm start          # ng serve su http://localhost:4200/toolpm (richiede il backend su :3000)
+npm start          # ng serve su http://localhost:4201/toolpm (richiede il backend su :3000)
 npm run build      # build di produzione in dist/frontend/browser
 npm test           # test Vitest
 ```
@@ -188,7 +188,7 @@ npm test           # test Vitest
 
 ### Percorso di pubblicazione `/toolpm/`
 
-L'app risponde su `http://localhost:4200/toolpm`. Il percorso è definito da `baseHref: "/toolpm/"` in `angular.json`
+L'app risponde su `http://localhost:4201/toolpm`. Il percorso è definito da `baseHref: "/toolpm/"` in `angular.json`
 (vale sia per `ng build` sia per `ng serve`) e va tenuto allineato con `nginx.conf` e con la cartella di destinazione nel `Dockerfile`.
 I `routerLink` assoluti del codice (es. `/pianificatore/risorse`) sono relativi al base href, quindi non contengono `/toolpm`.
 Le API restano su `/api/...` (indirizzo assoluto, non influenzato dal base href).

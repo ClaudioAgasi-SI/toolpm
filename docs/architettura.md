@@ -6,7 +6,7 @@
 ┌─────────────┐      HTTP       ┌──────────────────────┐   /api/*   ┌───────────────────┐   driver   ┌─────────────────────┐
 │   Browser   │ ──────────────► │ frontend             │ ─────────► │ backend           │ ─────────► │ MongoDB             │
 │  (utente)   │                 │ nginx + Angular      │            │ NestJS + Mongoose │            │ db "toolpm"         │
-└─────────────┘                 │ container :80 → 4200 │            │ container :3000   │            │ host :27017         │
+└─────────────┘                 │ container :80 → 4201 │            │ container :3000   │            │ host :27017         │
                                 └──────────────────────┘            └───────────────────┘            └─────────────────────┘
 ```
 
@@ -50,7 +50,7 @@ toolpm/
 | Servizio | Build | Porta | Note |
 |---|---|---|---|
 | `backend` | `backend/Dockerfile` (multi-stage, `node:22-alpine`) | 3000 → 3000 | `MONGODB_URI` predefinito `mongodb://host.docker.internal:27017/toolpm`; monta `./db` in sola lettura su `/db` per lo script di import |
-| `frontend` | `frontend/Dockerfile` (build Angular su `node:22-alpine`, esecuzione su `nginx:1.27-alpine`) | 4200 → 80 | dipende da `backend` |
+| `frontend` | `frontend/Dockerfile` (build Angular su `node:22-alpine`, esecuzione su `nginx:1.27-alpine`) | 4201 → 80 | dipende da `backend` |
 
 **Perché `host.docker.internal`**: dentro un container `localhost` indica il container stesso. Docker Desktop espone le porte del PC ai container con il nome `host.docker.internal`; la voce `extra_hosts: host-gateway` lo rende disponibile anche su Docker per Linux.
 

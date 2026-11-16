@@ -26,7 +26,7 @@ docker compose up -d --build
 
 Poi apri:
 
-- applicazione: http://localhost:4200/toolpm (Pianificatore: http://localhost:4200/toolpm/pianificatore); http://localhost:4200 reindirizza lì
+- applicazione: http://localhost:4201/toolpm (Pianificatore: http://localhost:4201/toolpm/pianificatore); http://localhost:4201 reindirizza lì
 - documentazione delle API (Swagger): http://localhost:3000/api/docs
 - verifica del backend: http://localhost:3000/api/health (deve rispondere `"mongodb": "connesso"`)
 
@@ -62,8 +62,9 @@ Se MongoDB gira in un container, i comandi si possono lanciare al suo interno co
 
 ### Convivenza con il vecchio pianificatore
 
-ToolPM usa le stesse porte del progetto `pianificatore-risorse` (4200 e 3000): prima di avviarlo ferma l'altro
-(`docker compose down` nella sua cartella), oppure cambia le porte in `docker-compose.yml`.
+Il frontend di ToolPM usa la porta 4201, quindi non va in conflitto con il frontend di `pianificatore-risorse` (4200).
+Il backend invece usa la stessa porta 3000: per avviare ToolPM ferma prima l'altro progetto
+(`docker compose down` nella sua cartella), oppure cambia la porta del backend in `docker-compose.yml`.
 
 ## Sviluppo senza Docker
 
@@ -74,7 +75,7 @@ Servono Node.js 22 e MongoDB su `localhost:27017`.
 cd backend && npm install && npm run start:dev      # http://localhost:3000/api
 
 # terminale 2
-cd frontend && npm install && npm start             # http://localhost:4200/toolpm
+cd frontend && npm install && npm start             # http://localhost:4201/toolpm
 ```
 
 In sviluppo `ng serve` inoltra le chiamate `/api` al backend tramite `frontend/proxy.conf.json`.

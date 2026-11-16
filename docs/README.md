@@ -14,7 +14,7 @@ tenendo conto di skill, importanza strategica e probabilità di allocazione.
 ## In breve
 
 ```
-Browser ──► frontend (Angular, nginx :4200) ──/api──► backend (NestJS :3000) ──► MongoDB :27017 (db "toolpm")
+Browser ──► frontend (Angular, nginx :4201) ──/api──► backend (NestJS :3000) ──► MongoDB :27017 (db "toolpm")
 ```
 
 - **Frontend**: Angular 22, componenti standalone, signals. In Docker è servito da nginx, che inoltra `/api` al backend.
@@ -25,7 +25,7 @@ Browser ──► frontend (Angular, nginx :4200) ──/api──► backend (N
 
 | Cosa | URL |
 |---|---|
-| Applicazione | http://localhost:4200/toolpm |
+| Applicazione | http://localhost:4201/toolpm |
 | Swagger UI | http://localhost:3000/api/docs |
 | Specifica OpenAPI (JSON) | http://localhost:3000/api/docs-json |
 | Stato del backend | http://localhost:3000/api/health |
