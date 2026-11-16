@@ -10,7 +10,7 @@ async function bootstrap() {
   // In sviluppo il frontend gira su un'altra porta (ng serve su 4201).
   app.enableCors({ origin: process.env.CORS_ORIGIN?.split(',') ?? true });
 
-  // Documentazione Swagger: http://localhost:3000/api/docs (JSON OpenAPI su /api/docs-json)
+  // Documentazione Swagger: http://localhost:3001/api/docs (JSON OpenAPI su /api/docs-json)
   const config = new DocumentBuilder()
     .setTitle('ToolPM — API')
     .setDescription(
@@ -24,6 +24,6 @@ async function bootstrap() {
     customSiteTitle: 'ToolPM — API',
   });
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 3001);
 }
 await bootstrap();

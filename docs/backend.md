@@ -55,7 +55,7 @@ Variabili d'ambiente (lette con `@nestjs/config`, anche da un file `.env` nella 
 | Variabile | Default | Descrizione |
 |---|---|---|
 | `MONGODB_URI` | `mongodb://localhost:27017/toolpm` | Stringa di connessione; in docker-compose `mongodb://host.docker.internal:27017/toolpm` |
-| `PORT` | `3000` | Porta HTTP |
+| `PORT` | `3001` | Porta HTTP |
 | `CORS_ORIGIN` | tutte le origini | Elenco separato da virgole delle origini ammesse |
 | `MONGODB_AUTO_INDEX` | `false` | `true` per far creare a Mongoose gli indici definiti negli schemi |
 | `SEED_DIR` | `../db` | Solo per `scripts/seed.mjs` |
@@ -176,8 +176,8 @@ Il tipo determina il campo (`tecnico` → `skillTecnici`, `funzionale` → `skil
 
 ## Swagger / OpenAPI
 
-- UI: **http://localhost:3000/api/docs** (anche "Try it out" per eseguire le chiamate: attenzione, POST/PUT/DELETE modificano davvero il database)
-- JSON: http://localhost:3000/api/docs-json (importabile in Postman)
+- UI: **http://localhost:3001/api/docs** (anche "Try it out" per eseguire le chiamate: attenzione, POST/PUT/DELETE modificano davvero il database)
+- JSON: http://localhost:3001/api/docs-json (importabile in Postman)
 
 La documentazione è generata dai decoratori: `@ApiProperty` sugli schemi Mongoose (che fanno da modello sia per il database sia per le API), `@ApiOperation`/`@ApiQuery`/`@ApiParam`/`@Api*Response` sui controller. Le risposte con `_id` usano classi derivate (`RisorsaConId`, `SkillConId`, ...); la risposta della griglia è descritta in `pianificazione.dto.ts`.
 
@@ -188,7 +188,7 @@ Quando si aggiunge un campo a uno schema, aggiungere anche `@ApiProperty`/`@ApiP
 ```bash
 cd backend
 npm install
-npm run start:dev     # avvio con ricaricamento automatico, http://localhost:3000/api
+npm run start:dev     # avvio con ricaricamento automatico, http://localhost:3001/api
 npm run build         # compilazione in dist/
 npm test              # test Vitest
 npm run seed          # import dei dati di esempio (solo collection vuote)
@@ -199,7 +199,7 @@ npm run seed          # import dei dati di esempio (solo collection vuote)
 `backend/Dockerfile` (multi-stage):
 
 1. **build**: `npm ci`, `npm run build`, `npm prune --omit=dev`;
-2. **esecuzione**: copia `node_modules`, `dist` e `scripts`, utente `node`, `CMD node dist/main.js`, porta 3000.
+2. **esecuzione**: copia `node_modules`, `dist` e `scripts`, utente `node`, `CMD node dist/main.js`, porta 3001.
 
 ## Come aggiungere un endpoint
 

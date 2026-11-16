@@ -27,8 +27,8 @@ docker compose up -d --build
 Poi apri:
 
 - applicazione: http://localhost:4201/toolpm (Pianificatore: http://localhost:4201/toolpm/pianificatore); http://localhost:4201 reindirizza lì
-- documentazione delle API (Swagger): http://localhost:3000/api/docs
-- verifica del backend: http://localhost:3000/api/health (deve rispondere `"mongodb": "connesso"`)
+- documentazione delle API (Swagger): http://localhost:3001/api/docs
+- verifica del backend: http://localhost:3001/api/health (deve rispondere `"mongodb": "connesso"`)
 
 Per aggiornare dopo una modifica al codice: `git pull` e di nuovo `docker compose up -d --build`.
 Per fermare: `docker compose down` (MongoDB e i suoi dati non vengono toccati).
@@ -62,9 +62,12 @@ Se MongoDB gira in un container, i comandi si possono lanciare al suo interno co
 
 ### Convivenza con il vecchio pianificatore
 
-Il frontend di ToolPM usa la porta 4201, quindi non va in conflitto con il frontend di `pianificatore-risorse` (4200).
-Il backend invece usa la stessa porta 3000: per avviare ToolPM ferma prima l'altro progetto
-(`docker compose down` nella sua cartella), oppure cambia la porta del backend in `docker-compose.yml`.
+ToolPM usa porte diverse da `pianificatore-risorse`, quindi i due progetti possono girare insieme:
+
+| | ToolPM | pianificatore-risorse |
+|---|---|---|
+| Frontend | 4201 | 4200 |
+| Backend | 3001 | 3000 |
 
 ## Sviluppo senza Docker
 
@@ -72,7 +75,7 @@ Servono Node.js 22 e MongoDB su `localhost:27017`.
 
 ```bash
 # terminale 1
-cd backend && npm install && npm run start:dev      # http://localhost:3000/api
+cd backend && npm install && npm run start:dev      # http://localhost:3001/api
 
 # terminale 2
 cd frontend && npm install && npm start             # http://localhost:4201/toolpm
@@ -83,8 +86,8 @@ Test: `npm test` in `backend/` e in `frontend/`.
 
 ## API
 
-Documentazione interattiva Swagger, con la possibilità di provare le chiamate: **http://localhost:3000/api/docs**
-(specifica OpenAPI in JSON: http://localhost:3000/api/docs-json).
+Documentazione interattiva Swagger, con la possibilità di provare le chiamate: **http://localhost:3001/api/docs**
+(specifica OpenAPI in JSON: http://localhost:3001/api/docs-json).
 
 | Metodo | Percorso | Descrizione |
 |---|---|---|

@@ -6,7 +6,7 @@
 ┌─────────────┐      HTTP       ┌──────────────────────┐   /api/*   ┌───────────────────┐   driver   ┌─────────────────────┐
 │   Browser   │ ──────────────► │ frontend             │ ─────────► │ backend           │ ─────────► │ MongoDB             │
 │  (utente)   │                 │ nginx + Angular      │            │ NestJS + Mongoose │            │ db "toolpm"         │
-└─────────────┘                 │ container :80 → 4201 │            │ container :3000   │            │ host :27017         │
+└─────────────┘                 │ container :80 → 4201 │            │ container :3001   │            │ host :27017         │
                                 └──────────────────────┘            └───────────────────┘            └─────────────────────┘
 ```
 
@@ -20,8 +20,8 @@
 
 Il frontend chiama sempre l'indirizzo **relativo** `/api/...`: nessun URL del backend è scritto nel codice Angular.
 
-- In **Docker** la richiesta arriva a nginx (`frontend/nginx.conf`), che la inoltra a `http://backend:3000` (nome del servizio nella rete di docker-compose).
-- In **sviluppo** (`ng serve`) la inoltra il proxy di Angular (`frontend/proxy.conf.json`) a `http://localhost:3000`.
+- In **Docker** la richiesta arriva a nginx (`frontend/nginx.conf`), che la inoltra a `http://backend:3001` (nome del servizio nella rete di docker-compose).
+- In **sviluppo** (`ng serve`) la inoltra il proxy di Angular (`frontend/proxy.conf.json`) a `http://localhost:3001`.
 
 ## Flusso tipico: caricamento della griglia
 
@@ -49,7 +49,7 @@ toolpm/
 
 | Servizio | Build | Porta | Note |
 |---|---|---|---|
-| `backend` | `backend/Dockerfile` (multi-stage, `node:22-alpine`) | 3000 → 3000 | `MONGODB_URI` predefinito `mongodb://host.docker.internal:27017/toolpm`; monta `./db` in sola lettura su `/db` per lo script di import |
+| `backend` | `backend/Dockerfile` (multi-stage, `node:22-alpine`) | 3001 → 3001 | `MONGODB_URI` predefinito `mongodb://host.docker.internal:27017/toolpm`; monta `./db` in sola lettura su `/db` per lo script di import |
 | `frontend` | `frontend/Dockerfile` (build Angular su `node:22-alpine`, esecuzione su `nginx:1.27-alpine`) | 4201 → 80 | dipende da `backend` |
 
 **Perché `host.docker.internal`**: dentro un container `localhost` indica il container stesso. Docker Desktop espone le porte del PC ai container con il nome `host.docker.internal`; la voce `extra_hosts: host-gateway` lo rende disponibile anche su Docker per Linux.

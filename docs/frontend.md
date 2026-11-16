@@ -60,8 +60,8 @@ I componenti sono caricati in modo lazy (`loadComponent`). Con `withComponentInp
 
 `ApiService` (`api.service.ts`) usa l'URL **relativo** `/api`:
 
-- in sviluppo il proxy di `ng serve` (`proxy.conf.json`) inoltra a `http://localhost:3000`;
-- in Docker nginx (`nginx.conf`) inoltra a `http://backend:3000`.
+- in sviluppo il proxy di `ng serve` (`proxy.conf.json`) inoltra a `http://localhost:3001`;
+- in Docker nginx (`nginx.conf`) inoltra a `http://backend:3001`.
 
 | Metodo | Chiamata |
 |---|---|
@@ -168,7 +168,7 @@ Variabili in `styles.scss`: `--sfondo`, `--testo`, `--testo-tenue`, `--bordo`, `
 ```bash
 cd frontend
 npm install
-npm start          # ng serve su http://localhost:4201/toolpm (richiede il backend su :3000)
+npm start          # ng serve su http://localhost:4201/toolpm (richiede il backend su :3001)
 npm run build      # build di produzione in dist/frontend/browser
 npm test           # test Vitest
 ```
@@ -182,7 +182,7 @@ npm test           # test Vitest
 
 `nginx.conf`:
 
-- `location /api/` → `proxy_pass http://backend:3000`;
+- `location /api/` → `proxy_pass http://backend:3001`;
 - `location = /` → redirect a `/toolpm/`; `location = /toolpm` → redirect a `/toolpm/`;
 - `location /toolpm/` → `try_files $uri $uri/ /toolpm/index.html` (necessario perché le rotte Angular funzionino anche ricaricando la pagina).
 
