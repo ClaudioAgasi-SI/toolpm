@@ -18,6 +18,8 @@ La nuova sezione **Consuntivazione** di ToolPM raccoglie le ore lavorate da ogni
 
 *Revisione del 17/11/2026, terza parte: nuovo profilo approvatore PMSenior; chi gestisce clienti, centri di costo, progetti, attività e risorse; email (nome utente) e cellulare delle risorse; date del progetto facoltative fino ai passaggi In corso e Chiuso.*
 
+*Revisione del 17/11/2026, quarta parte: chiusi tutti i punti aperti. Il PMSenior vede i costi e approva come PM su tutti i progetti; il TL modifica le caratteristiche solo delle risorse che lavorano sui suoi progetti.*
+
 **Perimetro.** Sono inclusi i costi delle circa 200 risorse interne (programmatori, analisti, designer UI/UX, project manager, team leader, architetti IT, sistemisti, tester e altri ruoli). Restano fuori, per ora: ferie, permessi e malattia; integrazione con paghe o HR; costi non legati al personale (licenze, hardware, trasferte); ricavi e fatturazione. Il modello è pensato per poterli aggiungere in seguito.
 
 **Glossario**
@@ -54,14 +56,14 @@ La riga di consuntivo appartiene alla giornata di una risorsa, punta sempre a un
 | Attività | Un progetto può avere attività. Si consuntiva sul progetto oppure su una sua attività; il costo di un'attività alimenta il suo progetto e il centro di costo del progetto. Le attività hanno un solo livello, senza sotto-attività. Un progetto con attività accetta anche ore dirette, salvo che sia attiva l'opzione "solo su attività" (disattivata di default). |
 | Visibilità dei costi | Oltre al totale per centro di costo, si vede il costo del singolo progetto e, al suo interno, il dettaglio per attività. |
 | Approvazione | Su due livelli, per ogni riga (anche su attività). L'approvatore TL supervisiona e dà un primo via libera, che non è obbligatorio. Solo l'approvazione dell'approvatore PM rende valida la riga e la fa entrare nei costi. Se ci sono più PM, o più TL, basta l'approvazione di uno di loro. |
-| Profili di approvazione | Tre profili, indipendenti dal ruolo che la persona ha nel progetto: approvatore TL, approvatore PM e approvatore PMSenior. Ogni utente ha un'abilitazione generale a uno dei tre; sul singolo progetto è assegnato come TL o come PM (almeno un PM obbligatorio, TL facoltativi). Chi crea un progetto ne diventa approvatore con il proprio profilo. Il PMSenior può fare tutto ciò che fa il PM, più quanto indicato in "Chi gestisce le anagrafiche". |
+| Profili di approvazione | Tre profili, indipendenti dal ruolo che la persona ha nel progetto: approvatore TL, approvatore PM e approvatore PMSenior. Ogni utente ha un'abilitazione generale a uno dei tre; sul singolo progetto è assegnato come TL o come PM (almeno un PM obbligatorio, TL facoltativi). Chi crea un progetto ne diventa approvatore con il proprio profilo. Il PMSenior può fare tutto ciò che fa il PM, più quanto indicato in "Chi gestisce le anagrafiche"; vede i costi di tutti i progetti e può approvare come PM su tutti i progetti, anche dove non è assegnato. Le abilitazioni le assegna l'amministratore di sistema. |
 | Regole di approvazione | Il TL approva le ore consuntivate sul progetto e sulle sue attività e può respingere una riga, con motivazione. Una riga inviata di nuovo dopo un rifiuto riparte senza via libera del TL. La stessa persona può essere TL e PM sullo stesso progetto; in quel caso approva direttamente come PM. I profili sono TL, PM e PMSenior, valori fissi. |
 | Gestione delle attività | Le attività di un progetto le creano e le modificano solo gli approvatori TL e PM di quel progetto e i PMSenior, nessun altro utente. |
-| Chi gestisce le anagrafiche | Clienti e centri di costo: PMSenior. Progetti: TL, PM e PMSenior. Attività: TL e PM del progetto, PMSenior. Risorse: PM e PMSenior. Caratteristiche delle risorse (skill, certificazioni, pianificazione e simili): TL, PM e PMSenior. |
-| Risorse | Ogni risorsa ha un'email, obbligatoria e usata anche come nome utente per accedere al sistema, e un numero di cellulare. |
+| Chi gestisce le anagrafiche | Clienti e centri di costo: PMSenior. Progetti: TL, PM e PMSenior. Attività: TL e PM del progetto, PMSenior. Risorse: PM e PMSenior. Caratteristiche delle risorse (skill, certificazioni, pianificazione e simili): PM e PMSenior su tutte le risorse, TL solo sulle risorse che lavorano sui suoi progetti. Ruolo professionale e orario contrattuale: PM e PMSenior; le tariffe restano al controller. |
+| Risorse | Ogni risorsa ha un'email, obbligatoria e usata anche come nome utente per accedere al sistema, e un numero di cellulare facoltativo. |
 | Creazione dei progetti | Un progetto lo crea un TL, un PM o un PMSenior, che ne diventa approvatore con il proprio profilo. È sempre legato a un centro di costo; il cliente è facoltativo (progetto interno). Le attività sono sempre legate a un progetto. |
-| Stati del progetto | In valutazione, In corso, Chiuso. Non si consuntiva su un progetto Chiuso né sulle sue attività. Le date sono facoltative: l'inizio diventa obbligatorio quando il progetto passa In corso, la fine quando passa a Chiuso. |
-| Stime e consuntivato | Il progetto ha quattro stime impostate a mano da chi lo modifica, mai calcolate: manageriale in giorni, manageriale in euro, definitiva in giorni (effort), definitiva in euro. Il consuntivato è invece sempre calcolato dalle righe sul progetto e sulle sue attività. Le attività hanno una stima in giorni facoltativa, che non concorre alle stime del progetto. |
+| Stati del progetto | In valutazione, In corso, Chiuso. Non si consuntiva su un progetto Chiuso né sulle sue attività. Le date sono facoltative: l'inizio diventa obbligatorio quando il progetto passa In corso, la fine quando passa a Chiuso. Si consuntiva anche su un progetto In valutazione. I passaggi In valutazione → In corso → Chiuso li decidono TL o PM del progetto o un PMSenior; un progetto Chiuso torna In corso solo per decisione di un PM o di un PMSenior. Le righe già inviate quando il progetto viene chiuso restano approvabili e respingibili, ma non se ne aggiungono né se ne modificano. |
+| Stime e consuntivato | Il progetto ha quattro stime impostate a mano da chi lo modifica, mai calcolate: manageriale in giorni, manageriale in euro, definitiva in giorni (effort), definitiva in euro. Il consuntivato è invece sempre calcolato dalle righe sul progetto e sulle sue attività. Le attività hanno una stima in giorni facoltativa, che non concorre alle stime del progetto. Il TL vede e imposta anche le stime in euro, ma non vede tariffe né costo consuntivato. Per confrontare ore e stime in giorni, 1 giorno = 8 ore (parametro configurabile). |
 | Dati comuni | Risorse, ruoli, clienti, progetti con attività e approvatori, centri di costo passano in un modulo Comuni (/api/comuni), condiviso da tutte le sezioni. Il Pianificatore li legge da lì. |
 | Budget | Nessun budget separato: il riferimento sono le stime del progetto, confrontate con il consuntivato. |
 | Ferie, permessi, malattia | Esclusi per ora; possibile estensione futura. |
@@ -73,9 +75,9 @@ La riga di consuntivo appartiene alla giornata di una risorsa, punta sempre a un
 | Attore | Cosa fa |
 | --- | --- |
 | Risorsa | Inserisce e invia il proprio consuntivo. Vede solo le proprie ore, non le tariffe né i costi. |
-| Approvatore TL | Supervisore (una specie di Team Leader). Può creare progetti. Sui progetti a cui è assegnato controlla le righe inviate (ore, straordinari, attività) e dà un primo via libera, che segnala al PM la sua supervisione ma non rende valida la riga. Crea e modifica le attività dei propri progetti. Vede ore e tipologie, non tariffe né costi. |
+| Approvatore TL | Supervisore (una specie di Team Leader). Può creare progetti. Sui progetti a cui è assegnato controlla le righe inviate (ore, straordinari, attività) e dà un primo via libera, che segnala al PM la sua supervisione ma non rende valida la riga. Crea e modifica le attività dei propri progetti e le caratteristiche delle risorse che ci lavorano. Vede ore, tipologie e stime del progetto, non tariffe né costi consuntivati. |
 | Approvatore PM | Una specie di Project Manager. Può creare progetti. Sui progetti a cui è assegnato approva in modo definitivo o respinge le righe, con o senza il via libera del TL. Solo la sua approvazione rende valida la riga. Crea e modifica le attività dei propri progetti. Vede ore e costi di quei progetti. |
-| Approvatore PMSenior | Fa tutto ciò che fa il PM. In più crea clienti e centri di costo e, come il PM, risorse; crea e modifica progetti e attività e le caratteristiche delle risorse. |
+| Approvatore PMSenior | Fa tutto ciò che fa il PM. In più crea clienti e centri di costo e, come il PM, risorse; crea e modifica progetti e attività e le caratteristiche delle risorse. Vede i costi di tutti i progetti e può approvare come PM su tutti. |
 | Controller / amministrazione | Gestisce tipologie di costo, tariffe standard e personalizzate. Chiude i periodi. Vede tutti i costi. |
 | Amministratore di sistema | Gestisce utenti, abilitazioni (TL, PM, PMSenior) e ruoli applicativi. |
 
@@ -85,7 +87,7 @@ La riga di consuntivo appartiene alla giornata di una risorsa, punta sempre a un
 
 1. **RF-01 Clienti e progetti.** Il progetto lo crea un TL, un PM o un PMSenior; i clienti li crea il PMSenior. Attributi: codice identificativo univoco, titolo, descrizione, cliente (facoltativo: assente nei progetti interni), data di inizio e data di fine, stato (RF-26), centro di costo (obbligatorio), le quattro stime (RF-24), opzione "solo su attività", approvatori con il loro profilo (almeno un PM; TL facoltativi). Il centro di costo non si può cambiare dopo il primo consuntivo. Il Pianificatore userà la stessa anagrafica al posto del testo libero di oggi.
 2. **RF-02 Centri di costo.** Codice, descrizione, stato. Un centro di costo riceve i costi di uno o più progetti. Li crea il PMSenior.
-3. **RF-03 Risorse e ruoli.** Si riusa l'anagrafica risorse del Pianificatore, aggiungendo email (obbligatoria, unica, usata come nome utente per l'accesso), cellulare, matricola, date di ingresso e uscita, orario contrattuale giornaliero e ruolo. Il ruolo ha uno storico con data di decorrenza, perché da esso dipende la tariffa standard. Le risorse le creano PM e PMSenior; le caratteristiche (skill, certificazioni, pianificazione e simili) le modificano TL, PM e PMSenior.
+3. **RF-03 Risorse e ruoli.** Si riusa l'anagrafica risorse del Pianificatore, aggiungendo email (obbligatoria, unica, usata come nome utente per l'accesso), cellulare, matricola, date di ingresso e uscita, orario contrattuale giornaliero e ruolo. Il ruolo ha uno storico con data di decorrenza, perché da esso dipende la tariffa standard. Le risorse le creano PM e PMSenior; le caratteristiche (skill, certificazioni, pianificazione e simili) le modificano PM e PMSenior per tutte le risorse e il TL per le risorse che lavorano sui suoi progetti (allocate nel Pianificatore o con ore consuntivate su un progetto di cui è TL). Ruolo e orario contrattuale li modificano PM e PMSenior. Il cellulare è facoltativo.
 4. **RF-04 Tipologie di costo.** Anagrafica configurabile: codice, descrizione, ordine di visualizzazione, categoria (ordinaria o straordinaria), attiva sì/no. Una tipologia usata non si cancella, si disattiva.
 5. **RF-05 Tariffe standard per ruolo.** Per ogni ruolo e tipologia di costo, un costo orario con data di inizio validità (e una di fine facoltativa).
 6. **RF-06 Tariffe personalizzate.** Per una singola risorsa e una o più tipologie, un costo orario con validità. Prevale sulla tariffa standard del ruolo.
@@ -179,7 +181,7 @@ Le righe della stessa giornata su progetti diversi passano per questi stati in m
 
 ### Requisiti non funzionali
 
-- **Riservatezza.** Tariffe e costi li vedono solo il controller e, per i propri progetti, gli approvatori PM. Gli approvatori TL vedono ore e tipologie, non tariffe né costi. Serve un'autenticazione con utenti e ruoli, che oggi ToolPM non ha.
+- **Riservatezza.** Tariffe e costi li vedono solo il controller e, per i propri progetti, gli approvatori PM; i PMSenior li vedono per tutti i progetti. Gli approvatori TL vedono ore, tipologie e stime del progetto, non tariffe né costi consuntivati. Serve un'autenticazione con utenti e ruoli, che oggi ToolPM non ha.
 - **Volumi.** Con 200 risorse, circa 220 giorni lavorativi e 3 righe al giorno: circa 44.000 giornate e 130.000 righe l'anno, 1,3 milioni in dieci anni.
 - **Prestazioni.** Report annuali su tutte le risorse in pochi secondi; inserimento di una settimana tipica in meno di due minuti.
 - **Concorrenza.** Più approvatori possono agire nello stesso momento su righe della stessa giornata, anche mentre la risorsa ne modifica altre.
@@ -188,18 +190,7 @@ Le righe della stessa giornata su progetti diversi passano per questi stati in m
 
 ### Punti ancora aperti
 
-Il 17/11/2026 sono stati confermati: abilitazione generale TL, PM o PMSenior per creare progetti (chi crea ne diventa approvatore) e date facoltative fino ai passaggi In corso e Chiuso. Restano questi punti; per ciascuno il documento adotta l'ipotesi indicata. Gli altri attributi del progetto saranno definiti più avanti.
-
-- [ ] Si può consuntivare su un progetto In valutazione (es. ore di analisi o di offerta)? *Ipotesi: sì; blocca solo lo stato Chiuso.*
-- [ ] Quali passaggi di stato sono ammessi e chi li fa? *Ipotesi: In valutazione → In corso → Chiuso, decisi da TL o PM del progetto o da un PMSenior; un progetto Chiuso può tornare In corso solo per decisione di un PM o PMSenior.*
-- [ ] Le righe già inviate quando il progetto viene chiuso? *Ipotesi: restano approvabili e respingibili; non se ne aggiungono né se ne modificano.*
-- [ ] Per confrontare ore consuntivate e stime in giorni, quante ore vale un giorno? *Ipotesi: 8 ore, come parametro configurabile.*
-- [ ] Il TL non vede tariffe né costi: può vedere e impostare le stime in euro del progetto? *Ipotesi: sì, sono valori del progetto; continua a non vedere tariffe e costo consuntivato.*
-- [ ] Il PMSenior "fa tutto ciò che fa il PM": su tutti i progetti o solo su quelli a cui è assegnato? *Ipotesi: crea e modifica progetti e attività di tutti i progetti; approva le righe come PM, e ne vede i costi, solo dove è assegnato.*
-- [ ] Chi assegna a un utente l'abilitazione TL, PM o PMSenior? *Ipotesi: l'amministratore di sistema.*
-- [ ] Chi modifica ruolo professionale e orario contrattuale di una risorsa, da cui dipende la tariffa? *Ipotesi: PM e PMSenior, come gli altri dati anagrafici; le tariffe restano al controller.*
-- [ ] Il TL modifica le caratteristiche di tutte le risorse o solo di chi lavora sui suoi progetti? *Ipotesi: di tutte.*
-- [ ] Il cellulare è obbligatorio? *Ipotesi: no; l'email è obbligatoria e unica.*
+Nessun punto aperto. Il 17/11/2026 sono state confermate tutte le ipotesi, con due correzioni (il PMSenior vede i costi e approva su tutti i progetti; il TL modifica le caratteristiche solo delle risorse dei suoi progetti), ora tra le decisioni. Gli altri attributi del progetto saranno definiti più avanti.
 
 ## Analisi tecnica
 
@@ -222,7 +213,7 @@ I moduli si registrano come oggi con `RouterModule` in `app.module.ts`. Lo spost
 | Metodo | Percorso | Chi | Descrizione |
 | --- | --- | --- | --- |
 | GET / POST / PUT | `/api/comuni/progetti`, `/clienti`, `/centri-costo`, `/ruoli` | Progetti: creazione da TL, PM e PMSenior; modifica da TL e PM del progetto e da PMSenior. Clienti e centri di costo: PMSenior. Ruoli: admin | Anagrafiche; il centro di costo di un progetto è bloccato dopo il primo consuntivo. Il progetto porta titolo, descrizione, date, stato e le quattro stime |
-| GET / POST / PUT | `/api/comuni/risorse` | Creazione e dati anagrafici: PM, PMSenior. Caratteristiche (skill, certificazioni, pianificazione): TL, PM, PMSenior | Risorse con email (obbligatoria, unica, nome utente) e cellulare |
+| GET / POST / PUT | `/api/comuni/risorse` | Creazione e dati anagrafici: PM, PMSenior. Caratteristiche (skill, certificazioni, pianificazione): PM, PMSenior; TL solo per le risorse dei suoi progetti | Risorse con email (obbligatoria, unica, nome utente) e cellulare facoltativo |
 | POST | `/api/comuni/progetti/:id/stato` | TL e PM del progetto, PMSenior | Passaggio di stato (In valutazione, In corso, Chiuso); riapertura di un progetto Chiuso solo da PM o PMSenior; inizio obbligatorio per In corso, fine per Chiuso |
 | PUT | `/api/comuni/progetti/:id/approvatori` | TL e PM del progetto, PMSenior, admin | Elenco degli approvatori del progetto, ciascuno con il profilo TL o PM |
 | GET / POST / PUT | `/api/comuni/progetti/:id/attivita` | Lettura: controller e approvatori del progetto. Scrittura: approvatori TL e PM del progetto, PMSenior | Attività del progetto; il progetto di un'attività è bloccato dopo il primo consuntivo |
@@ -236,7 +227,7 @@ I moduli si registrano come oggi con `RouterModule` in `app.module.ts`. Lo spost
 | GET | `/api/consuntivazione/approvazioni?progetto=&attivita=&stato=inviata` | Approvatore | Righe da approvare sui propri progetti e sulle loro attività: al TL le inviate, al PM anche quelle con il via libera del TL |
 | POST | `/api/consuntivazione/approvazioni` | Approvatore | Approva o respinge un elenco di righe, con motivazione. L'approvazione del TL porta le righe in approvataTL, quella del PM in approvata |
 | POST | `/api/consuntivazione/periodi/:mese/chiudi`, `/riapri` | Controller | Chiusura del mese |
-| GET | `/api/consuntivazione/report/progetti/:id?da=&a=` | Approvatore del progetto, controller | Scheda del progetto: stime e consuntivato a confronto (giorni ed euro), totale, dettaglio per attività con la loro stima in giorni (più la voce "senza attività"), risorsa, tipologia, mese |
+| GET | `/api/consuntivazione/report/progetti/:id?da=&a=` | Approvatore del progetto, PMSenior, controller | Scheda del progetto: stime e consuntivato a confronto (giorni ed euro), totale, dettaglio per attività con la loro stima in giorni (più la voce "senza attività"), risorsa, tipologia, mese |
 | GET | `/api/consuntivazione/report/costi?raggruppa=cdc\|progetto\|attivita\|risorsa\|ruolo\|tipologia&da&a` | Approvatore (propri progetti), controller | Totali ore e costi, anche annidati (es. centro di costo → progetto → attività) |
 | GET | `/api/consuntivazione/report/pianificato-vs-consuntivato?mese=AAAAMM` | Approvatore, controller | Confronto con il Pianificatore |
 | POST | `/api/consuntivazione/ricalcolo` | Controller | Anteprima e applicazione del ricalcolo dopo una correzione di tariffa |
@@ -249,7 +240,7 @@ Le risposte per la risorsa non contengono mai tariffe né importi; quelle per l'
 | --- | --- | --- |
 | `/toolpm/consuntivazione/settimana` | Il mio consuntivo: griglia progetti e attività × giorni, stato di ogni riga, invio | Risorsa |
 | `/toolpm/consuntivazione/approvazioni` | Righe da approvare, filtrabili per progetto, attività, risorsa e periodo; approvazione in blocco; per il PM, colonna e filtro "via libera TL" | Approvatore |
-| `/toolpm/consuntivazione/progetti/:id` | Scheda del progetto: stime contro consuntivato in giorni ed euro (per il TL senza costo consuntivato), totale, andamento mensile, dettaglio per attività, risorsa e tipologia | Approvatore del progetto, controller |
+| `/toolpm/consuntivazione/progetti/:id` | Scheda del progetto: stime contro consuntivato in giorni ed euro (per il TL senza costo consuntivato), totale, andamento mensile, dettaglio per attività, risorsa e tipologia | Approvatore del progetto, PMSenior, controller |
 | `/toolpm/consuntivazione/costi` | Report costi per centro di costo, progetto e attività, con esportazione | Approvatore, controller |
 | `/toolpm/consuntivazione/tipologie` | Tipologie di costo | Controller |
 | `/toolpm/consuntivazione/tariffe` | Tariffe standard per ruolo e personalizzate per risorsa, con storico | Controller |
@@ -277,10 +268,11 @@ Le tariffe sono una lista di voci per tipologia, non campi fissi: una nuova tipo
 - Regole della giornata nel servizio: totale ≤ 24 h, avviso sulle ore ordinarie oltre l'orario contrattuale, periodo non chiuso, righe approvate non modificabili.
 - Una sola giornata per risorsa e data (vincolo di unicità).
 - Tariffe: nessuna sovrapposizione di periodi per la stessa combinazione ruolo + tipologia o risorsa + tipologia.
-- Approvazione: il backend verifica che l'utente sia approvatore del progetto di ogni riga (anche su un'attività) e ammette solo le transizioni del suo profilo. TL: da inviata ad approvataTL o respinta. PM: da inviata o approvataTL ad approvata o respinta, e da approvata a respinta. Un progetto attivo deve avere almeno un PM.
+- Approvazione: il backend verifica che l'utente sia approvatore del progetto di ogni riga, oppure PMSenior, (anche su un'attività) e ammette solo le transizioni del suo profilo. TL: da inviata ad approvataTL o respinta. PM: da inviata o approvataTL ad approvata o respinta, e da approvata a respinta. Un progetto attivo deve avere almeno un PM.
 - Attività: il backend accetta creazione e modifica solo da chi è approvatore TL o PM del progetto.
 - Progetto: codice univoco, centro di costo obbligatorio, date facoltative ma inizio obbligatorio per passare In corso e fine per passare a Chiuso, fine non precedente all'inizio, stime ≥ 0 salvate come le inserisce l'utente e mai ricalcolate. Il backend rifiuta righe nuove o modificate su un progetto Chiuso o sulle sue attività.
 - Risorsa: email obbligatoria, in formato valido e unica (indice unico su `risorse.email`), usata come nome utente.
+- Caratteristiche di una risorsa modificate da un TL: il backend le accetta solo se la risorsa è allocata nel Pianificatore, o ha ore consuntivate, su un progetto di cui l'utente è TL.
 - Concorrenza: approvazioni e modifiche aggiornano solo le righe interessate; un numero di versione sulla giornata impedisce che un salvataggio della risorsa sovrascriva un'approvazione avvenuta nel frattempo.
 
 ### Sicurezza
