@@ -22,6 +22,8 @@ La nuova sezione **Consuntivazione** di ToolPM raccoglie le ore lavorate da ogni
 
 *Revisione del 17/11/2026, quinta parte: percentuale di completamento di progetti e attività; indicatori Earned Value (EVM) che dicono se il progetto è in linea con tempi e costi.*
 
+*Revisione del 17/11/2026, sesta parte: confermate tutte le ipotesi su percentuale di completamento ed EVM; nessun punto aperto.*
+
 **Perimetro.** Sono inclusi i costi delle circa 200 risorse interne (programmatori, analisti, designer UI/UX, project manager, team leader, architetti IT, sistemisti, tester e altri ruoli). Restano fuori, per ora: ferie, permessi e malattia; integrazione con paghe o HR; costi non legati al personale (licenze, hardware, trasferte); ricavi e fatturazione. Il modello è pensato per poterli aggiungere in seguito.
 
 **Glossario**
@@ -71,6 +73,7 @@ La riga di consuntivo appartiene alla giornata di una risorsa, punta sempre a un
 | Stime e consuntivato | Il progetto ha quattro stime impostate a mano da chi lo modifica, mai calcolate: manageriale in giorni, manageriale in euro, definitiva in giorni (effort), definitiva in euro. Il consuntivato è invece sempre calcolato dalle righe sul progetto e sulle sue attività. Le attività hanno una stima in giorni facoltativa, che non concorre alle stime del progetto. Il TL vede e imposta anche le stime in euro, ma non vede tariffe né costo consuntivato. Per confrontare ore e stime in giorni, 1 giorno = 8 ore (parametro configurabile). |
 | Percentuale di completamento | Progetti e attività hanno una percentuale di completamento. Quella di un'attività la modificano la risorsa assegnata all'attività, il TL e il PM approvatori del progetto e i PMSenior. Quella del progetto la modificano solo gli approvatori TL e PM del progetto e i PMSenior; una risorsa che non è approvatrice non può modificarla. Il PMSenior può farlo su tutti i progetti e tutte le attività. |
 | Avanzamento (EVM) | Da stima, consuntivato e percentuale di completamento il sistema calcola con il metodo Earned Value se il progetto è in linea con i tempi e con i costi, e mostra in quale stato si trova per i tempi e per i costi. |
+| Regole dell'EVM | Le risorse assegnate a un'attività sono un elenco esplicito, gestito da TL e PM del progetto e dai PMSenior. Il budget (BAC) è la stima definitiva; se manca, quella manageriale. Il lavoro pianificato (PV) si distribuisce in modo lineare tra data di inizio e data di fine; in futuro potrà venire dalle allocazioni del Pianificatore. Il costo effettivo (AC) conta solo le righe approvate dal PM. Soglie degli stati 0,85, 0,95 e 1,05, configurabili. Il TL vede gli indicatori in giorni, gli indici e gli stati, non gli importi in euro. L'EVM si calcola per i progetti In corso e Chiusi, non per quelli In valutazione. |
 | Dati comuni | Risorse, ruoli, clienti, progetti con attività e approvatori, centri di costo passano in un modulo Comuni (/api/comuni), condiviso da tutte le sezioni. Il Pianificatore li legge da lì. |
 | Budget | Nessun budget separato: il riferimento sono le stime del progetto, confrontate con il consuntivato. |
 | Ferie, permessi, malattia | Esclusi per ora; possibile estensione futura. |
@@ -255,15 +258,7 @@ Le righe della stessa giornata su progetti diversi passano per questi stati in m
 
 ### Punti ancora aperti
 
-Le decisioni del 17/11/2026 hanno chiuso i punti precedenti. Percentuale di completamento ed EVM aprono questi punti; per ciascuno il documento adotta l'ipotesi indicata. Gli altri attributi del progetto saranno definiti più avanti.
-
-- [ ] Chi è "la risorsa assegnata" a un'attività? *Ipotesi: un elenco esplicito di risorse sull'attività, gestito da TL e PM del progetto e dai PMSenior; chi è nell'elenco può aggiornare la percentuale.*
-- [ ] Quale stima fa da budget (BAC)? *Ipotesi: la stima definitiva; se manca, quella manageriale.*
-- [ ] Come si distribuisce il lavoro pianificato (PV) nel tempo? *Ipotesi: in modo lineare tra data di inizio e data di fine; in seguito si potrà ricavare dalle allocazioni del Pianificatore.*
-- [ ] Il costo effettivo (AC) conta solo le righe approvate dal PM? *Ipotesi: sì; la scheda può mostrare a parte le ore inviate e non ancora approvate.*
-- [ ] Le soglie degli stati vanno bene (0,85 / 0,95 / 1,05)? *Ipotesi: sì, configurabili.*
-- [ ] Il TL non vede i costi in euro: cosa vede dell'EVM? *Ipotesi: indicatori in giorni, indici e stati di tempi e costi; non gli importi in euro.*
-- [ ] Per quali progetti si calcola l'EVM? *Ipotesi: In corso e Chiuso; non per quelli In valutazione.*
+Nessun punto aperto. Il 17/11/2026 sono state confermate anche le ipotesi su percentuale di completamento ed EVM, ora tra le decisioni ("Regole dell'EVM"). Gli altri attributi del progetto saranno definiti più avanti.
 
 ## Analisi tecnica
 
