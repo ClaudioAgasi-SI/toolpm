@@ -39,6 +39,8 @@ Dentro un container `localhost` indica il container stesso, quindi il backend si
 `mongodb://host.docker.internal:27017/toolpm`, il nome con cui Docker Desktop espone le porte del PC.
 Per usare un indirizzo diverso copia `.env.example` in `.env` e modifica `MONGODB_URI`.
 
+Per l'accesso con utenti e password imposta in `.env` almeno `JWT_SECRET`, `ADMIN_EMAIL` e `ADMIN_PASSWORD_INIZIALE` (vedi `.env.example`): al primo avvio il backend crea l'amministratore, che al primo accesso cambia la password.
+
 Dalla fase 1 MongoDB deve girare come replica set a un nodo: la procedura è in [docs/mongodb-replica-set.md](docs/mongodb-replica-set.md).
 Per verificare connessione, replica set e transazioni: `docker compose exec backend npm run verifica-mongodb`.
 
@@ -95,6 +97,11 @@ Documentazione interattiva Swagger, con la possibilità di provare le chiamate: 
 | Metodo | Percorso | Descrizione |
 |---|---|---|
 | GET | `/api/health` | Stato del backend, della connessione a MongoDB e del replica set |
+| POST | `/api/auth/login`, `/api/auth/logout` | Accesso con email e password (cookie `toolpm_token`), uscita |
+| GET | `/api/auth/me` | Profilo dell'utente che ha fatto l'accesso |
+| POST | `/api/auth/cambia-password` | Cambio della propria password |
+| GET / POST / PUT | `/api/utenti`, `/api/utenti/:id` | Gestione degli utenti (solo amministratore) |
+| POST | `/api/utenti/:id/password` | Password provvisoria (solo amministratore) |
 | GET | `/api/pianificatore/risorse` | Elenco risorse |
 | GET / PUT / DELETE | `/api/pianificatore/risorse/:id` | Lettura, sostituzione, cancellazione di una risorsa |
 | POST | `/api/pianificatore/risorse` | Nuova risorsa |

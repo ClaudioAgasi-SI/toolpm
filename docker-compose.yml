@@ -11,6 +11,13 @@ services:
       # directConnection=true: necessario con il replica set a un nodo (docs/mongodb-replica-set.md), innocuo con un'istanza singola.
       MONGODB_URI: ${MONGODB_URI:-mongodb://host.docker.internal:27017/toolpm?directConnection=true}
       SEED_DIR: /db
+      # Autenticazione (fase 1, blocco B2): valori da .env, vedi .env.example
+      JWT_SECRET: ${JWT_SECRET:-}
+      JWT_DURATA: ${JWT_DURATA:-8h}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD_INIZIALE: ${ADMIN_PASSWORD_INIZIALE:-}
+      AUTH_OBBLIGATORIA: ${AUTH_OBBLIGATORIA:-false}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
     volumes:
       # Dati di esempio, usati solo dallo script di import (scripts/seed.mjs).
       - ./db:/db:ro

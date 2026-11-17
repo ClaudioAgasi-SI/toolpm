@@ -24,6 +24,16 @@ backend/
 │   ├── app.module.ts                configurazione, connessione MongoDB, moduli
 │   ├── health.controller.ts         GET /api/health
 │   ├── mongoose-errors.filter.ts    errori di validazione Mongoose → HTTP 400
+│   ├── auth/                        autenticazione (fase 1, blocco B2) → /api/auth, /api/utenti
+│   │   ├── utente.schema.ts            schema Utente (collection utenti), abilitazioni e ruoli
+│   │   ├── password.ts                 cifratura e verifica delle password (scrypt)
+│   │   ├── auth.service.ts             accesso, token, profilo, cambio password, primo amministratore
+│   │   ├── autenticazione.guard.ts     guard globale: utente dal token, @Pubblica, @Ruoli
+│   │   ├── decoratori.ts               @Pubblica(), @Ruoli(...), @UtenteRichiesta()
+│   │   ├── auth.controller.ts          /api/auth/login, logout, me, cambia-password
+│   │   ├── utenti.service.ts / utenti.controller.ts  /api/utenti (solo admin)
+│   │   ├── auth.module.ts
+│   │   └── auth.spec.ts                test di password, token, accesso e guard
 │   ├── infrastruttura/              servizi tecnici condivisi (fase 1, blocco B1)
 │   │   ├── contesto-utente.ts          utente corrente per richiesta (AsyncLocalStorage)
 │   │   ├── contesto-utente.middleware.ts  apre il contesto a ogni richiesta HTTP
@@ -71,6 +81,11 @@ Variabili d'ambiente (lette con `@nestjs/config`, anche da un file `.env` nella 
 | `CORS_ORIGIN` | tutte le origini | Elenco separato da virgole delle origini ammesse |
 | `MONGODB_AUTO_INDEX` | `false` | `true` per far creare a Mongoose gli indici definiti negli schemi |
 | `SEED_DIR` | `../db` | Solo per `scripts/seed.mjs` |
+| `JWT_SECRET` | casuale a ogni avvio | Segreto per firmare i token di accesso; senza, gli accessi scadono a ogni riavvio |
+| `JWT_DURATA` | `8h` | Durata dell'accesso (token e cookie) |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD_INIZIALE` | — | Primo amministratore, creato all'avvio se non esiste nessun utente admin |
+| `AUTH_OBBLIGATORIA` | `false` | `true`: ogni API tranne login e health richiede l'accesso (da attivare con il blocco B6) |
+| `COOKIE_SECURE` | `false` | `true` se ToolPM è servito in HTTPS |
 
 ## Avvio dell'applicazione (`main.ts`)
 
@@ -87,6 +102,16 @@ Servizi tecnici usati da tutte le sezioni, nella cartella `src/infrastruttura/`.
 - **Tracciamento dei salvataggi.** `tracciamentoPlugin` è registrato sulla connessione Mongoose in `app.module.ts` e vale per ogni schema che dichiara `collection` (gli schemi incorporati, come skill e allocazioni, ne restano fuori). Aggiunge `creatoIl`, `creatoDa`, `modificatoIl`, `modificatoDa` e li valorizza in `save`, `insertMany`, `updateOne`, `updateMany`, `findOneAndUpdate`, `findOneAndReplace` e `replaceOne`. I valori mandati dal client vengono ignorati; in una sostituzione (PUT delle risorse) la creazione del documento esistente si conserva. **Regola:** ogni nuovo schema di primo livello deve dichiarare `collection` in `@Schema({ collection: ... })`.
 - **Parametri.** `ParametriService` (modulo globale `InfrastrutturaModule`) legge e scrive la collection `parametri`; per ora non ha API, arriveranno con i permessi (blocco B3).
 - **Migrazioni.** `npm run migra` esegue in ordine gli script `scripts/migrazioni/NNN-nome.mjs` non ancora eseguiti e li registra nella collection `migrazioni`; `npm run migra -- --elenco` mostra lo stato senza eseguire nulla. In Docker: `docker compose exec backend npm run migra`. Prima di eseguirle serve un backup ([mongodb-replica-set.md](mongodb-replica-set.md#2-backup)).
+
+## Autenticazione (fase 1)
+
+Modulo `src/auth/`. Il nome utente è l'email; le password sono cifrate con **scrypt** (incluso in Node.js, nessun modulo nativo da compilare nell'immagine Docker) nel formato `scrypt$N$r$p$sale$hash`.
+
+- **Accesso.** `POST /api/auth/login` con `{ email, password }` verifica le credenziali e imposta il cookie `toolpm_token` (httpOnly, SameSite=Lax, durata `JWT_DURATA`), con dentro un token JWT che contiene solo l'id dell'utente. Il messaggio d'errore è lo stesso per email sconosciuta, password errata e utente disattivato. `POST /api/auth/logout` cancella il cookie; `GET /api/auth/me` restituisce il profilo; `POST /api/auth/cambia-password` cambia la propria password (almeno 10 caratteri).
+- **Guard globale.** `AutenticazioneGuard` legge il token dal cookie o da `Authorization: Bearer`, carica l'utente (se esiste ed è attivo) e lo scrive nella richiesta e nel contesto, così il tracciamento dei salvataggi registra chi modifica. Gli endpoint `@Pubblica()` (login, logout, health) passano sempre; quelli `@Ruoli(...)` richiedono l'accesso e uno dei ruoli indicati (403 altrimenti).
+- **Periodo di transizione.** Finché il frontend non ha la pagina di accesso (blocco B6), `AUTH_OBBLIGATORIA` vale `false`: le altre API accettano anche richieste anonime, registrate come `anonimo`. Con il blocco B6 il valore diventa `true` e ogni API senza accesso risponde 401.
+- **Gestione utenti.** `/api/utenti`, solo per il ruolo `admin`: elenco, creazione con password provvisoria, modifica di email, nome, risorsa collegata, abilitazione (TL, PM, PMSenior o nessuna), ruoli (`risorsa`, `controller`, `admin`) e stato attivo, reimpostazione della password. Gli utenti non si cancellano: si disattivano. Un amministratore non può disattivare se stesso né togliersi il ruolo admin. Chi riceve una password provvisoria deve cambiarla al primo accesso (`deveCambiarePassword`).
+- **Primo amministratore.** All'avvio, se non esiste nessun utente con ruolo `admin` e sono impostati `ADMIN_EMAIL` e `ADMIN_PASSWORD_INIZIALE`, il backend lo crea.
 
 ## Moduli
 

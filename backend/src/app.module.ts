@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RouterModule } from '@nestjs/core';
 import { MongooseModule } from '@nestjs/mongoose';
 import type { Connection } from 'mongoose';
+import { AuthModule } from './auth/auth.module.js';
 import { HealthController } from './health.controller.js';
 import { ContestoUtenteMiddleware } from './infrastruttura/contesto-utente.middleware.js';
 import { InfrastrutturaModule } from './infrastruttura/infrastruttura.module.js';
@@ -32,6 +33,7 @@ import { RisorseModule } from './pianificatore/risorse/risorse.module.js';
       }),
     }),
     InfrastrutturaModule,
+    AuthModule,
     PianificatoreModule,
     RouterModule.register([
       {

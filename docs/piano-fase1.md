@@ -12,7 +12,7 @@ La fase 1 prepara ToolPM per la Consuntivazione: accesso con utenti e profili, m
 | --- | --- | --- |
 | B0 — Preparazione | In corso | Codice e documentazione su GitHub (commit del 17/11/2026): test della griglia e del filtro per skill, `/api/health` con il replica set, script `npm run verifica-mongodb`, guida [mongodb-replica-set.md](mongodb-replica-set.md), nuove variabili in `.env.example`. Resta da eseguire sul PC il passaggio di MongoDB a replica set. |
 | B1 — Infrastruttura comune | Fatto | Contesto dell'utente, plugin di tracciamento su tutte le collection, `ParametriService`, script `npm run migra` con le migrazioni `001-parametri` e `002-tracciamento-esistenti`, test (23 in tutto nel backend). Da eseguire sul PC, dopo un backup: `docker compose exec backend npm run migra`. |
-| B2 — Autenticazione | Da fare | |
+| B2 — Autenticazione | Fatto | Collection `utenti`, accesso con email e password (scrypt), token JWT nel cookie httpOnly `toolpm_token`, guard globale con `@Pubblica` e `@Ruoli`, `/api/auth` e `/api/utenti` (solo admin), primo amministratore da `.env`, migrazione `003-indici-utenti`, test (36 in tutto nel backend). `AUTH_OBBLIGATORIA` resta `false` fino al blocco B6. |
 | B3 — Permessi | Da fare | |
 | B4 — Modulo Comuni | Da fare | |
 | B5 — Pianificatore adattato | Da fare | |
@@ -83,7 +83,7 @@ La fase 1 si divide in otto blocchi. Ogni blocco si chiude con codice, test e do
 
 ### B2 — Autenticazione
 
-- Modulo `backend/src/auth/` e collection `utenti`: risorsa collegata, email come nome utente, password cifrata (argon2), abilitazione (TL, PM, PMSenior o nessuna), ruoli applicativi (`risorsa`, `controller`, `admin`), attivo sì/no, ultimo accesso.
+- Modulo `backend/src/auth/` e collection `utenti`: risorsa collegata, email come nome utente, password cifrata (scrypt, incluso in Node.js: argon2 richiederebbe un modulo nativo da compilare nell'immagine Docker), abilitazione (TL, PM, PMSenior o nessuna), ruoli applicativi (`risorsa`, `controller`, `admin`), attivo sì/no, ultimo accesso.
 - API `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`; token JWT in un cookie httpOnly.
 - Guard globale: ogni API richiede l'accesso, salvo quelle marcate `@Pubblica()` (login, `/api/health`).
 - Gestione utenti per l'amministratore: creazione, disattivazione, abilitazione, reimpostazione della password. Nessun invio di email nella fase 1.

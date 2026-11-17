@@ -14,10 +14,13 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('ToolPM — API')
     .setDescription(
-      'API REST di ToolPM. Sezione Pianificatore risorse (/api/pianificatore): risorse, pianificazione mensile e anagrafiche (skills, certificazioni, scale di valutazione). ' +
+      'API REST di ToolPM. Accesso: POST /api/auth/login con email e password (cookie toolpm_token). Sezione Pianificatore risorse (/api/pianificatore): risorse, pianificazione mensile e anagrafiche (skills, certificazioni, scale di valutazione). ' +
         'Le anagrafiche sono suggerimenti: nelle risorse sono ammessi anche valori non presenti lì.',
     )
     .setVersion('1.0')
+    // Accesso: cookie toolpm_token impostato da POST /api/auth/login, oppure token in "Authorization: Bearer".
+    .addCookieAuth('toolpm_token')
+    .addBearerAuth()
     .build();
   SwaggerModule.setup('api/docs', app, () => SwaggerModule.createDocument(app, config), {
     jsonDocumentUrl: 'api/docs-json',

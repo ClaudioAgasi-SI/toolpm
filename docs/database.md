@@ -133,6 +133,24 @@ Univocità del nome e assenza di duplicati sono verificate dal backend (`RateSer
 | `certName` | string | sì | Nome della certificazione |
 | `certType` | string | no | Categoria (es. `developer`, `project management`) |
 
+## Collection `utenti`
+
+Utenti che accedono a ToolPM (fase 1, blocco B2). Indice unico su `email` (migrazione `003-indici-utenti`).
+
+| Campo | Tipo | Obbl. | Note |
+|---|---|---|---|
+| `email` | string | sì | Nome utente; minuscolo, unico |
+| `passwordHash` | string | sì | Hash scrypt; mai restituito dalle API |
+| `nome` | string | | Nome mostrato |
+| `risorsaId` | ObjectId | | Risorsa (persona) collegata |
+| `abilitazione` | string \| null | | `TL`, `PM`, `PMSenior` o `null` |
+| `ruoli` | string[] | | `risorsa`, `controller`, `admin` (default `["risorsa"]`) |
+| `attivo` | boolean | | Default `true`; gli utenti non si cancellano, si disattivano |
+| `deveCambiarePassword` | boolean | | `true` dopo una password provvisoria |
+| `ultimoAccesso` | Date | | Aggiornato a ogni accesso |
+
+Più i campi di tracciamento.
+
 ## Collection `parametri`
 
 Parametri di sistema, un documento per chiave (indice unico su `chiave`). Valori iniziali creati dalla migrazione `001-parametri`.
@@ -152,6 +170,7 @@ Registro delle migrazioni eseguite da `npm run migra`: `_id` è il nome dello sc
 |---|---|
 | `001-parametri` | Crea la collection `parametri` con indice unico e i valori iniziali (non tocca parametri già presenti) |
 | `002-tracciamento-esistenti` | Aggiunge i campi di tracciamento ai documenti di `risorse`, `skills`, `rate`, `certificazioni` che non li hanno, con autore `sistema:migrazione` |
+| `003-indici-utenti` | Indice unico su `utenti.email` |
 
 ## Regole sui dati
 
