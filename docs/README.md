@@ -12,6 +12,7 @@ tenendo conto di skill, importanza strategica e probabilità di allocazione.
 | [database.md](database.md) | MongoDB: collection, schema dei documenti, regole sui dati, indici, import dei dati |
 | [analisi-pianificatore.md](analisi-pianificatore.md) | Sezione Pianificatore risorse allocate: analisi funzionale (requisiti, calcolo della percentuale pesata, regole, limiti attuali) e analisi tecnica di sintesi con le evoluzioni previste |
 | [analisi-consuntivazione.md](analisi-consuntivazione.md) | Sezione Consuntivazione (in analisi): analisi funzionale e tecnica, progetti (stati, stime, percentuale di completamento) e attività, indicatori EVM di tempi e costi, profili di approvazione TL, PM e PMSenior, integrazioni con altri sistemi tramite script di estrazione, modello dei dati su MongoDB |
+| [piano-fase1.md](piano-fase1.md) | Piano della fase 1 (fondamenta): autenticazione e profili, modulo Comuni, permessi, adattamento del Pianificatore, migrazione dei dati, criteri di completamento e rischi |
 
 ## In breve
 
