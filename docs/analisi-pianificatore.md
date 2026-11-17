@@ -163,6 +163,7 @@ Decise durante l'analisi della Consuntivazione ([analisi-consuntivazione.md](ana
 
 1. **Modulo Comuni.** Risorse, ruoli, clienti, progetti (con attività e approvatori) e centri di costo passano in `src/comuni/`, condivisi tra le sezioni. Il Pianificatore li legge da lì.
 2. **Allocazioni collegate ai progetti.** I campi `cliente` e `progetto` delle allocazioni, oggi testo libero, diventano riferimenti all'anagrafica progetti, con una migrazione che associa i testi esistenti.
-3. **Autenticazione e ruoli** su tutte le API, comprese quelle del Pianificatore.
+3. **Autenticazione e profili** su tutte le API, comprese quelle del Pianificatore. Si accede con l'email della risorsa come nome utente. Le risorse le creano i profili PM e PMSenior; le loro caratteristiche (skill, certificazioni, pianificazione e simili) le modificano TL, PM e PMSenior.
 4. **Tracciamento dei salvataggi**: `creatoIl`, `creatoDa`, `modificatoIl`, `modificatoDa` su ogni documento, valorizzati in automatico; migrazione per i documenti esistenti.
 5. **Confronto pianificato e consuntivato**: la Consuntivazione userà le percentuali del Pianificatore per confrontarle con le ore effettivamente lavorate.
+6. **Nuovi dati della risorsa**: email (obbligatoria e unica, usata come nome utente) e cellulare.

@@ -1,16 +1,22 @@
 # ToolPM — Consuntivazione costi di progetto
 
-16/11/2026 · Claudio Agasi
+17/11/2026 · Claudio Agasi
 
-> Analisi della sezione **Consuntivazione** (nessun codice ancora scritto). Versione di lavoro con commenti: [documento su Claude](https://claude.ai/artifact/DaCYgfRoJpWhxxaWgQYMFt). Questo file è la copia salvata nel repository al 16/11/2026.
+> Analisi della sezione **Consuntivazione** (nessun codice ancora scritto). Versione di lavoro con commenti: [documento su Claude](https://claude.ai/artifact/DaCYgfRoJpWhxxaWgQYMFt). Questo file è la copia salvata nel repository al 17/11/2026.
 
 ## Introduzione
 
-La nuova sezione **Consuntivazione** di ToolPM raccoglie le ore lavorate da ogni risorsa, giorno per giorno e progetto per progetto, e ne ricava il costo del personale per progetto e per centro di costo. Il documento contiene l'analisi funzionale, l'analisi tecnica e due proposte di database (MongoDB e relazionale) messe a confronto. Non è stato ancora scritto codice.
+La nuova sezione **Consuntivazione** di ToolPM raccoglie le ore lavorate da ogni risorsa, giorno per giorno e progetto per progetto, e ne ricava il costo del personale per progetto e per centro di costo. Il documento contiene l'analisi funzionale, l'analisi tecnica, le integrazioni con altri sistemi e il modello dei dati su MongoDB, il database scelto per tutto ToolPM. Non è stato ancora scritto codice.
 
 *Revisione del 16/11/2026: aggiornata con le risposte ai punti aperti (tipologie di costo configurabili, tariffe standard per ruolo e personalizzate, più approvatori per progetto, nessun cambio di centro di costo) e con la dimensione aziendale di circa 200 dipendenti.*
 
 *Revisione successiva: aggiunte le attività di progetto (si può consuntivare su un'attività invece che sul progetto), la vista del costo del singolo progetto, le procedure di esportazione per integrazioni future e i campi di ultimo salvataggio e utente su tutti i dati.*
+
+*Revisione del 17/11/2026: confermate le sette ipotesi rimaste aperte; dati comuni in un modulo Comuni (`/api/comuni`); approvazione su due livelli con i profili approvatore TL (supervisione, facoltativa) e approvatore PM (convalida, obbligatoria).*
+
+*Revisione del 17/11/2026, seconda parte: anagrafica completa del progetto (titolo, descrizione, cliente, date, quattro stime impostate a mano), stati In valutazione, In corso e Chiuso, progetti creati da TL e PM, stima in giorni facoltativa sulle attività.*
+
+*Revisione del 17/11/2026, terza parte: nuovo profilo approvatore PMSenior; chi gestisce clienti, centri di costo, progetti, attività e risorse; email (nome utente) e cellulare delle risorse; date del progetto facoltative fino ai passaggi In corso e Chiuso.*
 
 **Perimetro.** Sono inclusi i costi delle circa 200 risorse interne (programmatori, analisti, designer UI/UX, project manager, team leader, architetti IT, sistemisti, tester e altri ruoli). Restano fuori, per ora: ferie, permessi e malattia; integrazione con paghe o HR; costi non legati al personale (licenze, hardware, trasferte); ricavi e fatturazione. Il modello è pensato per poterli aggiungere in seguito.
 
@@ -20,10 +26,10 @@ La nuova sezione **Consuntivazione** di ToolPM raccoglie le ore lavorate da ogni
 | --- | --- |
 | Risorsa | Persona che lavora sui progetti. È la stessa entità già usata dal Pianificatore. |
 | Ruolo | Profilo professionale della risorsa (es. analista, tester). Determina la tariffa standard. |
-| Progetto | Attività su cui si consuntivano ore, per un cliente oppure interna. Ha un solo centro di costo e uno o più approvatori. |
+| Progetto | Lavoro su cui si consuntivano ore, per un cliente oppure interno. Ha uno stato (In valutazione, In corso, Chiuso), date di inizio e fine e quattro stime impostate a mano. Ha un solo centro di costo, almeno un approvatore PM e, se serve, uno o più approvatori TL. |
 | Attività | Parte di un progetto (es. analisi, sviluppo, collaudo) su cui si può consuntivare al posto del progetto. Appartiene a un solo progetto. |
 | Centro di costo (CdC) | Contenitore contabile che riceve i costi di uno o più progetti. |
-| Approvatore | Persona che approva le ore consuntivate su un progetto e sulle sue attività. Un progetto può averne più d'uno. |
+| Approvatore | Persona a cui, su un progetto, è assegnato un profilo di approvazione. Approvatore TL: supervisiona e dà un primo via libera, facoltativo. Approvatore PM: convalida in modo definitivo; solo la sua approvazione rende valida una riga. Approvatore PMSenior: tutto ciò che fa il PM, più la creazione di clienti, centri di costo e risorse. Il profilo non dipende dal ruolo della persona nel progetto. |
 | Tipologia di costo | Tipo di ora con un proprio costo orario: ordinaria, straordinaria, straordinaria notturna, straordinaria festiva, più quelle che si vorranno aggiungere. |
 | Tariffa standard | Costo orario per tipologia, valido per tutte le risorse di un ruolo in un intervallo di date. |
 | Tariffa personalizzata | Costo orario per tipologia di una singola risorsa, in un intervallo di date. Prevale sulla tariffa standard. |
@@ -32,22 +38,32 @@ La nuova sezione **Consuntivazione** di ToolPM raccoglie le ore lavorate da ogni
 
 ## Analisi funzionale
 
-Ogni giorno la risorsa dichiara quante ore ha lavorato, su quali progetti o attività di progetto e con quale tipologia di costo. Il sistema valorizza ogni ora con la tariffa applicabile alla risorsa in quella data: quella personalizzata se c'è, altrimenti quella standard del suo ruolo. Ogni approvatore approva le righe dei propri progetti. I costi approvati si vedono a tre livelli: per attività, per singolo progetto e per centro di costo. Il costo di una riga su un'attività alimenta l'attività, il progetto a cui appartiene e il centro di costo di quel progetto.
+Ogni giorno la risorsa dichiara quante ore ha lavorato, su quali progetti o attività di progetto e con quale tipologia di costo. Il sistema valorizza ogni ora con la tariffa applicabile alla risorsa in quella data: quella personalizzata se c'è, altrimenti quella standard del suo ruolo. L'approvatore TL del progetto può dare un primo via libera; la riga diventa valida solo con l'approvazione dell'approvatore PM. I costi approvati si vedono a tre livelli: per attività, per singolo progetto e per centro di costo. Il costo di una riga su un'attività alimenta l'attività, il progetto a cui appartiene e il centro di costo di quel progetto.
 
 ![Modello dei dati: 12 entità](img/consuntivazione/modello-dati.png)
 
-La riga di consuntivo appartiene alla giornata di una risorsa, punta sempre a un progetto e, se la risorsa ha scelto un'attività, anche all'attività (linea tratteggiata, facoltativa). Da progetto e attività il costo risale al centro di costo. La tariffa si cerca prima tra quelle personalizzate della risorsa, poi tra quelle standard del suo ruolo. La linea blu collega i progetti ai loro approvatori, che sono risorse.
+La riga di consuntivo appartiene alla giornata di una risorsa, punta sempre a un progetto e, se la risorsa ha scelto un'attività, anche all'attività (linea tratteggiata, facoltativa). Da progetto e attività il costo risale al centro di costo. La tariffa si cerca prima tra quelle personalizzate della risorsa, poi tra quelle standard del suo ruolo. La linea blu collega i progetti ai loro approvatori, che sono risorse con un profilo TL o PM.
 
 ### Decisioni prese
 
 | Tema | Decisione |
 | --- | --- |
 | Tipologie di costo | Configurabili da chi censisce i costi. Si parte da ordinaria, straordinaria, straordinaria notturna, straordinaria festiva; se ne possono aggiungere altre (es. una straordinaria notturna festiva con tariffa propria). Il sistema non decide quale tipologia si applica: la sceglie la risorsa. |
-| Tariffe | Standard per ruolo; in più, tariffa personalizzata per la singola risorsa, che prevale sulla standard. |
+| Tariffe | Standard per ruolo; in più, tariffa personalizzata per la singola risorsa, che prevale sempre sulla standard per le tipologie che contiene. Per le altre tipologie vale la standard. Una tipologia senza alcuna tariffa lascia la riga "da valorizzare". |
 | Progetto e centro di costo | Un progetto ha un solo centro di costo, che non cambia nel tempo e non si ripartisce. |
-| Attività | Un progetto può avere attività. Si consuntiva sul progetto oppure su una sua attività; il costo di un'attività alimenta il suo progetto e il centro di costo del progetto. |
+| Attività | Un progetto può avere attività. Si consuntiva sul progetto oppure su una sua attività; il costo di un'attività alimenta il suo progetto e il centro di costo del progetto. Le attività hanno un solo livello, senza sotto-attività. Un progetto con attività accetta anche ore dirette, salvo che sia attiva l'opzione "solo su attività" (disattivata di default). |
 | Visibilità dei costi | Oltre al totale per centro di costo, si vede il costo del singolo progetto e, al suo interno, il dettaglio per attività. |
-| Approvazione | Ogni progetto ha uno o più approvatori; ciascuno approva le ore consuntivate sui progetti di cui è approvatore, comprese quelle sulle loro attività. |
+| Approvazione | Su due livelli, per ogni riga (anche su attività). L'approvatore TL supervisiona e dà un primo via libera, che non è obbligatorio. Solo l'approvazione dell'approvatore PM rende valida la riga e la fa entrare nei costi. Se ci sono più PM, o più TL, basta l'approvazione di uno di loro. |
+| Profili di approvazione | Tre profili, indipendenti dal ruolo che la persona ha nel progetto: approvatore TL, approvatore PM e approvatore PMSenior. Ogni utente ha un'abilitazione generale a uno dei tre; sul singolo progetto è assegnato come TL o come PM (almeno un PM obbligatorio, TL facoltativi). Chi crea un progetto ne diventa approvatore con il proprio profilo. Il PMSenior può fare tutto ciò che fa il PM, più quanto indicato in "Chi gestisce le anagrafiche". |
+| Regole di approvazione | Il TL approva le ore consuntivate sul progetto e sulle sue attività e può respingere una riga, con motivazione. Una riga inviata di nuovo dopo un rifiuto riparte senza via libera del TL. La stessa persona può essere TL e PM sullo stesso progetto; in quel caso approva direttamente come PM. I profili sono TL, PM e PMSenior, valori fissi. |
+| Gestione delle attività | Le attività di un progetto le creano e le modificano solo gli approvatori TL e PM di quel progetto e i PMSenior, nessun altro utente. |
+| Chi gestisce le anagrafiche | Clienti e centri di costo: PMSenior. Progetti: TL, PM e PMSenior. Attività: TL e PM del progetto, PMSenior. Risorse: PM e PMSenior. Caratteristiche delle risorse (skill, certificazioni, pianificazione e simili): TL, PM e PMSenior. |
+| Risorse | Ogni risorsa ha un'email, obbligatoria e usata anche come nome utente per accedere al sistema, e un numero di cellulare. |
+| Creazione dei progetti | Un progetto lo crea un TL, un PM o un PMSenior, che ne diventa approvatore con il proprio profilo. È sempre legato a un centro di costo; il cliente è facoltativo (progetto interno). Le attività sono sempre legate a un progetto. |
+| Stati del progetto | In valutazione, In corso, Chiuso. Non si consuntiva su un progetto Chiuso né sulle sue attività. Le date sono facoltative: l'inizio diventa obbligatorio quando il progetto passa In corso, la fine quando passa a Chiuso. |
+| Stime e consuntivato | Il progetto ha quattro stime impostate a mano da chi lo modifica, mai calcolate: manageriale in giorni, manageriale in euro, definitiva in giorni (effort), definitiva in euro. Il consuntivato è invece sempre calcolato dalle righe sul progetto e sulle sue attività. Le attività hanno una stima in giorni facoltativa, che non concorre alle stime del progetto. |
+| Dati comuni | Risorse, ruoli, clienti, progetti con attività e approvatori, centri di costo passano in un modulo Comuni (/api/comuni), condiviso da tutte le sezioni. Il Pianificatore li legge da lì. |
+| Budget | Nessun budget separato: il riferimento sono le stime del progetto, confrontate con il consuntivato. |
 | Ferie, permessi, malattia | Esclusi per ora; possibile estensione futura. |
 | Paghe e HR | Nessuna integrazione per ora; possibile estensione futura tramite procedure di esportazione. |
 | Dimensione | Circa 200 dipendenti. |
@@ -57,17 +73,19 @@ La riga di consuntivo appartiene alla giornata di una risorsa, punta sempre a un
 | Attore | Cosa fa |
 | --- | --- |
 | Risorsa | Inserisce e invia il proprio consuntivo. Vede solo le proprie ore, non le tariffe né i costi. |
-| Approvatore di progetto | Approva o respinge le righe consuntivate sui progetti di cui è approvatore. Vede ore e costi di quei progetti. |
-| Controller / amministrazione | Gestisce centri di costo, tipologie di costo, tariffe standard e personalizzate. Chiude i periodi. Vede tutti i costi. |
-| Amministratore di sistema | Gestisce utenti, ruoli applicativi e anagrafiche comuni. |
+| Approvatore TL | Supervisore (una specie di Team Leader). Può creare progetti. Sui progetti a cui è assegnato controlla le righe inviate (ore, straordinari, attività) e dà un primo via libera, che segnala al PM la sua supervisione ma non rende valida la riga. Crea e modifica le attività dei propri progetti. Vede ore e tipologie, non tariffe né costi. |
+| Approvatore PM | Una specie di Project Manager. Può creare progetti. Sui progetti a cui è assegnato approva in modo definitivo o respinge le righe, con o senza il via libera del TL. Solo la sua approvazione rende valida la riga. Crea e modifica le attività dei propri progetti. Vede ore e costi di quei progetti. |
+| Approvatore PMSenior | Fa tutto ciò che fa il PM. In più crea clienti e centri di costo e, come il PM, risorse; crea e modifica progetti e attività e le caratteristiche delle risorse. |
+| Controller / amministrazione | Gestisce tipologie di costo, tariffe standard e personalizzate. Chiude i periodi. Vede tutti i costi. |
+| Amministratore di sistema | Gestisce utenti, abilitazioni (TL, PM, PMSenior) e ruoli applicativi. |
 
 ### Requisiti funzionali
 
 **Anagrafiche**
 
-1. **RF-01 Clienti e progetti.** Codice univoco, descrizione, cliente (facoltativo per i progetti interni), date di inizio e fine, stato (attivo, sospeso, chiuso), centro di costo, uno o più approvatori. Il centro di costo non si può cambiare dopo il primo consuntivo. Il Pianificatore userà la stessa anagrafica al posto del testo libero di oggi.
-2. **RF-02 Centri di costo.** Codice, descrizione, stato. Un centro di costo riceve i costi di uno o più progetti.
-3. **RF-03 Risorse e ruoli.** Si riusa l'anagrafica risorse del Pianificatore, aggiungendo matricola, utente di accesso, date di ingresso e uscita, orario contrattuale giornaliero e ruolo. Il ruolo ha uno storico con data di decorrenza, perché da esso dipende la tariffa standard.
+1. **RF-01 Clienti e progetti.** Il progetto lo crea un TL, un PM o un PMSenior; i clienti li crea il PMSenior. Attributi: codice identificativo univoco, titolo, descrizione, cliente (facoltativo: assente nei progetti interni), data di inizio e data di fine, stato (RF-26), centro di costo (obbligatorio), le quattro stime (RF-24), opzione "solo su attività", approvatori con il loro profilo (almeno un PM; TL facoltativi). Il centro di costo non si può cambiare dopo il primo consuntivo. Il Pianificatore userà la stessa anagrafica al posto del testo libero di oggi.
+2. **RF-02 Centri di costo.** Codice, descrizione, stato. Un centro di costo riceve i costi di uno o più progetti. Li crea il PMSenior.
+3. **RF-03 Risorse e ruoli.** Si riusa l'anagrafica risorse del Pianificatore, aggiungendo email (obbligatoria, unica, usata come nome utente per l'accesso), cellulare, matricola, date di ingresso e uscita, orario contrattuale giornaliero e ruolo. Il ruolo ha uno storico con data di decorrenza, perché da esso dipende la tariffa standard. Le risorse le creano PM e PMSenior; le caratteristiche (skill, certificazioni, pianificazione e simili) le modificano TL, PM e PMSenior.
 4. **RF-04 Tipologie di costo.** Anagrafica configurabile: codice, descrizione, ordine di visualizzazione, categoria (ordinaria o straordinaria), attiva sì/no. Una tipologia usata non si cancella, si disattiva.
 5. **RF-05 Tariffe standard per ruolo.** Per ogni ruolo e tipologia di costo, un costo orario con data di inizio validità (e una di fine facoltativa).
 6. **RF-06 Tariffe personalizzate.** Per una singola risorsa e una o più tipologie, un costo orario con validità. Prevale sulla tariffa standard del ruolo.
@@ -78,7 +96,7 @@ La riga di consuntivo appartiene alla giornata di una risorsa, punta sempre a un
 8. **RF-08 Vista settimanale.** Griglia progetti e attività × giorni con totali per riga e per giorno. Propone i progetti su cui la risorsa è allocata nel Pianificatore in quel mese.
 9. **RF-09 Copia.** Copia del giorno o della settimana precedente come bozza.
 10. **RF-10 Invio.** La risorsa invia una o più giornate: tutte le righe passano in attesa di approvazione.
-11. **RF-11 Approvazione per progetto.** Ogni approvatore vede, in un elenco, le righe inviate sui propri progetti e le approva o respinge, anche in blocco, con motivazione per il rifiuto. Le righe della stessa giornata su progetti diversi seguono strade indipendenti. Le righe respinte tornano modificabili dalla risorsa.
+11. **RF-11 Approvazione su due livelli.** L'approvatore TL vede, in un elenco, le righe inviate sui propri progetti e dà il via libera o le respinge, anche in blocco, con motivazione per il rifiuto. L'approvatore PM vede le righe inviate e quelle già approvate dal TL, distinte da una colonna "via libera TL" (chi e quando), e le approva in modo definitivo o le respinge, anche in blocco. Il via libera del TL non è obbligatorio. Le righe della stessa giornata su progetti diversi seguono strade indipendenti. Le righe respinte tornano modificabili dalla risorsa.
 12. **RF-12 Chiusura del periodo.** Il controller chiude un mese: le righe del mese non sono più modificabili, salvo riapertura motivata.
 
 **Costi e report**
@@ -92,11 +110,17 @@ La riga di consuntivo appartiene alla giornata di una risorsa, punta sempre a un
 
 **Attività di progetto**
 
-19. **RF-19 Anagrafica attività.** Per ogni progetto, un elenco di attività: codice (univoco nel progetto), descrizione, date di inizio e fine facoltative, stato (attiva, chiusa). Un'attività appartiene a un solo progetto e non si sposta su un altro dopo il primo consuntivo.
+19. **RF-19 Anagrafica attività.** Per ogni progetto, un elenco di attività: codice (univoco nel progetto), descrizione, date di inizio e fine facoltative, stato (attiva, chiusa), stima in giorni facoltativa. Un'attività appartiene a un solo progetto e non si sposta su un altro dopo il primo consuntivo. Le attività le creano e le modificano solo gli approvatori TL e PM del progetto e i PMSenior.
 20. **RF-20 Consuntivazione su attività.** In ogni riga la risorsa sceglie il progetto oppure una sua attività. Scegliendo l'attività, il progetto è implicito.
 21. **RF-21 Ribaltamento dei costi.** Il costo di una riga su un'attività si somma all'attività, al progetto a cui l'attività appartiene e al centro di costo di quel progetto, una sola volta per livello.
 22. **RF-22 Costo per attività.** Ore e costo per attività in un periodo, dentro la scheda del progetto e nei report, con dettaglio per risorsa e tipologia di costo.
-23. **RF-23 Approvazione delle attività.** Le righe su un'attività le approvano gli approvatori del progetto a cui l'attività appartiene.
+23. **RF-23 Approvazione delle attività.** Le righe su un'attività le approvano gli approvatori TL e PM del progetto a cui l'attività appartiene, con le stesse regole.
+
+**Progetto: stime e ciclo di vita**
+
+24. **RF-24 Stime del progetto.** Quattro valori impostati a mano da chi modifica il progetto, mai calcolati: stima manageriale in giorni, stima manageriale in euro, stima definitiva in giorni (effort), stima definitiva in euro. La stima in giorni delle attività, facoltativa, non concorre a nessuna di queste.
+25. **RF-25 Consuntivato del progetto.** Ore, giorni e costo consuntivati sono sempre calcolati dalle righe approvate dal PM sul progetto e sulle sue attività. La scheda del progetto li affianca alle stime: giorni consuntivati contro stime in giorni, costo contro stime in euro; per ogni attività, giorni consuntivati contro la sua stima, se c'è.
+26. **RF-26 Stati del progetto.** In valutazione, In corso, Chiuso. Non si consuntiva su un progetto Chiuso né sulle sue attività: la griglia della risorsa non li propone e il backend rifiuta righe nuove o modificate su di essi. Le date di inizio e di fine sono facoltative: l'inizio è obbligatorio per passare In corso, la fine per passare a Chiuso.
 
 ### Calcolo del costo
 
@@ -127,7 +151,7 @@ Esempio con valori ipotetici. Il ruolo "Sviluppatore senior" ha tariffe standard
 | B | Collaudo | Ordinaria | 2 | Personalizzata | 32 | 64 |
 | **Totale** |  |  | **10** |  |  | **334** |
 
-Quel giorno l'attività "Sviluppo" costa 192 € e il progetto A 270 €: 192 € dall'attività più 78 € consuntivati direttamente sul progetto. Il progetto B costa 64 €, tutti dall'attività "Collaudo". Il centro di costo di A riceve 270 €, quello di B 64 €. Le righe di A e di B possono essere approvate da persone diverse e in momenti diversi; ciascuna entra nei report solo dopo la propria approvazione.
+Quel giorno l'attività "Sviluppo" costa 192 € e il progetto A 270 €: 192 € dall'attività più 78 € consuntivati direttamente sul progetto. Il progetto B costa 64 €, tutti dall'attività "Collaudo". Il centro di costo di A riceve 270 €, quello di B 64 €. Le righe di A e di B possono essere approvate da persone diverse e in momenti diversi; ciascuna entra nei report solo dopo l'approvazione del PM del proprio progetto.
 
 ### Regole di business
 
@@ -139,20 +163,23 @@ Quel giorno l'attività "Sviluppo" costa 192 € e il progetto A 270 €: 192 �
 - Si consuntiva solo su progetti e attività attivi alla data, con tipologie attive, tra data di ingresso e di uscita della risorsa.
 - Il costo di una riga si conta una sola volta per livello: nell'attività (se c'è), nel progetto e nel centro di costo. I totali di progetto non sommano due volte le righe delle attività.
 - Il costo calcolato si memorizza sulla riga con la tariffa usata e la sua provenienza (personalizzata o standard): i report non cambiano se una tariffa cambia in seguito, salvo ricalcolo esplicito (RF-18).
-- Una riga approvata non si modifica più; per correggerla l'approvatore deve prima respingerla.
+- Una riga approvata non si modifica più; per correggerla un approvatore PM deve prima respingerla.
+- Un progetto non si può attivare senza almeno un approvatore PM. I TL sono facoltativi.
+- Solo le righe approvate dal PM (o in un mese chiuso) entrano nei costi, nei report e nelle esportazioni; il solo via libera del TL non basta.
+- Su un progetto Chiuso, e sulle sue attività, non si possono creare né modificare righe.
 - Ogni modifica a righe approvate, tariffe, tipologie, attività e approvatori viene registrata (chi, quando, valore prima e dopo).
 
 ### Stati di una riga
 
-L'approvazione avviene per progetto, quindi lo stato appartiene alla singola riga. Lo stato della giornata è un riepilogo (es. "3 righe approvate su 4").
+L'approvazione avviene per progetto e su due livelli (TL facoltativo, PM obbligatorio), quindi lo stato appartiene alla singola riga. Lo stato della giornata è un riepilogo (es. "3 righe approvate su 4").
 
 ![Stati di una riga di consuntivo](img/consuntivazione/stati-riga.png)
 
-Le righe della stessa giornata su progetti diversi passano per questi stati in modo indipendente. Un mese chiuso si può riaprire solo dal controller, con motivazione registrata nello storico.
+Le righe della stessa giornata su progetti diversi passano per questi stati in modo indipendente. Il PM può approvare sia una riga inviata sia una già approvata dal TL: in entrambi i casi la riga diventa approvata e conta nei costi. Un mese chiuso si può riaprire solo dal controller, con motivazione registrata nello storico.
 
 ### Requisiti non funzionali
 
-- **Riservatezza.** Tariffe e costi li vedono solo il controller e, per i propri progetti, gli approvatori. Serve un'autenticazione con utenti e ruoli, che oggi ToolPM non ha.
+- **Riservatezza.** Tariffe e costi li vedono solo il controller e, per i propri progetti, gli approvatori PM. Gli approvatori TL vedono ore e tipologie, non tariffe né costi. Serve un'autenticazione con utenti e ruoli, che oggi ToolPM non ha.
 - **Volumi.** Con 200 risorse, circa 220 giorni lavorativi e 3 righe al giorno: circa 44.000 giornate e 130.000 righe l'anno, 1,3 milioni in dieci anni.
 - **Prestazioni.** Report annuali su tutte le risorse in pochi secondi; inserimento di una settimana tipica in meno di due minuti.
 - **Concorrenza.** Più approvatori possono agire nello stesso momento su righe della stessa giornata, anche mentre la risorsa ne modifica altre.
@@ -161,15 +188,18 @@ Le righe della stessa giornata su progetti diversi passano per questi stati in m
 
 ### Punti ancora aperti
 
-Le risposte hanno chiuso tutti i punti precedenti. Restano alcuni dettagli, per ciascuno dei quali il documento adotta l'ipotesi indicata.
+Il 17/11/2026 sono stati confermati: abilitazione generale TL, PM o PMSenior per creare progetti (chi crea ne diventa approvatore) e date facoltative fino ai passaggi In corso e Chiuso. Restano questi punti; per ciascuno il documento adotta l'ipotesi indicata. Gli altri attributi del progetto saranno definiti più avanti.
 
-- [ ] Con più approvatori sullo stesso progetto basta l'approvazione di uno solo? *Ipotesi: sì.*
-- [ ] La tariffa personalizzata prevale sempre sulla standard, o si usa solo quando la risorsa non ha un ruolo con tariffe standard? *Ipotesi: prevale sempre, per le tipologie che contiene.*
-- [ ] Una tariffa personalizzata che copre solo alcune tipologie si integra con le standard per le altre? *Ipotesi: sì, come nell'esempio.*
-- [ ] Una tipologia di costo aggiunta in futuro senza tariffe definite: le righe restano "da valorizzare"? *Ipotesi: sì.*
-- [ ] Le attività possono avere sotto-attività? *Ipotesi: no, un solo livello sotto il progetto.*
-- [ ] Un progetto con attività può ricevere ore anche direttamente, o va imposto di consuntivare solo sulle attività? *Ipotesi: entrambe le cose sono possibili, con un'impostazione per progetto "solo su attività", disattivata di default.*
-- [ ] Serve un budget (ore o importo) per progetto o per attività, da confrontare con il consuntivato? *Ipotesi: non ora; il modello può accoglierlo in seguito.*
+- [ ] Si può consuntivare su un progetto In valutazione (es. ore di analisi o di offerta)? *Ipotesi: sì; blocca solo lo stato Chiuso.*
+- [ ] Quali passaggi di stato sono ammessi e chi li fa? *Ipotesi: In valutazione → In corso → Chiuso, decisi da TL o PM del progetto o da un PMSenior; un progetto Chiuso può tornare In corso solo per decisione di un PM o PMSenior.*
+- [ ] Le righe già inviate quando il progetto viene chiuso? *Ipotesi: restano approvabili e respingibili; non se ne aggiungono né se ne modificano.*
+- [ ] Per confrontare ore consuntivate e stime in giorni, quante ore vale un giorno? *Ipotesi: 8 ore, come parametro configurabile.*
+- [ ] Il TL non vede tariffe né costi: può vedere e impostare le stime in euro del progetto? *Ipotesi: sì, sono valori del progetto; continua a non vedere tariffe e costo consuntivato.*
+- [ ] Il PMSenior "fa tutto ciò che fa il PM": su tutti i progetti o solo su quelli a cui è assegnato? *Ipotesi: crea e modifica progetti e attività di tutti i progetti; approva le righe come PM, e ne vede i costi, solo dove è assegnato.*
+- [ ] Chi assegna a un utente l'abilitazione TL, PM o PMSenior? *Ipotesi: l'amministratore di sistema.*
+- [ ] Chi modifica ruolo professionale e orario contrattuale di una risorsa, da cui dipende la tariffa? *Ipotesi: PM e PMSenior, come gli altri dati anagrafici; le tariffe restano al controller.*
+- [ ] Il TL modifica le caratteristiche di tutte le risorse o solo di chi lavora sui suoi progetti? *Ipotesi: di tutte.*
+- [ ] Il cellulare è obbligatorio? *Ipotesi: no; l'email è obbligatoria e unica.*
 
 ## Analisi tecnica
 
@@ -179,7 +209,7 @@ La Consuntivazione diventa la seconda sezione di ToolPM, con la stessa struttura
 
 | Modulo | Cartella | Prefisso API | Contenuto |
 | --- | --- | --- | --- |
-| Comuni | `src/comuni/` | `/api/comuni` | Risorse (spostate dal Pianificatore) con storico dei ruoli, ruoli professionali, clienti, progetti con approvatori e attività, centri di costo |
+| Comuni | `src/comuni/` | `/api/comuni` | Risorse (spostate dal Pianificatore) con storico dei ruoli, ruoli professionali, clienti, progetti con approvatori (profilo TL o PM) e attività, centri di costo |
 | Auth | `src/auth/` | `/api/auth` | Login, token JWT, guard per ruolo applicativo, utente corrente |
 | Pianificatore | `src/pianificatore/` | `/api/pianificatore` | Invariato; legge risorse e progetti dal modulo Comuni |
 | Consuntivazione | `src/consuntivazione/` | `/api/consuntivazione` | Tipologie di costo, tariffe standard e personalizzate, consuntivi, approvazioni, chiusura periodi, calcolo costi, report |
@@ -191,9 +221,11 @@ I moduli si registrano come oggi con `RouterModule` in `app.module.ts`. Lo spost
 
 | Metodo | Percorso | Chi | Descrizione |
 | --- | --- | --- | --- |
-| GET / POST / PUT | `/api/comuni/progetti`, `/clienti`, `/centri-costo`, `/ruoli` | Controller, admin | Anagrafiche; il centro di costo di un progetto è bloccato dopo il primo consuntivo |
-| PUT | `/api/comuni/progetti/:id/approvatori` | Controller, admin | Elenco degli approvatori del progetto |
-| GET / POST / PUT | `/api/comuni/progetti/:id/attivita` | Controller, approvatore del progetto | Attività del progetto; il progetto di un'attività è bloccato dopo il primo consuntivo |
+| GET / POST / PUT | `/api/comuni/progetti`, `/clienti`, `/centri-costo`, `/ruoli` | Progetti: creazione da TL, PM e PMSenior; modifica da TL e PM del progetto e da PMSenior. Clienti e centri di costo: PMSenior. Ruoli: admin | Anagrafiche; il centro di costo di un progetto è bloccato dopo il primo consuntivo. Il progetto porta titolo, descrizione, date, stato e le quattro stime |
+| GET / POST / PUT | `/api/comuni/risorse` | Creazione e dati anagrafici: PM, PMSenior. Caratteristiche (skill, certificazioni, pianificazione): TL, PM, PMSenior | Risorse con email (obbligatoria, unica, nome utente) e cellulare |
+| POST | `/api/comuni/progetti/:id/stato` | TL e PM del progetto, PMSenior | Passaggio di stato (In valutazione, In corso, Chiuso); riapertura di un progetto Chiuso solo da PM o PMSenior; inizio obbligatorio per In corso, fine per Chiuso |
+| PUT | `/api/comuni/progetti/:id/approvatori` | TL e PM del progetto, PMSenior, admin | Elenco degli approvatori del progetto, ciascuno con il profilo TL o PM |
+| GET / POST / PUT | `/api/comuni/progetti/:id/attivita` | Lettura: controller e approvatori del progetto. Scrittura: approvatori TL e PM del progetto, PMSenior | Attività del progetto; il progetto di un'attività è bloccato dopo il primo consuntivo |
 | GET / POST / PUT | `/api/consuntivazione/tipologie-costo` | Controller | Tipologie configurabili; disattivazione invece di cancellazione |
 | GET / POST / PUT | `/api/consuntivazione/tariffe-standard?ruolo=` | Controller | Tariffe per ruolo e tipologia, con validità |
 | GET / POST / PUT | `/api/consuntivazione/risorse/:id/tariffe-personalizzate` | Controller | Tariffe della singola risorsa, con validità |
@@ -201,28 +233,28 @@ I moduli si registrano come oggi con `RouterModule` in `app.module.ts`. Lo spost
 | GET | `/api/consuntivazione/consuntivi?da=&a=` | Risorsa (proprie), controller | Consuntivi del periodo |
 | PUT | `/api/consuntivazione/consuntivi/:data` | Risorsa | Crea o aggiorna le righe in bozza o respinte della giornata; ogni riga indica il progetto o l'attività |
 | POST | `/api/consuntivazione/consuntivi/invio` | Risorsa | Invia un insieme di giornate |
-| GET | `/api/consuntivazione/approvazioni?progetto=&attivita=&stato=inviata` | Approvatore | Righe da approvare sui propri progetti e sulle loro attività |
-| POST | `/api/consuntivazione/approvazioni` | Approvatore | Approva o respinge un elenco di righe, con motivazione |
+| GET | `/api/consuntivazione/approvazioni?progetto=&attivita=&stato=inviata` | Approvatore | Righe da approvare sui propri progetti e sulle loro attività: al TL le inviate, al PM anche quelle con il via libera del TL |
+| POST | `/api/consuntivazione/approvazioni` | Approvatore | Approva o respinge un elenco di righe, con motivazione. L'approvazione del TL porta le righe in approvataTL, quella del PM in approvata |
 | POST | `/api/consuntivazione/periodi/:mese/chiudi`, `/riapri` | Controller | Chiusura del mese |
-| GET | `/api/consuntivazione/report/progetti/:id?da=&a=` | Approvatore del progetto, controller | Scheda costi del progetto: totale, dettaglio per attività (più la voce "senza attività"), risorsa, tipologia, mese |
+| GET | `/api/consuntivazione/report/progetti/:id?da=&a=` | Approvatore del progetto, controller | Scheda del progetto: stime e consuntivato a confronto (giorni ed euro), totale, dettaglio per attività con la loro stima in giorni (più la voce "senza attività"), risorsa, tipologia, mese |
 | GET | `/api/consuntivazione/report/costi?raggruppa=cdc\|progetto\|attivita\|risorsa\|ruolo\|tipologia&da&a` | Approvatore (propri progetti), controller | Totali ore e costi, anche annidati (es. centro di costo → progetto → attività) |
 | GET | `/api/consuntivazione/report/pianificato-vs-consuntivato?mese=AAAAMM` | Approvatore, controller | Confronto con il Pianificatore |
 | POST | `/api/consuntivazione/ricalcolo` | Controller | Anteprima e applicazione del ricalcolo dopo una correzione di tariffa |
 
-Le risposte per la risorsa non contengono mai tariffe né importi; quelle per l'approvatore solo i progetti di cui è approvatore. I filtri stanno nel backend.
+Le risposte per la risorsa non contengono mai tariffe né importi; quelle per l'approvatore solo i progetti di cui è approvatore e, per il TL, senza tariffe né importi. I filtri stanno nel backend.
 
 ### Pagine del frontend (Angular)
 
 | Percorso | Pagina | Chi |
 | --- | --- | --- |
 | `/toolpm/consuntivazione/settimana` | Il mio consuntivo: griglia progetti e attività × giorni, stato di ogni riga, invio | Risorsa |
-| `/toolpm/consuntivazione/approvazioni` | Righe da approvare, filtrabili per progetto, attività, risorsa e periodo; approvazione in blocco | Approvatore |
-| `/toolpm/consuntivazione/progetti/:id` | Scheda costi del progetto: totale, andamento mensile, dettaglio per attività, risorsa e tipologia | Approvatore del progetto, controller |
+| `/toolpm/consuntivazione/approvazioni` | Righe da approvare, filtrabili per progetto, attività, risorsa e periodo; approvazione in blocco; per il PM, colonna e filtro "via libera TL" | Approvatore |
+| `/toolpm/consuntivazione/progetti/:id` | Scheda del progetto: stime contro consuntivato in giorni ed euro (per il TL senza costo consuntivato), totale, andamento mensile, dettaglio per attività, risorsa e tipologia | Approvatore del progetto, controller |
 | `/toolpm/consuntivazione/costi` | Report costi per centro di costo, progetto e attività, con esportazione | Approvatore, controller |
 | `/toolpm/consuntivazione/tipologie` | Tipologie di costo | Controller |
 | `/toolpm/consuntivazione/tariffe` | Tariffe standard per ruolo e personalizzate per risorsa, con storico | Controller |
 | `/toolpm/consuntivazione/periodi` | Stato e chiusura dei mesi | Controller |
-| `/toolpm/comuni/...` | Progetti (con approvatori e attività), clienti, centri di costo, ruoli | Controller, admin |
+| `/toolpm/comuni/...` | Progetti (con approvatori e attività), clienti, centri di costo, ruoli | TL, PM e PMSenior (progetti, attività, caratteristiche delle risorse); PM e PMSenior (risorse); PMSenior (clienti, centri di costo); admin (utenti e abilitazioni) |
 
 ### Risoluzione della tariffa e calcolo del costo
 
@@ -245,13 +277,16 @@ Le tariffe sono una lista di voci per tipologia, non campi fissi: una nuova tipo
 - Regole della giornata nel servizio: totale ≤ 24 h, avviso sulle ore ordinarie oltre l'orario contrattuale, periodo non chiuso, righe approvate non modificabili.
 - Una sola giornata per risorsa e data (vincolo di unicità).
 - Tariffe: nessuna sovrapposizione di periodi per la stessa combinazione ruolo + tipologia o risorsa + tipologia.
-- Approvazione: il backend verifica che l'utente sia approvatore del progetto di ogni riga, anche quando la riga è su un'attività.
+- Approvazione: il backend verifica che l'utente sia approvatore del progetto di ogni riga (anche su un'attività) e ammette solo le transizioni del suo profilo. TL: da inviata ad approvataTL o respinta. PM: da inviata o approvataTL ad approvata o respinta, e da approvata a respinta. Un progetto attivo deve avere almeno un PM.
+- Attività: il backend accetta creazione e modifica solo da chi è approvatore TL o PM del progetto.
+- Progetto: codice univoco, centro di costo obbligatorio, date facoltative ma inizio obbligatorio per passare In corso e fine per passare a Chiuso, fine non precedente all'inizio, stime ≥ 0 salvate come le inserisce l'utente e mai ricalcolate. Il backend rifiuta righe nuove o modificate su un progetto Chiuso o sulle sue attività.
+- Risorsa: email obbligatoria, in formato valido e unica (indice unico su `risorse.email`), usata come nome utente.
 - Concorrenza: approvazioni e modifiche aggiornano solo le righe interessate; un numero di versione sulla giornata impedisce che un salvataggio della risorsa sovrascriva un'approvazione avvenuta nel frattempo.
 
 ### Sicurezza
 
 - Autenticazione con utente e password (o in seguito con il sistema aziendale, es. Microsoft Entra ID) e token JWT con scadenza.
-- Ruoli applicativi: `risorsa`, `approvatore` (derivato dall'essere approvatore di almeno un progetto), `controller`, `admin`. Una risorsa è legata a un utente.
+- Ruoli applicativi: `risorsa`, `approvatore` con abilitazione generale TL, PM o PMSenior e profilo TL o PM assegnato sul singolo progetto (i permessi sui progetti si verificano progetto per progetto), `controller`, `admin`. Una risorsa è legata a un utente; il nome utente è l'email della risorsa.
 - Guard NestJS su ogni endpoint; i filtri sui dati (le mie ore, i miei progetti) sono applicati nelle query.
 - Le API del Pianificatore, oggi aperte, vanno protette nello stesso rilascio.
 
@@ -278,19 +313,19 @@ Ogni documento salvato in MongoDB, di qualsiasi collection e sezione (Pianificat
 
 - Test unitari (Vitest) sulla risoluzione della tariffa: personalizzata parziale, cambio di ruolo a metà mese, cambio di tariffa, tariffa mancante, nuova tipologia, arrotondamenti.
 - Test dei totali: righe su attività e direttamente sul progetto nella stessa giornata, verifica che attività + "senza attività" = progetto e che la somma dei progetti = centro di costo.
-- Test degli stati delle righe e dell'approvazione con più approvatori e progetti diversi nella stessa giornata.
+- Test degli stati delle righe e dell'approvazione a due livelli (con e senza via libera del TL), con più approvatori e progetti diversi nella stessa giornata.
 - Test di concorrenza (approvazione e modifica contemporanee) e dei permessi per ogni ruolo.
 
 ### Piano di rilascio proposto
 
-1. **Fase 1 — Fondamenta.** Autenticazione e ruoli; modulo Comuni con progetti, approvatori, clienti, centri di costo e ruoli; migrazione delle risorse e dei progetti del Pianificatore (oggi testi liberi) verso le nuove anagrafiche.
+1. **Fase 1 — Fondamenta.** Autenticazione e ruoli; modulo Comuni con progetti, approvatori con profilo TL o PM, clienti, centri di costo e ruoli; migrazione delle risorse e dei progetti del Pianificatore (oggi testi liberi) verso le nuove anagrafiche.
 2. **Fase 2 — Consuntivazione.** Tipologie di costo, tariffe standard e personalizzate, consuntivo giornaliero e settimanale, calcolo e memorizzazione dei costi.
-3. **Fase 3 — Controllo.** Invio, approvazione per progetto, chiusura dei periodi, storico delle modifiche.
+3. **Fase 3 — Controllo.** Invio, approvazione a due livelli (via libera TL facoltativo, approvazione PM definitiva), chiusura dei periodi, storico delle modifiche.
 4. **Fase 4 — Report.** Costi per progetto e centro di costo, pianificato contro consuntivato, esportazioni.
 
 ## Integrazioni future con contabilità, paghe ed ERP
 
-Le integrazioni con contabilità, paghe ed ERP non richiedono un database relazionale. Si realizzano con procedure pianificate, eseguite una volta al giorno o alla settimana, che leggono i dati da MongoDB, li trasformano nel formato richiesto e li inviano al sistema di destinazione. I dati in MongoDB vengono solo letti: l'unica scrittura è nel registro delle esportazioni. Oggi non servono, ma il modello dei dati è già predisposto.
+ToolPM tiene tutti i dati su MongoDB. Le integrazioni con altri sistemi, compresi quelli basati su database relazionali (contabilità, paghe, ERP, database di analisi), si realizzano con script dedicati, eseguiti come procedure batch pianificate o come servizi. Gli script estraggono i dati da MongoDB, li trasformano in formati adatti a essere caricati nei sistemi relazionali (file CSV o tracciati concordati, chiamate a servizi, scritture in tabelle di appoggio) e li trasferiscono al sistema di destinazione. I dati in MongoDB vengono solo letti: l'unica scrittura è nel registro delle esportazioni. Oggi non servono, ma il modello dei dati è già predisposto.
 
 ![Flusso di esportazione verso i sistemi esterni](img/consuntivazione/flusso-esportazione.png)
 
@@ -335,7 +370,7 @@ I contenuti e i formati effettivi andranno concordati con i fornitori dei sistem
 
 Nel piano di rilascio le integrazioni sono una **fase 5** facoltativa, da avviare quando si conosceranno i sistemi di destinazione. Quello che serve già dalla fase 1 sono i campi `modificatoIl` / `modificatoDa`, la chiusura dei periodi e i codici stabili di progetti, centri di costo e risorse.
 
-## Proposta database MongoDB
+## Modello dei dati su MongoDB
 
 Nel database `toolpm` si aggiungono tredici collection, oltre a `risorse` che esiste già. Il consuntivo resta **un documento per risorsa e giornata**, con le righe incorporate; ogni riga ha ora il proprio stato di approvazione. Le tariffe sono **un documento per tipologia e periodo**, così una nuova tipologia non cambia lo schema.
 
@@ -343,12 +378,12 @@ Nel database `toolpm` si aggiungono tredici collection, oltre a `risorse` che es
 
 | Collection | Un documento = | Note |
 | --- | --- | --- |
-| `risorse` | una persona | Esistente; si aggiungono `matricola`, `utenteId`, `dataIngresso`, `dataUscita`, `oreContrattualiGiorno` e `storicoRuoli` (ruolo + data di decorrenza) |
+| `risorse` | una persona | Esistente; si aggiungono email (unica, nome utente), cellulare, abilitazione (TL, PM, PMSenior o nessuna), `matricola`, `utenteId`, `dataIngresso`, `dataUscita`, `oreContrattualiGiorno` e `storicoRuoli` (ruolo + data di decorrenza) |
 | `ruoli` | un ruolo professionale | Codice, descrizione |
 | `clienti` | un cliente | Codice e ragione sociale |
 | `centri_costo` | un centro di costo | Codice, descrizione, stato |
-| `progetti` | un progetto | Cliente, centro di costo (fisso), `approvatoriIds`, `soloSuAttivita`, date, stato |
-| `attivita` | un'attività di un progetto | `progettoId` (fisso dopo il primo consuntivo), codice univoco nel progetto, descrizione, date, stato |
+| `progetti` | un progetto | Cliente, centro di costo (fisso), approvatori con profilo TL o PM in `approvatori`, `soloSuAttivita`, titolo, descrizione, date, stato (inValutazione, inCorso, chiuso), quattro stime |
+| `attivita` | un'attività di un progetto | `progettoId` (fisso dopo il primo consuntivo), codice univoco nel progetto, descrizione, date, stato, stimaGiorni facoltativa |
 | `tipologie_costo` | una tipologia | Codice, descrizione, ordine, categoria, attiva |
 | `tariffe_standard` | costo orario di un ruolo per una tipologia in un periodo | Collection separata, accessibile solo al controller |
 | `tariffe_personalizzate` | costo orario di una risorsa per una tipologia in un periodo | Come sopra |
@@ -366,17 +401,28 @@ Nel database `toolpm` si aggiungono tredici collection, oltre a `risorse` che es
 {
   "_id": { "$oid": "6740a1c2e1f0a1b2c3d4e501" },
   "codice": "TIMBUFE",
-  "descrizione": "TIM — front end Business",
+  "titolo": "TIM — front end Business",
+  "descrizione": "Evoluzione del front end per la clientela Business",
   "clienteId": { "$oid": "6740a1c2e1f0a1b2c3d4e401" },
   "centroCostoId": { "$oid": "6740a1c2e1f0a1b2c3d4e301" },
-  "approvatoriIds": [ { "$oid": "6740a1c2e1f0a1b2c3d4e099" }, { "$oid": "6740a1c2e1f0a1b2c3d4e098" } ],
+  "approvatori": [
+    { "risorsaId": { "$oid": "6740a1c2e1f0a1b2c3d4e099" }, "profilo": "PM" },
+    { "risorsaId": { "$oid": "6740a1c2e1f0a1b2c3d4e098" }, "profilo": "TL" }
+  ],
+  "soloSuAttivita": false,
   "dataInizio": { "$date": "2027-01-01T00:00:00Z" },
-  "dataFine": null,
-  "stato": "attivo",
+  "dataFine": { "$date": "2027-12-31T00:00:00Z" },
+  "stato": "inCorso",
+  "stime": {
+    "managerialeGiorni": 400,
+    "managerialeCentesimi": 16000000,
+    "definitivaGiorni": 440,
+    "definitivaCentesimi": 17600000
+  },
   "creatoIl": { "$date": "2026-12-15T10:20:00Z" },
-  "creatoDa": { "$oid": "6740a1c2e1f0a1b2c3d4e0c1" },
+  "creatoDa": { "$oid": "6740a1c2e1f0a1b2c3d4e099" },
   "modificatoIl": { "$date": "2027-01-03T08:45:00Z" },
-  "modificatoDa": { "$oid": "6740a1c2e1f0a1b2c3d4e0c1" }
+  "modificatoDa": { "$oid": "6740a1c2e1f0a1b2c3d4e099" }
 }
 ```
 
@@ -391,6 +437,7 @@ Nel database `toolpm` si aggiungono tredici collection, oltre a `risorse` che es
   "dataInizio": { "$date": "2027-01-01T00:00:00Z" },
   "dataFine": null,
   "stato": "attiva",
+  "stimaGiorni": 250,
   "creatoIl": { "$date": "2026-12-15T10:30:00Z" },
   "creatoDa": { "$oid": "6740a1c2e1f0a1b2c3d4e099" },
   "modificatoIl": { "$date": "2026-12-15T10:30:00Z" },
@@ -420,7 +467,7 @@ Nel database `toolpm` si aggiungono tredici collection, oltre a `risorse` che es
   "modificatoIl": { "$date": "2026-12-16T09:05:00Z" }, "modificatoDa": { "$oid": "6740a1c2e1f0a1b2c3d4e0c1" } }
 ```
 
-`consuntivi` (la giornata dell'esempio dell'analisi funzionale: le righe del progetto A, una sull'attività "Sviluppo" e una direttamente sul progetto, già approvate; quella sull'attività "Collaudo" del progetto B in attesa)
+`consuntivi` (la giornata dell'esempio dell'analisi funzionale: le righe del progetto A, una sull'attività "Sviluppo" con il via libera del TL e una direttamente sul progetto senza, entrambe approvate dal PM; quella sull'attività "Collaudo" del progetto B con il solo via libera del TL, in attesa del PM)
 
 ```json
 {
@@ -428,28 +475,32 @@ Nel database `toolpm` si aggiungono tredici collection, oltre a `risorse` che es
   "risorsaId": { "$oid": "6ae88b192fcc045f0ca48409" },
   "data": { "$date": "2027-01-12T00:00:00Z" },
   "mese": "202701",
-  "versione": 4,
+  "versione": 5,
   "righe": [
     { "_id": { "$oid": "6740a1c2e1f0a1b2c3d4ea01" }, "progettoId": { "$oid": "6740a1c2e1f0a1b2c3d4e501" },
       "attivitaId": { "$oid": "6740a1c2e1f0a1b2c3d4eb01" },
       "centroCostoId": { "$oid": "6740a1c2e1f0a1b2c3d4e301" }, "tipologiaId": { "$oid": "6740a1c2e1f0a1b2c3d4e800" },
       "tipologiaCodice": "ORDINARIA", "minuti": 360, "fonteTariffa": "personalizzata", "tariffaCentesimiOra": 3200,
       "costoCentesimi": 19200, "stato": "approvata",
-      "approvataDa": { "$oid": "6740a1c2e1f0a1b2c3d4e099" }, "approvataIl": { "$date": "2027-01-13T09:10:00Z" },
+      "approvazioneTL": { "da": { "$oid": "6740a1c2e1f0a1b2c3d4e098" }, "il": { "$date": "2027-01-12T19:00:00Z" } },
+      "approvazionePM": { "da": { "$oid": "6740a1c2e1f0a1b2c3d4e099" }, "il": { "$date": "2027-01-13T09:10:00Z" } },
       "modificatoIl": { "$date": "2027-01-13T09:10:00Z" }, "modificatoDa": { "$oid": "6740a1c2e1f0a1b2c3d4e099" } },
     { "_id": { "$oid": "6740a1c2e1f0a1b2c3d4ea02" }, "progettoId": { "$oid": "6740a1c2e1f0a1b2c3d4e501" },
       "attivitaId": null,
       "centroCostoId": { "$oid": "6740a1c2e1f0a1b2c3d4e301" }, "tipologiaId": { "$oid": "6740a1c2e1f0a1b2c3d4e802" },
       "tipologiaCodice": "STRAORDINARIA", "minuti": 120, "fonteTariffa": "standard", "tariffaCentesimiOra": 3900,
       "costoCentesimi": 7800, "stato": "approvata",
-      "approvataDa": { "$oid": "6740a1c2e1f0a1b2c3d4e099" }, "approvataIl": { "$date": "2027-01-13T09:10:00Z" },
+      "approvazioneTL": null,
+      "approvazionePM": { "da": { "$oid": "6740a1c2e1f0a1b2c3d4e099" }, "il": { "$date": "2027-01-13T09:10:00Z" } },
       "modificatoIl": { "$date": "2027-01-13T09:10:00Z" }, "modificatoDa": { "$oid": "6740a1c2e1f0a1b2c3d4e099" } },
     { "_id": { "$oid": "6740a1c2e1f0a1b2c3d4ea03" }, "progettoId": { "$oid": "6740a1c2e1f0a1b2c3d4e502" },
       "attivitaId": { "$oid": "6740a1c2e1f0a1b2c3d4eb02" },
       "centroCostoId": { "$oid": "6740a1c2e1f0a1b2c3d4e302" }, "tipologiaId": { "$oid": "6740a1c2e1f0a1b2c3d4e800" },
       "tipologiaCodice": "ORDINARIA", "minuti": 120, "fonteTariffa": "personalizzata", "tariffaCentesimiOra": 3200,
-      "costoCentesimi": 6400, "stato": "inviata",
-      "modificatoIl": { "$date": "2027-01-12T18:05:00Z" }, "modificatoDa": { "$oid": "6740a1c2e1f0a1b2c3d4e0a1" } }
+      "costoCentesimi": 6400, "stato": "approvataTL",
+      "approvazioneTL": { "da": { "$oid": "6740a1c2e1f0a1b2c3d4e096" }, "il": { "$date": "2027-01-13T08:30:00Z" } },
+      "approvazionePM": null,
+      "modificatoIl": { "$date": "2027-01-13T08:30:00Z" }, "modificatoDa": { "$oid": "6740a1c2e1f0a1b2c3d4e096" } }
   ],
   "creatoIl": { "$date": "2027-01-12T17:40:00Z" },
   "creatoDa": { "$oid": "6740a1c2e1f0a1b2c3d4e0a1" },
@@ -471,22 +522,34 @@ Nel database `toolpm` si aggiungono tredici collection, oltre a `risorse` che es
 | `attivita` | `{ progettoId: 1, codice: 1 }` unico | Attività di un progetto, codice univoco nel progetto |
 | `tariffe_personalizzate` | `{ risorsaId: 1, tipologiaId: 1, validoDal: -1 }` | Tariffa della risorsa valida in una data |
 | `tariffe_standard` | `{ ruoloId: 1, tipologiaId: 1, validoDal: -1 }` | Tariffa del ruolo valida in una data |
-| `progetti` | `{ codice: 1 }` unico; `{ approvatoriIds: 1 }`; `{ centroCostoId: 1 }` | Ricerca, progetti di un approvatore, progetti di un centro |
+| `progetti` | `{ codice: 1 }` unico; `{ "approvatori.risorsaId": 1 }`; `{ centroCostoId: 1 }` | Ricerca, progetti di un approvatore, progetti di un centro |
 | `tipologie_costo` | `{ codice: 1 }` unico | Ricerca per codice |
 | `esportazioni` | `{ destinazione: 1, periodo: 1 }` | Ultimo invio per destinazione e periodo |
 | `corrispondenze_codici` | `{ sistema: 1, entita: 1, idToolPM: 1 }` unico | Traduzione dei codici verso i sistemi esterni |
 
 ### Approvazione di righe
 
-L'approvatore aggiorna solo le righe dei propri progetti, senza toccare le altre righe della stessa giornata:
+Ogni approvatore aggiorna solo le righe dei progetti su cui ha il profilo richiesto, senza toccare le altre righe della stessa giornata. `progettiComeTL` e `progettiComePM` si ricavano da `progetti.approvatori`:
 
 ```javascript
+// TL: via libera, facoltativo
 db.consuntivi.updateMany(
   { "righe._id": { $in: righeDaApprovare } },
-  { $set: { "righe.$[r].stato": "approvata", "righe.$[r].approvataDa": utenteId, "righe.$[r].approvataIl": new Date() },
+  { $set: { "righe.$[r].stato": "approvataTL",
+            "righe.$[r].approvazioneTL": { da: utenteId, il: new Date() } },
     $inc: { versione: 1 } },
   { arrayFilters: [ { "r._id": { $in: righeDaApprovare }, "r.stato": "inviata",
-                      "r.progettoId": { $in: progettiDellApprovatore } } ] }
+                      "r.progettoId": { $in: progettiComeTL } } ] }
+)
+
+// PM: approvazione definitiva, con o senza via libera del TL
+db.consuntivi.updateMany(
+  { "righe._id": { $in: righeDaApprovare } },
+  { $set: { "righe.$[r].stato": "approvata",
+            "righe.$[r].approvazionePM": { da: utenteId, il: new Date() } },
+    $inc: { versione: 1 } },
+  { arrayFilters: [ { "r._id": { $in: righeDaApprovare }, "r.stato": { $in: ["inviata", "approvataTL"] },
+                      "r.progettoId": { $in: progettiComePM } } ] }
 )
 ```
 
@@ -532,230 +595,9 @@ MongoDB non ha chiavi esterne né vincoli sui periodi. Questi controlli stanno n
 
 Le operazioni su più documenti insieme (chiusura di un mese con scrittura dell'audit, ricalcolo) richiedono le transazioni, disponibili solo se MongoDB gira come **replica set**. L'istanza su Docker Desktop si può configurare come replica set di un solo nodo.
 
-## Proposta database relazionale
+### Decisione sul database
 
-Il modello relazionale usa **PostgreSQL**, con le stesse entità della proposta MongoDB. La giornata è una testata (`consuntivo_giorno`) con le sue righe (`consuntivo_riga`), ognuna con il proprio stato di approvazione. Approvatori, storico dei ruoli e tariffe diventano tabelle con vincoli garantiti dal database. In ToolPM andrebbe aggiunto un container PostgreSQL al `docker-compose.yml` e un ORM nel backend (TypeORM o Prisma).
-
-| Tabella | Chiave e relazioni principali |
-| --- | --- |
-| `ruolo` | Codice unico |
-| `risorsa` | Matricola unica; orario contrattuale |
-| `risorsa_ruolo` | FK `risorsa_id`, `ruolo_id`; periodo di validità senza sovrapposizioni |
-| `cliente` | Codice unico |
-| `centro_costo` | Codice unico |
-| `progetto` | FK `cliente_id` (facoltativa), `centro_costo_id`; `solo_su_attivita` |
-| `attivita` | FK `progetto_id`; codice unico nel progetto |
-| `progetto_approvatore` | FK `progetto_id`, `risorsa_id`; chiave sulla coppia |
-| `tipologia_costo` | Codice unico, categoria, ordine, attiva |
-| `tariffa_standard` | FK `ruolo_id`, `tipologia_id`; periodo senza sovrapposizioni per la coppia |
-| `tariffa_personalizzata` | FK `risorsa_id`, `tipologia_id`; periodo senza sovrapposizioni per la coppia |
-| `periodo` | Mese (chiave), stato, chi lo ha chiuso |
-| `consuntivo_giorno` | FK `risorsa_id`; unico su (risorsa, data); `versione` |
-| `consuntivo_riga` | FK giornata, progetto, attività (facoltativa), centro di costo, tipologia; minuti, stato, tariffa e costo fotografati, approvatore |
-| `audit_log` | Tabella, id, utente, data, valori prima e dopo (JSONB) |
-
-### DDL (estratto)
-
-```sql
-CREATE EXTENSION IF NOT EXISTS btree_gist;
-
-CREATE TYPE stato_riga AS ENUM ('bozza', 'inviata', 'approvata', 'respinta', 'chiusa');
-
-CREATE TABLE tipologia_costo (
-  id          bigserial PRIMARY KEY,
-  codice      varchar(30) NOT NULL UNIQUE,
-  descrizione varchar(100) NOT NULL,
-  categoria   varchar(15) NOT NULL CHECK (categoria IN ('ordinaria', 'straordinaria')),
-  ordine      smallint NOT NULL DEFAULT 0,
-  attiva      boolean NOT NULL DEFAULT true
-);
-
-CREATE TABLE risorsa_ruolo (
-  risorsa_id bigint NOT NULL REFERENCES risorsa(id),
-  ruolo_id   bigint NOT NULL REFERENCES ruolo(id),
-  validita   daterange NOT NULL,
-  EXCLUDE USING gist (risorsa_id WITH =, validita WITH &&)   -- un solo ruolo per data
-);
-
-CREATE TABLE progetto (
-  id               bigserial PRIMARY KEY,
-  codice           varchar(30) NOT NULL UNIQUE,
-  descrizione      varchar(200) NOT NULL,
-  cliente_id       bigint REFERENCES cliente(id),
-  centro_costo_id  bigint NOT NULL REFERENCES centro_costo(id),
-  data_inizio      date NOT NULL,
-  data_fine        date,
-  stato            varchar(10) NOT NULL DEFAULT 'attivo'
-);
-
-CREATE TABLE progetto_approvatore (
-  progetto_id bigint NOT NULL REFERENCES progetto(id),
-  risorsa_id  bigint NOT NULL REFERENCES risorsa(id),
-  PRIMARY KEY (progetto_id, risorsa_id)
-);
-
-CREATE TABLE tariffa_standard (
-  id            bigserial PRIMARY KEY,
-  ruolo_id      bigint NOT NULL REFERENCES ruolo(id),
-  tipologia_id  bigint NOT NULL REFERENCES tipologia_costo(id),
-  validita      daterange NOT NULL,
-  centesimi_ora integer NOT NULL CHECK (centesimi_ora >= 0),
-  EXCLUDE USING gist (ruolo_id WITH =, tipologia_id WITH =, validita WITH &&)
-);
-
-CREATE TABLE tariffa_personalizzata (
-  id            bigserial PRIMARY KEY,
-  risorsa_id    bigint NOT NULL REFERENCES risorsa(id),
-  tipologia_id  bigint NOT NULL REFERENCES tipologia_costo(id),
-  validita      daterange NOT NULL,
-  centesimi_ora integer NOT NULL CHECK (centesimi_ora >= 0),
-  EXCLUDE USING gist (risorsa_id WITH =, tipologia_id WITH =, validita WITH &&)
-);
-
-CREATE TABLE consuntivo_giorno (
-  id          bigserial PRIMARY KEY,
-  risorsa_id  bigint NOT NULL REFERENCES risorsa(id),
-  data        date NOT NULL,
-  versione    integer NOT NULL DEFAULT 1,
-  UNIQUE (risorsa_id, data)
-);
-
-CREATE TABLE consuntivo_riga (
-  id                   bigserial PRIMARY KEY,
-  consuntivo_giorno_id bigint NOT NULL REFERENCES consuntivo_giorno(id) ON DELETE CASCADE,
-  progetto_id          bigint NOT NULL REFERENCES progetto(id),
-  centro_costo_id      bigint NOT NULL REFERENCES centro_costo(id),
-  tipologia_id         bigint NOT NULL REFERENCES tipologia_costo(id),
-  minuti               integer NOT NULL CHECK (minuti > 0 AND minuti % 15 = 0),
-  fonte_tariffa        varchar(15) CHECK (fonte_tariffa IN ('personalizzata', 'standard')),
-  tariffa_cent_ora     integer,
-  costo_cent           bigint,                     -- NULL = da valorizzare
-  stato                stato_riga NOT NULL DEFAULT 'bozza',
-  approvata_da         bigint REFERENCES risorsa(id),
-  approvata_il         timestamptz,
-  motivo_rifiuto       text,
-  nota                 varchar(500)
-);
-
-CREATE INDEX ON consuntivo_riga (progetto_id, stato);
-CREATE INDEX ON consuntivo_riga (centro_costo_id);
-CREATE INDEX ON consuntivo_giorno (data);
-```
-
-Attività di progetto e loro collegamento alle righe. La chiave esterna composta garantisce dal database che l'attività di una riga appartenga allo stesso progetto della riga.
-
-```sql
-ALTER TABLE progetto ADD COLUMN solo_su_attivita boolean NOT NULL DEFAULT false;
-
-CREATE TABLE attivita (
-  id           bigserial PRIMARY KEY,
-  progetto_id  bigint NOT NULL REFERENCES progetto(id),
-  codice       varchar(30) NOT NULL,
-  descrizione  varchar(200) NOT NULL,
-  data_inizio  date,
-  data_fine    date,
-  stato        varchar(10) NOT NULL DEFAULT 'attiva',
-  UNIQUE (progetto_id, codice),
-  UNIQUE (id, progetto_id)              -- serve alla chiave composta qui sotto
-);
-
-ALTER TABLE consuntivo_riga ADD COLUMN attivita_id bigint;
-ALTER TABLE consuntivo_riga
-  ADD CONSTRAINT riga_attivita_del_progetto
-  FOREIGN KEY (attivita_id, progetto_id) REFERENCES attivita (id, progetto_id);
-
-CREATE INDEX ON consuntivo_riga (attivita_id);
-```
-
-Il limite di 24 ore al giorno e la coerenza tra `centro_costo_id` della riga e quello del progetto coinvolgono più righe o tabelle: si controllano nel backend o con un trigger.
-
-Come in MongoDB, ogni tabella avrebbe le colonne `creato_il`, `creato_da`, `modificato_il` e `modificato_da`, valorizzate dal backend o da un trigger.
-
-### Query di esempio
-
-Risoluzione della tariffa di una riga: personalizzata se esiste, altrimenti standard del ruolo alla data.
-
-```sql
-SELECT COALESCE(tp.centesimi_ora, ts.centesimi_ora)                 AS centesimi_ora,
-       CASE WHEN tp.id IS NOT NULL THEN 'personalizzata'
-            WHEN ts.id IS NOT NULL THEN 'standard' END              AS fonte
-FROM (SELECT $1::bigint AS risorsa_id, $2::bigint AS tipologia_id, $3::date AS data) q
-LEFT JOIN tariffa_personalizzata tp
-       ON tp.risorsa_id = q.risorsa_id AND tp.tipologia_id = q.tipologia_id AND tp.validita @> q.data
-LEFT JOIN risorsa_ruolo rr
-       ON rr.risorsa_id = q.risorsa_id AND rr.validita @> q.data
-LEFT JOIN tariffa_standard ts
-       ON ts.ruolo_id = rr.ruolo_id AND ts.tipologia_id = q.tipologia_id AND ts.validita @> q.data;
-```
-
-Costo per centro di costo, progetto e tipologia in gennaio 2027, solo righe approvate, con subtotali (`ROLLUP`):
-
-```sql
-SELECT cc.codice                 AS centro_costo,
-       p.codice                  AS progetto,
-       t.descrizione             AS tipologia,
-       SUM(r.minuti) / 60.0      AS ore,
-       SUM(r.costo_cent) / 100.0 AS costo_euro
-FROM consuntivo_riga r
-JOIN consuntivo_giorno g ON g.id = r.consuntivo_giorno_id
-JOIN progetto p          ON p.id = r.progetto_id
-JOIN centro_costo cc     ON cc.id = r.centro_costo_id
-JOIN tipologia_costo t   ON t.id = r.tipologia_id
-WHERE g.data >= DATE '2027-01-01' AND g.data < DATE '2027-02-01'
-  AND r.stato IN ('approvata', 'chiusa')
-GROUP BY ROLLUP (cc.codice, p.codice, t.descrizione)
-ORDER BY cc.codice, p.codice, t.descrizione;
-```
-
-Scheda costi di un progetto: totale e dettaglio per attività, con le ore registrate direttamente sul progetto nella voce "senza attività":
-
-```sql
-SELECT COALESCE(a.descrizione, 'senza attività') AS attivita,
-       SUM(r.minuti) / 60.0                       AS ore,
-       SUM(r.costo_cent) / 100.0                  AS costo_euro
-FROM consuntivo_riga r
-LEFT JOIN attivita a ON a.id = r.attivita_id
-WHERE r.progetto_id = $1
-  AND r.stato IN ('approvata', 'chiusa')
-GROUP BY ROLLUP (COALESCE(a.descrizione, 'senza attività'))
-ORDER BY costo_euro DESC;
-```
-
-La riga con `attivita` nulla prodotta da `ROLLUP` è il totale del progetto.
-
-Righe da approvare per un approvatore:
-
-```sql
-SELECT r.*, g.data, g.risorsa_id
-FROM consuntivo_riga r
-JOIN consuntivo_giorno g     ON g.id = r.consuntivo_giorno_id
-JOIN progetto_approvatore pa ON pa.progetto_id = r.progetto_id
-WHERE pa.risorsa_id = $1 AND r.stato = 'inviata'
-ORDER BY g.data;
-```
-
-## Confronto e raccomandazione
-
-**MongoDB resta la soluzione raccomandata, ma con un margine più stretto rispetto alla prima versione.** Le nuove informazioni aggiungono struttura relazionale: approvatori per progetto, storico dei ruoli, due livelli di tariffe con regola di precedenza, approvazione per singola riga. Su questi temi PostgreSQL offre vincoli e query più naturali. A favore di MongoDB pesano due fatti che non sono cambiati: ToolPM usa già MongoDB e il Pianificatore condivide con la Consuntivazione risorse e progetti. Introdurre PostgreSQL significherebbe gestire due database e tenere allineate le anagrafiche, oppure migrare anche il Pianificatore.
-
-I volumi non spostano la scelta: con 200 dipendenti si arriva a circa 130.000 righe l'anno e 1,3 milioni in dieci anni, quantità piccole per entrambi i database.
-
-| Criterio | MongoDB | Relazionale (PostgreSQL) | Più adatto |
-| --- | --- | --- | --- |
-| Coerenza con ToolPM | Stesso database, stesse librerie e stesso modo di lavorare del Pianificatore | Secondo database da installare, monitorare e salvare; nuovo ORM | MongoDB |
-| Anagrafiche condivise con il Pianificatore | Nello stesso database, nessuna sincronizzazione | Da duplicare o da migrare insieme al Pianificatore | MongoDB |
-| Volumi (≈130.000 righe/anno) | Ampiamente sufficiente | Ampiamente sufficiente | Pari |
-| Integrità dei riferimenti (15 entità) | Solo nel codice e con validatori `$jsonSchema` | Chiavi esterne, `CHECK`, `UNIQUE` garantiti dal database | Relazionale |
-| Periodi di ruoli e tariffe senza sovrapposizioni | Controllo scritto nel servizio | Vincolo `EXCLUDE` nativo, per tre tabelle | Relazionale |
-| Approvatori per progetto | Array `approvatoriIds` nel progetto: semplice da leggere | Tabella ponte con chiave sulla coppia | Pari |
-| Approvazione per riga | `updateMany` con `arrayFilters` sulla giornata, più un numero di versione | `UPDATE` sulle righe, transazioni sempre disponibili | Relazionale, di poco |
-| Risoluzione della tariffa | Due letture per giornata, logica nel servizio | Una query con `LEFT JOIN` e `COALESCE` | Pari |
-| Nuove tipologie di costo | Nessuna modifica di schema | Nessuna modifica di schema (righe in `tipologia_costo`) | Pari |
-| Report e strumenti esterni (Excel, Power BI) | Pipeline di aggregazione; connettori meno immediati | SQL standard, `ROLLUP`, viste; collegamento diretto | Relazionale |
-| Transazioni su più documenti | Solo con replica set | Sempre | Relazionale |
-| Competenze del team | Già in uso | SQL e ORM in più | MongoDB |
-
-**Perché MongoDB resta in vantaggio.** I criteri a favore del relazionale riguardano garanzie che con MongoDB si ottengono comunque, scrivendole nel backend e coprendole con test. I criteri a favore di MongoDB riguardano invece costi strutturali che il relazionale non può evitare: un secondo database e le anagrafiche divise tra due sistemi.
+Tutti i dati di ToolPM, Consuntivazione compresa, restano su MongoDB nel database `toolpm`: non si introduce un database relazionale. Le integrazioni con sistemi che usano database relazionali passano dagli script di estrazione e trasformazione descritti nella sezione Integrazioni.
 
 **Condizioni per scegliere MongoDB.**
 
@@ -763,5 +605,3 @@ I volumi non spostano la scelta: con 200 dipendenti si arriva a circa 130.000 ri
 - Validatori `$jsonSchema` su tutte le nuove collection.
 - Controlli di integrità (riferimenti, coerenza tra attività e progetto, periodi non sovrapposti, centro di costo bloccato) concentrati in servizi dedicati e coperti da test.
 - Importi e ore come interi; costi e tariffe "fotografati" sulle righe; numero di versione sulla giornata.
-
-**Quando conviene invece il relazionale.** Solo se si decidesse di portare su PostgreSQL l'intero ToolPM, Pianificatore compreso, oppure se i report diventassero il centro del prodotto, con analisti che interrogano direttamente il database operativo in SQL. In quel caso conviene decidere ora, prima di scrivere la Consuntivazione. Le integrazioni future con contabilità, paghe o ERP **non** sono invece un motivo per scegliere il relazionale: si realizzano con procedure periodiche di estrazione e trasformazione che leggono MongoDB e inviano i dati nel formato richiesto (vedi la sezione dedicata). Anche l'analisi con Power BI può usare una copia relazionale alimentata dalla stessa procedura, senza cambiare il database di ToolPM.
