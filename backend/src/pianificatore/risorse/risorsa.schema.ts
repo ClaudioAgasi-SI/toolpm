@@ -97,6 +97,20 @@ export class Risorsa {
 export class RisorsaConId extends Risorsa {
   @ApiProperty({ example: '6ae88b192fcc045f0ca48409' })
   _id: string;
+
+  // Campi di tracciamento aggiunti a ogni collection dal plugin (infrastruttura/tracciamento.plugin.ts).
+  // Sono in sola lettura: se arrivano nel corpo di una richiesta vengono ignorati.
+  @ApiPropertyOptional({ example: '2026-11-17T10:00:00.000Z', readOnly: true })
+  creatoIl?: Date;
+
+  @ApiPropertyOptional({ example: 'sistema:migrazione', description: 'Id dell\'utente o utente tecnico sistema:...', readOnly: true })
+  creatoDa?: string;
+
+  @ApiPropertyOptional({ example: '2026-11-17T10:00:00.000Z', readOnly: true })
+  modificatoIl?: Date;
+
+  @ApiPropertyOptional({ example: 'anonimo', description: 'Id dell\'utente o utente tecnico sistema:...', readOnly: true })
+  modificatoDa?: string;
 }
 
 export type RisorsaDocument = HydratedDocument<Risorsa>;

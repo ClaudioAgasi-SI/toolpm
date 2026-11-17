@@ -1,8 +1,12 @@
-import { Module } from '@nestjs/common';
+import { type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RouterModule } from '@nestjs/core';
 import { MongooseModule } from '@nestjs/mongoose';
+import type { Connection } from 'mongoose';
 import { HealthController } from './health.controller.js';
+import { ContestoUtenteMiddleware } from './infrastruttura/contesto-utente.middleware.js';
+import { InfrastrutturaModule } from './infrastruttura/infrastruttura.module.js';
+import { tracciamentoPlugin } from './infrastruttura/tracciamento.plugin.js';
 import { AnagraficheModule } from './pianificatore/anagrafiche/anagrafiche.module.js';
 import { PianificatoreModule } from './pianificatore/pianificatore.module.js';
 import { PianificazioneModule } from './pianificatore/pianificazione/pianificazione.module.js';
@@ -23,8 +27,11 @@ import { RisorseModule } from './pianificatore/risorse/risorse.module.js';
         uri: config.get<string>('MONGODB_URI', 'mongodb://localhost:27017/toolpm'),
         // Gli indici si creano solo se richiesto, per non toccare un database esistente.
         autoIndex: config.get<string>('MONGODB_AUTO_INDEX') === 'true',
+        // creatoIl/creatoDa/modificatoIl/modificatoDa su ogni documento di ogni collection.
+        connectionFactory: (connection: Connection) => connection.plugin(tracciamentoPlugin),
       }),
     }),
+    InfrastrutturaModule,
     PianificatoreModule,
     RouterModule.register([
       {
@@ -36,4 +43,9 @@ import { RisorseModule } from './pianificatore/risorse/risorse.module.js';
   ],
   controllers: [HealthController],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    // Contesto dell'utente per ogni richiesta: lo usa il tracciamento dei salvataggi.
+    consumer.apply(ContestoUtenteMiddleware).forRoutes('*path');
+  }
+}

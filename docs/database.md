@@ -20,6 +20,19 @@ certificazioni ┘            ├── skillTecnici[]     { skillName, rate }
 
 Le anagrafiche non sono collegate alle risorse da riferimenti: le risorse contengono i **valori** (testo), non gli `_id` delle anagrafiche.
 
+## Campi di tracciamento
+
+Dalla fase 1 ogni documento di ogni collection ha quattro campi, scritti in automatico dal backend (plugin `tracciamentoPlugin`, vedi [backend.md](backend.md#infrastruttura-comune-fase-1)) e mai dal client:
+
+| Campo | Tipo | Significato |
+|---|---|---|
+| `creatoIl` | Date | Data di creazione del documento |
+| `creatoDa` | string | Chi l'ha creato: id dell'utente oppure utente tecnico `sistema:...` (es. `sistema:migrazione`) |
+| `modificatoIl` | Date | Data dell'ultimo salvataggio |
+| `modificatoDa` | string | Chi ha fatto l'ultimo salvataggio |
+
+Fino all'autenticazione (fase 1, blocco B2) l'autore delle modifiche fatte dall'applicazione è `anonimo`. I documenti creati prima della fase 1 ricevono i campi dalla migrazione `002-tracciamento-esistenti`.
+
 ## Collection `risorse`
 
 Un documento per persona, con skill e pianificazione incorporate.
@@ -119,6 +132,26 @@ Univocità del nome e assenza di duplicati sono verificate dal backend (`RateSer
 |---|---|---|---|
 | `certName` | string | sì | Nome della certificazione |
 | `certType` | string | no | Categoria (es. `developer`, `project management`) |
+
+## Collection `parametri`
+
+Parametri di sistema, un documento per chiave (indice unico su `chiave`). Valori iniziali creati dalla migrazione `001-parametri`.
+
+| Chiave | Valore iniziale | Uso |
+|---|---|---|
+| `oreGiorno` | `8` | Ore che fanno un giorno, per confrontare ore consuntivate e stime in giorni |
+| `soglieEvm` | `{ anticipo: 1.05, ritardo: 0.95, fortementeInRitardo: 0.85 }` | Soglie degli stati di tempi e costi dell'EVM |
+
+Campi: `chiave` (string, unica), `valore` (qualsiasi tipo), `descrizione`, più i campi di tracciamento.
+
+## Collection `migrazioni`
+
+Registro delle migrazioni eseguite da `npm run migra`: `_id` è il nome dello script (es. `001-parametri`), poi `descrizione`, `eseguitaIl`, `durataMs`, `risultato` (riepilogo restituito dallo script) e i campi di tracciamento. Non va modificata a mano: togliere un documento fa rieseguire la migrazione.
+
+| Migrazione | Cosa fa |
+|---|---|
+| `001-parametri` | Crea la collection `parametri` con indice unico e i valori iniziali (non tocca parametri già presenti) |
+| `002-tracciamento-esistenti` | Aggiunge i campi di tracciamento ai documenti di `risorse`, `skills`, `rate`, `certificazioni` che non li hanno, con autore `sistema:migrazione` |
 
 ## Regole sui dati
 

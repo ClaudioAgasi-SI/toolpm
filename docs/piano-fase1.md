@@ -11,7 +11,7 @@ La fase 1 prepara ToolPM per la Consuntivazione: accesso con utenti e profili, m
 | Blocco | Stato | Note |
 | --- | --- | --- |
 | B0 — Preparazione | In corso | Codice e documentazione su GitHub (commit del 17/11/2026): test della griglia e del filtro per skill, `/api/health` con il replica set, script `npm run verifica-mongodb`, guida [mongodb-replica-set.md](mongodb-replica-set.md), nuove variabili in `.env.example`. Resta da eseguire sul PC il passaggio di MongoDB a replica set. |
-| B1 — Infrastruttura comune | Da fare | |
+| B1 — Infrastruttura comune | Fatto | Contesto dell'utente, plugin di tracciamento su tutte le collection, `ParametriService`, script `npm run migra` con le migrazioni `001-parametri` e `002-tracciamento-esistenti`, test (23 in tutto nel backend). Da eseguire sul PC, dopo un backup: `docker compose exec backend npm run migra`. |
 | B2 — Autenticazione | Da fare | |
 | B3 — Permessi | Da fare | |
 | B4 — Modulo Comuni | Da fare | |

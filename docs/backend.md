@@ -24,6 +24,14 @@ backend/
 │   ├── app.module.ts                configurazione, connessione MongoDB, moduli
 │   ├── health.controller.ts         GET /api/health
 │   ├── mongoose-errors.filter.ts    errori di validazione Mongoose → HTTP 400
+│   ├── infrastruttura/              servizi tecnici condivisi (fase 1, blocco B1)
+│   │   ├── contesto-utente.ts          utente corrente per richiesta (AsyncLocalStorage)
+│   │   ├── contesto-utente.middleware.ts  apre il contesto a ogni richiesta HTTP
+│   │   ├── tracciamento.plugin.ts      plugin Mongoose: creatoIl, creatoDa, modificatoIl, modificatoDa
+│   │   ├── parametro.schema.ts         schema dei parametri di sistema (collection parametri)
+│   │   ├── parametri.service.ts        lettura e scrittura dei parametri
+│   │   ├── infrastruttura.module.ts    modulo globale
+│   │   └── tracciamento.spec.ts        test di contesto, tracciamento e scelta delle migrazioni
 │   └── pianificatore/               sezione "Pianificatore risorse" → prefisso /api/pianificatore
 │       ├── pianificatore.module.ts  raccoglie i moduli della sezione
 │       ├── risorse/
@@ -46,6 +54,8 @@ backend/
 │           └── pianificazione.service.spec.ts  test della griglia e del filtro per skill
 ├── scripts/seed.mjs                 import dei JSON di db/ (vedi database.md)
 ├── scripts/verifica-mongodb.mjs     verifica di connessione, replica set e transazioni
+├── scripts/migra.mjs                esecuzione delle migrazioni dei dati (npm run migra)
+├── scripts/migrazioni/              migrazioni numerate NNN-nome.mjs (vedi database.md)
 ├── Dockerfile
 └── package.json
 ```
@@ -68,6 +78,15 @@ Variabili d'ambiente (lette con `@nestjs/config`, anche da un file `.env` nella 
 2. Filtro globale `MongooseErrorsFilter`.
 3. CORS abilitato (utile in sviluppo).
 4. Swagger su `/api/docs`, JSON su `/api/docs-json`.
+
+## Infrastruttura comune (fase 1)
+
+Servizi tecnici usati da tutte le sezioni, nella cartella `src/infrastruttura/`.
+
+- **Contesto dell'utente.** `ContestoUtenteMiddleware` apre per ogni richiesta un contesto (AsyncLocalStorage) con l'utente che sta lavorando; `utenteCorrente()` lo legge da qualsiasi punto del codice. Finché non c'è l'autenticazione (blocco B2) l'utente è `anonimo`; script e procedure usano utenti tecnici `sistema:...` con `eseguiCome()`.
+- **Tracciamento dei salvataggi.** `tracciamentoPlugin` è registrato sulla connessione Mongoose in `app.module.ts` e vale per ogni schema che dichiara `collection` (gli schemi incorporati, come skill e allocazioni, ne restano fuori). Aggiunge `creatoIl`, `creatoDa`, `modificatoIl`, `modificatoDa` e li valorizza in `save`, `insertMany`, `updateOne`, `updateMany`, `findOneAndUpdate`, `findOneAndReplace` e `replaceOne`. I valori mandati dal client vengono ignorati; in una sostituzione (PUT delle risorse) la creazione del documento esistente si conserva. **Regola:** ogni nuovo schema di primo livello deve dichiarare `collection` in `@Schema({ collection: ... })`.
+- **Parametri.** `ParametriService` (modulo globale `InfrastrutturaModule`) legge e scrive la collection `parametri`; per ora non ha API, arriveranno con i permessi (blocco B3).
+- **Migrazioni.** `npm run migra` esegue in ordine gli script `scripts/migrazioni/NNN-nome.mjs` non ancora eseguiti e li registra nella collection `migrazioni`; `npm run migra -- --elenco` mostra lo stato senza eseguire nulla. In Docker: `docker compose exec backend npm run migra`. Prima di eseguirle serve un backup ([mongodb-replica-set.md](mongodb-replica-set.md#2-backup)).
 
 ## Moduli
 
@@ -194,6 +213,7 @@ npm run start:dev     # avvio con ricaricamento automatico, http://localhost:300
 npm run build         # compilazione in dist/
 npm test              # test Vitest
 npm run verifica-mongodb  # connessione, replica set e transazioni di MongoDB
+npm run migra         # migrazioni dei dati non ancora eseguite (--elenco per vederle)
 npm run seed          # import dei dati di esempio (solo collection vuote)
 ```
 

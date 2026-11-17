@@ -31,7 +31,12 @@ for (const name of collections) {
   }
   if (count > 0) await col.deleteMany({});
   // Gli _id in formato export ({"$oid": ...}) diventano ObjectId.
-  for (const d of docs) if (d._id?.$oid) d._id = new mongoose.Types.ObjectId(d._id.$oid);
+  // Campi di tracciamento (docs/database.md): lo script scrive direttamente, senza il plugin del backend.
+  const ora = new Date();
+  for (const d of docs) {
+    if (d._id?.$oid) d._id = new mongoose.Types.ObjectId(d._id.$oid);
+    Object.assign(d, { creatoIl: ora, creatoDa: 'sistema:seed', modificatoIl: ora, modificatoDa: 'sistema:seed' });
+  }
   await col.insertMany(docs);
   console.log(`- ${name}: importati ${docs.length} documenti`);
 }
