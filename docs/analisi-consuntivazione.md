@@ -20,6 +20,8 @@ La nuova sezione **Consuntivazione** di ToolPM raccoglie le ore lavorate da ogni
 
 *Revisione del 17/11/2026, quarta parte: chiusi tutti i punti aperti. Il PMSenior vede i costi e approva come PM su tutti i progetti; il TL modifica le caratteristiche solo delle risorse che lavorano sui suoi progetti.*
 
+*Revisione del 17/11/2026, quinta parte: percentuale di completamento di progetti e attività; indicatori Earned Value (EVM) che dicono se il progetto è in linea con tempi e costi.*
+
 **Perimetro.** Sono inclusi i costi delle circa 200 risorse interne (programmatori, analisti, designer UI/UX, project manager, team leader, architetti IT, sistemisti, tester e altri ruoli). Restano fuori, per ora: ferie, permessi e malattia; integrazione con paghe o HR; costi non legati al personale (licenze, hardware, trasferte); ricavi e fatturazione. Il modello è pensato per poterli aggiungere in seguito.
 
 **Glossario**
@@ -37,6 +39,9 @@ La nuova sezione **Consuntivazione** di ToolPM raccoglie le ore lavorate da ogni
 | Tariffa personalizzata | Costo orario per tipologia di una singola risorsa, in un intervallo di date. Prevale sulla tariffa standard. |
 | Consuntivo | Ore dichiarate da una risorsa in una giornata, divise in righe per progetto (o attività) e tipologia di costo. |
 | Costo consuntivato | Ore × tariffa applicabile alla risorsa in quella data, per quella tipologia. Alimenta attività (se presente), progetto e centro di costo. |
+| Percentuale di completamento | Quanto del lavoro di un progetto o di un'attività è stato fatto, da 0 a 100. È impostata a mano, non calcolata. |
+| Risorsa assegnata | Risorsa indicata come esecutrice di un'attività; può aggiornarne la percentuale di completamento. |
+| EVM (Earned Value Method) | Metodo che confronta, a una data, il lavoro pianificato (PV), il lavoro fatto (EV) e il costo sostenuto (AC), e ne ricava se il progetto è in linea con tempi e costi. |
 
 ## Analisi funzionale
 
@@ -64,6 +69,8 @@ La riga di consuntivo appartiene alla giornata di una risorsa, punta sempre a un
 | Creazione dei progetti | Un progetto lo crea un TL, un PM o un PMSenior, che ne diventa approvatore con il proprio profilo. È sempre legato a un centro di costo; il cliente è facoltativo (progetto interno). Le attività sono sempre legate a un progetto. |
 | Stati del progetto | In valutazione, In corso, Chiuso. Non si consuntiva su un progetto Chiuso né sulle sue attività. Le date sono facoltative: l'inizio diventa obbligatorio quando il progetto passa In corso, la fine quando passa a Chiuso. Si consuntiva anche su un progetto In valutazione. I passaggi In valutazione → In corso → Chiuso li decidono TL o PM del progetto o un PMSenior; un progetto Chiuso torna In corso solo per decisione di un PM o di un PMSenior. Le righe già inviate quando il progetto viene chiuso restano approvabili e respingibili, ma non se ne aggiungono né se ne modificano. |
 | Stime e consuntivato | Il progetto ha quattro stime impostate a mano da chi lo modifica, mai calcolate: manageriale in giorni, manageriale in euro, definitiva in giorni (effort), definitiva in euro. Il consuntivato è invece sempre calcolato dalle righe sul progetto e sulle sue attività. Le attività hanno una stima in giorni facoltativa, che non concorre alle stime del progetto. Il TL vede e imposta anche le stime in euro, ma non vede tariffe né costo consuntivato. Per confrontare ore e stime in giorni, 1 giorno = 8 ore (parametro configurabile). |
+| Percentuale di completamento | Progetti e attività hanno una percentuale di completamento. Quella di un'attività la modificano la risorsa assegnata all'attività, il TL e il PM approvatori del progetto e i PMSenior. Quella del progetto la modificano solo gli approvatori TL e PM del progetto e i PMSenior; una risorsa che non è approvatrice non può modificarla. Il PMSenior può farlo su tutti i progetti e tutte le attività. |
+| Avanzamento (EVM) | Da stima, consuntivato e percentuale di completamento il sistema calcola con il metodo Earned Value se il progetto è in linea con i tempi e con i costi, e mostra in quale stato si trova per i tempi e per i costi. |
 | Dati comuni | Risorse, ruoli, clienti, progetti con attività e approvatori, centri di costo passano in un modulo Comuni (/api/comuni), condiviso da tutte le sezioni. Il Pianificatore li legge da lì. |
 | Budget | Nessun budget separato: il riferimento sono le stime del progetto, confrontate con il consuntivato. |
 | Ferie, permessi, malattia | Esclusi per ora; possibile estensione futura. |
@@ -74,7 +81,7 @@ La riga di consuntivo appartiene alla giornata di una risorsa, punta sempre a un
 
 | Attore | Cosa fa |
 | --- | --- |
-| Risorsa | Inserisce e invia il proprio consuntivo. Vede solo le proprie ore, non le tariffe né i costi. |
+| Risorsa | Inserisce e invia il proprio consuntivo. Aggiorna la percentuale di completamento delle attività a cui è assegnata. Vede solo le proprie ore, non le tariffe né i costi. |
 | Approvatore TL | Supervisore (una specie di Team Leader). Può creare progetti. Sui progetti a cui è assegnato controlla le righe inviate (ore, straordinari, attività) e dà un primo via libera, che segnala al PM la sua supervisione ma non rende valida la riga. Crea e modifica le attività dei propri progetti e le caratteristiche delle risorse che ci lavorano. Vede ore, tipologie e stime del progetto, non tariffe né costi consuntivati. |
 | Approvatore PM | Una specie di Project Manager. Può creare progetti. Sui progetti a cui è assegnato approva in modo definitivo o respinge le righe, con o senza il via libera del TL. Solo la sua approvazione rende valida la riga. Crea e modifica le attività dei propri progetti. Vede ore e costi di quei progetti. |
 | Approvatore PMSenior | Fa tutto ciò che fa il PM. In più crea clienti e centri di costo e, come il PM, risorse; crea e modifica progetti e attività e le caratteristiche delle risorse. Vede i costi di tutti i progetti e può approvare come PM su tutti. |
@@ -124,6 +131,15 @@ La riga di consuntivo appartiene alla giornata di una risorsa, punta sempre a un
 25. **RF-25 Consuntivato del progetto.** Ore, giorni e costo consuntivati sono sempre calcolati dalle righe approvate dal PM sul progetto e sulle sue attività. La scheda del progetto li affianca alle stime: giorni consuntivati contro stime in giorni, costo contro stime in euro; per ogni attività, giorni consuntivati contro la sua stima, se c'è.
 26. **RF-26 Stati del progetto.** In valutazione, In corso, Chiuso. Non si consuntiva su un progetto Chiuso né sulle sue attività: la griglia della risorsa non li propone e il backend rifiuta righe nuove o modificate su di essi. Le date di inizio e di fine sono facoltative: l'inizio è obbligatorio per passare In corso, la fine per passare a Chiuso.
 
+**Avanzamento ed Earned Value**
+
+27. **RF-27 Percentuale di completamento.** Progetti e attività hanno una percentuale di completamento da 0 a 100, impostata a mano. Quella del progetto la modificano solo i suoi approvatori TL e PM e i PMSenior; quella di un'attività anche le risorse assegnate all'attività. Ogni modifica è registrata con valore, data e autore.
+28. **RF-28 Risorse assegnate alle attività.** Ogni attività ha l'elenco delle risorse assegnate, gestito da TL e PM del progetto e dai PMSenior.
+29. **RF-29 Indicatori EVM del progetto.** A una data di riferimento (di default oggi) il sistema calcola PV, EV, AC, gli scostamenti SV e CV, gli indici SPI e CPI e le previsioni EAC, ETC, VAC e TCPI, in euro e in giorni (vedi "Calcolo dell'avanzamento (EVM)").
+30. **RF-30 Stato di tempi e costi.** Il sistema traduce SPI e CPI in uno stato dei tempi (In anticipo, In linea, In ritardo, In forte ritardo) e uno stato dei costi (Sotto budget, In linea, Sopra budget, Fortemente sopra budget), mostrati con un colore nella scheda del progetto e nell'elenco dei progetti.
+31. **RF-31 Andamento nel tempo.** Ogni notte il sistema salva gli indicatori di ogni progetto In corso, per mostrare l'andamento di PV, EV e AC e degli indici nel tempo.
+32. **RF-32 Indicatori delle attività.** Per un'attività con stima in giorni il sistema mostra EV, AC e CPI in giorni; SPI e stato dei tempi solo se l'attività ha date di inizio e di fine.
+
 ### Calcolo del costo
 
 La tariffa di una riga si cerca in quest'ordine, per la tipologia della riga e alla data della riga:
@@ -154,6 +170,55 @@ Esempio con valori ipotetici. Il ruolo "Sviluppatore senior" ha tariffe standard
 | **Totale** |  |  | **10** |  |  | **334** |
 
 Quel giorno l'attività "Sviluppo" costa 192 € e il progetto A 270 €: 192 € dall'attività più 78 € consuntivati direttamente sul progetto. Il progetto B costa 64 €, tutti dall'attività "Collaudo". Il centro di costo di A riceve 270 €, quello di B 64 €. Le righe di A e di B possono essere approvate da persone diverse e in momenti diversi; ciascuna entra nei report solo dopo l'approvazione del PM del proprio progetto.
+
+### Calcolo dell'avanzamento (EVM)
+
+Il metodo Earned Value confronta, a una data di riferimento, quanto lavoro si doveva aver fatto (PV), quanto se n'è fatto davvero (EV) e quanto è costato (AC). Si calcola sul progetto in euro e in giorni: la stima definitiva fa da budget, la percentuale di completamento dà il lavoro fatto, il consuntivato dà il costo.
+
+| Grandezza | Significato | Come si calcola |
+| --- | --- | --- |
+| BAC | Budget a finire | Stima definitiva in euro (o in giorni); se manca, la stima manageriale |
+| PV | Valore pianificato | BAC × quota della durata trascorsa tra data di inizio e data di fine |
+| EV | Valore guadagnato | BAC × percentuale di completamento del progetto |
+| AC | Costo effettivo | Costo (o giorni, 8 ore = 1 giorno) delle righe approvate dal PM fino alla data |
+| SV, CV | Scostamento di tempi e di costi | EV − PV; EV − AC |
+| SPI, CPI | Indice di tempi e di costi | EV / PV; EV / AC |
+| EAC | Costo previsto a finire | BAC / CPI |
+| ETC | Costo ancora da sostenere | EAC − AC |
+| VAC | Scostamento previsto a finire | BAC − EAC |
+| TCPI | Efficienza necessaria per chiudere nel budget | (BAC − EV) / (BAC − AC) |
+
+```latex
+\text{SPI} = \frac{\text{EV}}{\text{PV}} = \frac{\text{BAC} \times \%_{\text{completamento}}}{\text{BAC} \times \dfrac{\text{giorni trascorsi}}{\text{durata pianificata}}} \qquad \text{CPI} = \frac{\text{EV}}{\text{AC}}
+```
+
+SPI e CPI diventano lo stato mostrato all'utente. Le soglie sono configurabili.
+
+| Valore dell'indice | Stato dei tempi (SPI) | Stato dei costi (CPI) |
+| --- | --- | --- |
+| ≥ 1,05 | In anticipo | Sotto budget |
+| da 0,95 a 1,05 | In linea | In linea |
+| da 0,85 a 0,95 | In ritardo | Sopra budget |
+| < 0,85 | In forte ritardo | Fortemente sopra budget |
+
+Esempio sul progetto TIMBUFE: stima definitiva 176.000 € e 440 giorni, dal 01/01/2027 al 31/12/2027. Al 02/07/2027, a metà della durata, il progetto è completo al 40% e sono stati consuntivati e approvati 80.000 €, pari a 200 giorni.
+
+| Indicatore | Euro | Giorni |
+| --- | --- | --- |
+| PV | 88.000 | 220 |
+| EV | 70.400 | 176 |
+| AC | 80.000 | 200 |
+| SV | −17.600 | −44 |
+| CV | −9.600 | −24 |
+| SPI | 0,80 | 0,80 |
+| CPI | 0,88 | 0,88 |
+| EAC | 200.000 | 500 |
+| VAC | −24.000 | −60 |
+| TCPI | 1,10 | 1,10 |
+
+Il progetto è **In forte ritardo** sui tempi (SPI 0,80) e **Sopra budget** sui costi (CPI 0,88). Al ritmo attuale costerà 200.000 €, 24.000 € oltre la stima; per rientrare nel budget il lavoro restante dovrebbe rendere il 10% in più (TCPI 1,10).
+
+Casi particolari: senza stima il progetto non ha indicatori; senza data di inizio o di fine PV, SPI e stato dei tempi risultano "Non calcolabili", mentre CPI e stato dei costi restano disponibili. La percentuale del progetto non si ricava da quelle delle attività; la scheda mostra per riferimento la media delle attività pesata sulla loro stima in giorni.
 
 ### Regole di business
 
@@ -190,7 +255,15 @@ Le righe della stessa giornata su progetti diversi passano per questi stati in m
 
 ### Punti ancora aperti
 
-Nessun punto aperto. Il 17/11/2026 sono state confermate tutte le ipotesi, con due correzioni (il PMSenior vede i costi e approva su tutti i progetti; il TL modifica le caratteristiche solo delle risorse dei suoi progetti), ora tra le decisioni. Gli altri attributi del progetto saranno definiti più avanti.
+Le decisioni del 17/11/2026 hanno chiuso i punti precedenti. Percentuale di completamento ed EVM aprono questi punti; per ciascuno il documento adotta l'ipotesi indicata. Gli altri attributi del progetto saranno definiti più avanti.
+
+- [ ] Chi è "la risorsa assegnata" a un'attività? *Ipotesi: un elenco esplicito di risorse sull'attività, gestito da TL e PM del progetto e dai PMSenior; chi è nell'elenco può aggiornare la percentuale.*
+- [ ] Quale stima fa da budget (BAC)? *Ipotesi: la stima definitiva; se manca, quella manageriale.*
+- [ ] Come si distribuisce il lavoro pianificato (PV) nel tempo? *Ipotesi: in modo lineare tra data di inizio e data di fine; in seguito si potrà ricavare dalle allocazioni del Pianificatore.*
+- [ ] Il costo effettivo (AC) conta solo le righe approvate dal PM? *Ipotesi: sì; la scheda può mostrare a parte le ore inviate e non ancora approvate.*
+- [ ] Le soglie degli stati vanno bene (0,85 / 0,95 / 1,05)? *Ipotesi: sì, configurabili.*
+- [ ] Il TL non vede i costi in euro: cosa vede dell'EVM? *Ipotesi: indicatori in giorni, indici e stati di tempi e costi; non gli importi in euro.*
+- [ ] Per quali progetti si calcola l'EVM? *Ipotesi: In corso e Chiuso; non per quelli In valutazione.*
 
 ## Analisi tecnica
 
@@ -203,7 +276,7 @@ La Consuntivazione diventa la seconda sezione di ToolPM, con la stessa struttura
 | Comuni | `src/comuni/` | `/api/comuni` | Risorse (spostate dal Pianificatore) con storico dei ruoli, ruoli professionali, clienti, progetti con approvatori (profilo TL o PM) e attività, centri di costo |
 | Auth | `src/auth/` | `/api/auth` | Login, token JWT, guard per ruolo applicativo, utente corrente |
 | Pianificatore | `src/pianificatore/` | `/api/pianificatore` | Invariato; legge risorse e progetti dal modulo Comuni |
-| Consuntivazione | `src/consuntivazione/` | `/api/consuntivazione` | Tipologie di costo, tariffe standard e personalizzate, consuntivi, approvazioni, chiusura periodi, calcolo costi, report |
+| Consuntivazione | `src/consuntivazione/` | `/api/consuntivazione` | Tipologie di costo, tariffe standard e personalizzate, consuntivi, approvazioni, chiusura periodi, calcolo costi, report, indicatori EVM |
 | Audit | `src/audit/` | — | Interceptor che registra le modifiche ai dati sensibili |
 
 I moduli si registrano come oggi con `RouterModule` in `app.module.ts`. Lo spostamento delle risorse in Comuni cambia `/api/pianificatore/risorse` in `/api/comuni/risorse`: il frontend del Pianificatore va aggiornato nello stesso rilascio.
@@ -231,6 +304,11 @@ I moduli si registrano come oggi con `RouterModule` in `app.module.ts`. Lo spost
 | GET | `/api/consuntivazione/report/costi?raggruppa=cdc\|progetto\|attivita\|risorsa\|ruolo\|tipologia&da&a` | Approvatore (propri progetti), controller | Totali ore e costi, anche annidati (es. centro di costo → progetto → attività) |
 | GET | `/api/consuntivazione/report/pianificato-vs-consuntivato?mese=AAAAMM` | Approvatore, controller | Confronto con il Pianificatore |
 | POST | `/api/consuntivazione/ricalcolo` | Controller | Anteprima e applicazione del ricalcolo dopo una correzione di tariffa |
+| PUT | `/api/comuni/progetti/:id/completamento` | TL e PM del progetto, PMSenior | Percentuale di completamento del progetto (0–100), registrata nello storico |
+| PUT | `/api/comuni/progetti/:id/attivita/:attivitaId/completamento` | Risorse assegnate all'attività, TL e PM del progetto, PMSenior | Percentuale di completamento dell'attività, registrata nello storico |
+| PUT | `/api/comuni/progetti/:id/attivita/:attivitaId/risorse` | TL e PM del progetto, PMSenior | Risorse assegnate all'attività |
+| GET | `/api/consuntivazione/report/progetti/:id/evm?al=AAAA-MM-GG` | Approvatori del progetto, PMSenior, controller | Indicatori EVM del progetto e delle attività alla data, con stato di tempi e costi; al TL senza importi in euro |
+| GET | `/api/consuntivazione/report/progetti/:id/evm/andamento?da=&a=` | Approvatori del progetto, PMSenior, controller | Serie giornaliera degli indicatori salvati, per i grafici di andamento |
 
 Le risposte per la risorsa non contengono mai tariffe né importi; quelle per l'approvatore solo i progetti di cui è approvatore e, per il TL, senza tariffe né importi. I filtri stanno nel backend.
 
@@ -238,9 +316,9 @@ Le risposte per la risorsa non contengono mai tariffe né importi; quelle per l'
 
 | Percorso | Pagina | Chi |
 | --- | --- | --- |
-| `/toolpm/consuntivazione/settimana` | Il mio consuntivo: griglia progetti e attività × giorni, stato di ogni riga, invio | Risorsa |
+| `/toolpm/consuntivazione/settimana` | Il mio consuntivo: griglia progetti e attività × giorni, stato di ogni riga, invio, aggiornamento della percentuale delle attività assegnate | Risorsa |
 | `/toolpm/consuntivazione/approvazioni` | Righe da approvare, filtrabili per progetto, attività, risorsa e periodo; approvazione in blocco; per il PM, colonna e filtro "via libera TL" | Approvatore |
-| `/toolpm/consuntivazione/progetti/:id` | Scheda del progetto: stime contro consuntivato in giorni ed euro (per il TL senza costo consuntivato), totale, andamento mensile, dettaglio per attività, risorsa e tipologia | Approvatore del progetto, PMSenior, controller |
+| `/toolpm/consuntivazione/progetti/:id` | Scheda del progetto: stime contro consuntivato in giorni ed euro (per il TL senza costo consuntivato), totale, andamento mensile, indicatori EVM con stato di tempi e costi e loro andamento, dettaglio per attività, risorsa e tipologia | Approvatore del progetto, PMSenior, controller |
 | `/toolpm/consuntivazione/costi` | Report costi per centro di costo, progetto e attività, con esportazione | Approvatore, controller |
 | `/toolpm/consuntivazione/tipologie` | Tipologie di costo | Controller |
 | `/toolpm/consuntivazione/tariffe` | Tariffe standard per ruolo e personalizzate per risorsa, con storico | Controller |
@@ -260,6 +338,28 @@ Le risposte per la risorsa non contengono mai tariffe né importi; quelle per l'
 
 Le tariffe sono una lista di voci per tipologia, non campi fissi: una nuova tipologia si aggiunge senza modificare il codice né lo schema. Ore e importi sono interi (**minuti** e **centesimi di euro**); la conversione in ore e euro avviene solo nella visualizzazione.
 
+### Calcolo degli indicatori EVM
+
+Un servizio `EvmService` del modulo Consuntivazione calcola gli indicatori al momento della richiesta, alla data indicata. Legge dal progetto stime, date e percentuale di completamento, somma minuti e costi delle righe approvate fino a quella data e applica le formule di "Calcolo dell'avanzamento (EVM)". Gli importi restano in centesimi, i giorni si ottengono dai minuti con le ore per giorno configurate, gli indici si arrotondano a due decimali.
+
+```javascript
+// AC del progetto alla data di riferimento (solo righe approvate dal PM)
+db.consuntivi.aggregate([
+  { $match: { data: { $lte: dataRiferimento }, "righe.progettoId": progettoId } },
+  { $unwind: "$righe" },
+  { $match: { "righe.progettoId": progettoId, "righe.stato": { $in: ["approvata", "chiusa"] } } },
+  { $group: { _id: "$righe.attivitaId",
+              minuti: { $sum: "$righe.minuti" },
+              costoCentesimi: { $sum: "$righe.costoCentesimi" } } }
+])
+```
+
+Il risultato per attività serve anche agli indicatori delle singole attività; la somma dà l'AC del progetto.
+
+- **Andamento.** Una procedura pianificata notturna, con l'utente tecnico `sistema:evm`, salva in `evm_giornalieri` un documento per progetto In corso e giorno, con tutti gli indicatori e gli stati.
+- **Parametri.** Ore per giorno (8) e soglie degli stati stanno nella collection `parametri`, modificabile dal controller.
+- **Storico dell'avanzamento.** Ogni cambio di percentuale scrive un documento in `avanzamenti` (progetto o attività, valore precedente e nuovo, data, autore).
+
 ### Validazioni e concorrenza
 
 - DTO con `class-validator`: data ISO, minuti multipli di 15, tipologia, progetto e attività esistenti e attivi.
@@ -273,6 +373,7 @@ Le tariffe sono una lista di voci per tipologia, non campi fissi: una nuova tipo
 - Progetto: codice univoco, centro di costo obbligatorio, date facoltative ma inizio obbligatorio per passare In corso e fine per passare a Chiuso, fine non precedente all'inizio, stime ≥ 0 salvate come le inserisce l'utente e mai ricalcolate. Il backend rifiuta righe nuove o modificate su un progetto Chiuso o sulle sue attività.
 - Risorsa: email obbligatoria, in formato valido e unica (indice unico su `risorse.email`), usata come nome utente.
 - Caratteristiche di una risorsa modificate da un TL: il backend le accetta solo se la risorsa è allocata nel Pianificatore, o ha ore consuntivate, su un progetto di cui l'utente è TL.
+- Percentuale di completamento: intero da 0 a 100. Per il progetto il backend accetta solo i suoi approvatori TL e PM e i PMSenior; per un'attività anche le risorse nel suo elenco delle assegnate.
 - Concorrenza: approvazioni e modifiche aggiornano solo le righe interessate; un numero di versione sulla giornata impedisce che un salvataggio della risorsa sovrascriva un'approvazione avvenuta nel frattempo.
 
 ### Sicurezza
@@ -307,13 +408,14 @@ Ogni documento salvato in MongoDB, di qualsiasi collection e sezione (Pianificat
 - Test dei totali: righe su attività e direttamente sul progetto nella stessa giornata, verifica che attività + "senza attività" = progetto e che la somma dei progetti = centro di costo.
 - Test degli stati delle righe e dell'approvazione a due livelli (con e senza via libera del TL), con più approvatori e progetti diversi nella stessa giornata.
 - Test di concorrenza (approvazione e modifica contemporanee) e dei permessi per ogni ruolo.
+- Test del calcolo EVM sull'esempio TIMBUFE e sui casi particolari: stima mancante, date mancanti, nessun costo consuntivato, percentuale a zero.
 
 ### Piano di rilascio proposto
 
-1. **Fase 1 — Fondamenta.** Autenticazione e ruoli; modulo Comuni con progetti, approvatori con profilo TL o PM, clienti, centri di costo e ruoli; migrazione delle risorse e dei progetti del Pianificatore (oggi testi liberi) verso le nuove anagrafiche.
+1. **Fase 1 — Fondamenta.** Autenticazione e ruoli; modulo Comuni con progetti, approvatori con profilo TL o PM, clienti, centri di costo e ruoli; percentuale di completamento e risorse assegnate alle attività; migrazione delle risorse e dei progetti del Pianificatore (oggi testi liberi) verso le nuove anagrafiche.
 2. **Fase 2 — Consuntivazione.** Tipologie di costo, tariffe standard e personalizzate, consuntivo giornaliero e settimanale, calcolo e memorizzazione dei costi.
 3. **Fase 3 — Controllo.** Invio, approvazione a due livelli (via libera TL facoltativo, approvazione PM definitiva), chiusura dei periodi, storico delle modifiche.
-4. **Fase 4 — Report.** Costi per progetto e centro di costo, pianificato contro consuntivato, esportazioni.
+4. **Fase 4 — Report.** Costi per progetto e centro di costo, pianificato contro consuntivato, indicatori EVM con stato di tempi e costi e andamento giornaliero, esportazioni.
 
 ## Integrazioni future con contabilità, paghe ed ERP
 
@@ -374,8 +476,8 @@ Nel database `toolpm` si aggiungono tredici collection, oltre a `risorse` che es
 | `ruoli` | un ruolo professionale | Codice, descrizione |
 | `clienti` | un cliente | Codice e ragione sociale |
 | `centri_costo` | un centro di costo | Codice, descrizione, stato |
-| `progetti` | un progetto | Cliente, centro di costo (fisso), approvatori con profilo TL o PM in `approvatori`, `soloSuAttivita`, titolo, descrizione, date, stato (inValutazione, inCorso, chiuso), quattro stime |
-| `attivita` | un'attività di un progetto | `progettoId` (fisso dopo il primo consuntivo), codice univoco nel progetto, descrizione, date, stato, stimaGiorni facoltativa |
+| `progetti` | un progetto | Cliente, centro di costo (fisso), approvatori con profilo TL o PM in `approvatori`, `soloSuAttivita`, titolo, descrizione, date, stato (inValutazione, inCorso, chiuso), quattro stime, percentualeCompletamento |
+| `attivita` | un'attività di un progetto | `progettoId` (fisso dopo il primo consuntivo), codice univoco nel progetto, descrizione, date, stato, stimaGiorni facoltativa, percentualeCompletamento, risorseAssegnateIds |
 | `tipologie_costo` | una tipologia | Codice, descrizione, ordine, categoria, attiva |
 | `tariffe_standard` | costo orario di un ruolo per una tipologia in un periodo | Collection separata, accessibile solo al controller |
 | `tariffe_personalizzate` | costo orario di una risorsa per una tipologia in un periodo | Come sopra |
@@ -384,6 +486,9 @@ Nel database `toolpm` si aggiungono tredici collection, oltre a `risorse` che es
 | `audit_log` | una modifica | Collection, id, utente, data, valori prima e dopo |
 | `esportazioni` | un invio verso un sistema esterno | Destinazione, periodo, esito, record, totali di controllo, file (per le integrazioni future) |
 | `corrispondenze_codici` | un codice esterno | Entità di ToolPM, sistema esterno, codice da usare (per le integrazioni future) |
+| `avanzamenti` | un cambio di percentuale | Progetto, attività facoltativa, valore precedente e nuovo, data, autore |
+| `evm_giornalieri` | gli indicatori di un progetto in un giorno | PV, EV, AC, indici, previsioni e stati, in centesimi e in giorni; indice unico su progetto e data |
+| `parametri` | un parametro di sistema | Ore per giorno, soglie degli stati EVM |
 
 ### Documenti di esempio
 
@@ -405,6 +510,7 @@ Nel database `toolpm` si aggiungono tredici collection, oltre a `risorse` che es
   "dataInizio": { "$date": "2027-01-01T00:00:00Z" },
   "dataFine": { "$date": "2027-12-31T00:00:00Z" },
   "stato": "inCorso",
+  "percentualeCompletamento": 40,
   "stime": {
     "managerialeGiorni": 400,
     "managerialeCentesimi": 16000000,
@@ -430,6 +536,8 @@ Nel database `toolpm` si aggiungono tredici collection, oltre a `risorse` che es
   "dataFine": null,
   "stato": "attiva",
   "stimaGiorni": 250,
+  "percentualeCompletamento": 55,
+  "risorseAssegnateIds": [ { "$oid": "6ae88b192fcc045f0ca48409" } ],
   "creatoIl": { "$date": "2026-12-15T10:30:00Z" },
   "creatoDa": { "$oid": "6740a1c2e1f0a1b2c3d4e099" },
   "modificatoIl": { "$date": "2026-12-15T10:30:00Z" },

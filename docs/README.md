@@ -11,7 +11,7 @@ tenendo conto di skill, importanza strategica e probabilità di allocazione.
 | [backend.md](backend.md) | API NestJS: moduli, endpoint, regole di calcolo, validazione, Swagger, configurazione |
 | [database.md](database.md) | MongoDB: collection, schema dei documenti, regole sui dati, indici, import dei dati |
 | [analisi-pianificatore.md](analisi-pianificatore.md) | Sezione Pianificatore risorse allocate: analisi funzionale (requisiti, calcolo della percentuale pesata, regole, limiti attuali) e analisi tecnica di sintesi con le evoluzioni previste |
-| [analisi-consuntivazione.md](analisi-consuntivazione.md) | Sezione Consuntivazione (in analisi): analisi funzionale e tecnica, progetti (stati, stime) e attività, profili di approvazione TL, PM e PMSenior, integrazioni con altri sistemi tramite script di estrazione, modello dei dati su MongoDB |
+| [analisi-consuntivazione.md](analisi-consuntivazione.md) | Sezione Consuntivazione (in analisi): analisi funzionale e tecnica, progetti (stati, stime, percentuale di completamento) e attività, indicatori EVM di tempi e costi, profili di approvazione TL, PM e PMSenior, integrazioni con altri sistemi tramite script di estrazione, modello dei dati su MongoDB |
 
 ## In breve
 
