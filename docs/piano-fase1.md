@@ -6,6 +6,20 @@
 
 La fase 1 prepara ToolPM per la Consuntivazione: accesso con utenti e profili, modulo Comuni con le anagrafiche condivise e migrazione dei dati del Pianificatore. Non comprende ancora consuntivi, tariffe né EVM.
 
+## Avanzamento
+
+| Blocco | Stato | Note |
+| --- | --- | --- |
+| B0 — Preparazione | In corso | Codice e documentazione su GitHub (commit del 17/11/2026): test della griglia e del filtro per skill, `/api/health` con il replica set, script `npm run verifica-mongodb`, guida [mongodb-replica-set.md](mongodb-replica-set.md), nuove variabili in `.env.example`. Resta da eseguire sul PC il passaggio di MongoDB a replica set. |
+| B1 — Infrastruttura comune | Da fare | |
+| B2 — Autenticazione | Da fare | |
+| B3 — Permessi | Da fare | |
+| B4 — Modulo Comuni | Da fare | |
+| B5 — Pianificatore adattato | Da fare | |
+| B6 — Frontend | Da fare | |
+| B7 — Migrazione dei dati | Da fare | |
+| B8 — Test e documentazione | Da fare | |
+
 ## Obiettivo e perimetro
 
 Alla fine della fase 1 ogni utente entra in ToolPM con la propria email, vede e modifica solo ciò che il suo profilo consente, e Pianificatore e Consuntivazione condividono le stesse anagrafiche in un modulo Comuni.
@@ -141,11 +155,11 @@ La fase 1 è finita quando tutte queste verifiche passano, con test automatici d
 
 ## Rischi e decisioni prima di iniziare
 
-Prima di iniziare servono tre decisioni; per ciascuna il piano adotta l'ipotesi indicata.
+Le tre decisioni e le contromisure sono state confermate il 17/11/2026.
 
-- [ ] Come si accede: password gestite da ToolPM o account aziendale (per esempio Microsoft 365 o Google Workspace)? *Ipotesi: password di ToolPM nella fase 1; l'accesso con account aziendale si potrà aggiungere senza cambiare il modello, perché il nome utente è già l'email.*
-- [ ] Chi compila `risorse.csv` e `progetti.csv` (email, centri di costo, PM e TL) e con quali dati iniziali di clienti e centri di costo? *Ipotesi: l'amministrazione, prima del blocco B7.*
-- [ ] I vecchi percorsi `/api/pianificatore/risorse` restano attivi per un rilascio? *Ipotesi: sì, poi si eliminano.*
+- **Accesso:** password gestite da ToolPM nella fase 1. L'accesso con account aziendale (per esempio Microsoft 365 o Google Workspace) si potrà aggiungere senza cambiare il modello, perché il nome utente è già l'email.
+- **File da compilare:** `risorse.csv` e `progetti.csv` (email, centri di costo, PM e TL, clienti e centri di costo iniziali) li compila l'amministrazione, prima del blocco B7.
+- **Vecchi percorsi:** `/api/pianificatore/risorse` resta attivo per un rilascio, poi si elimina.
 
 | Rischio | Effetto | Contromisura |
 | --- | --- | --- |

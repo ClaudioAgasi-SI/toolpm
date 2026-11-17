@@ -153,9 +153,8 @@ Un documento per risorsa nella collection `risorse`, con skill e allocazioni inc
 
 ### Test e qualità
 
-- Backend: test Vitest sulle utilità dei mesi (`mesi.spec.ts`).
+- Backend: test Vitest sulle utilità dei mesi (`mesi.spec.ts`) e sulla griglia con il filtro per skill (`pianificazione.service.spec.ts`, aggiunto nel blocco B0 della fase 1).
 - Frontend: test Vitest sulla shell dell'applicazione e sulle utilità dei mesi.
-- Mancano test sul calcolo della griglia e sul filtro per skill: da aggiungere prima delle modifiche della fase 1.
 
 ### Evoluzioni tecniche previste
 

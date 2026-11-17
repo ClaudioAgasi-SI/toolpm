@@ -8,7 +8,8 @@ services:
     restart: unless-stopped
     environment:
       # Dentro un container "localhost" è il container stesso: il PC si raggiunge come host.docker.internal.
-      MONGODB_URI: ${MONGODB_URI:-mongodb://host.docker.internal:27017/toolpm}
+      # directConnection=true: necessario con il replica set a un nodo (docs/mongodb-replica-set.md), innocuo con un'istanza singola.
+      MONGODB_URI: ${MONGODB_URI:-mongodb://host.docker.internal:27017/toolpm?directConnection=true}
       SEED_DIR: /db
     volumes:
       # Dati di esempio, usati solo dallo script di import (scripts/seed.mjs).

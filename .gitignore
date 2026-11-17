@@ -6,3 +6,5 @@ coverage/
 *.log
 .DS_Store
 *.tsbuildinfo
+# backup di MongoDB (docs/mongodb-replica-set.md)
+backup-*.archive.gz

@@ -39,6 +39,9 @@ Dentro un container `localhost` indica il container stesso, quindi il backend si
 `mongodb://host.docker.internal:27017/toolpm`, il nome con cui Docker Desktop espone le porte del PC.
 Per usare un indirizzo diverso copia `.env.example` in `.env` e modifica `MONGODB_URI`.
 
+Dalla fase 1 MongoDB deve girare come replica set a un nodo: la procedura è in [docs/mongodb-replica-set.md](docs/mongodb-replica-set.md).
+Per verificare connessione, replica set e transazioni: `docker compose exec backend npm run verifica-mongodb`.
+
 ### Caricare i dati di esempio
 
 Solo se le collection sono vuote (non sovrascrive niente):
@@ -91,7 +94,7 @@ Documentazione interattiva Swagger, con la possibilità di provare le chiamate: 
 
 | Metodo | Percorso | Descrizione |
 |---|---|---|
-| GET | `/api/health` | Stato del backend e della connessione a MongoDB |
+| GET | `/api/health` | Stato del backend, della connessione a MongoDB e del replica set |
 | GET | `/api/pianificatore/risorse` | Elenco risorse |
 | GET / PUT / DELETE | `/api/pianificatore/risorse/:id` | Lettura, sostituzione, cancellazione di una risorsa |
 | POST | `/api/pianificatore/risorse` | Nuova risorsa |

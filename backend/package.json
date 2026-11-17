@@ -18,7 +18,8 @@
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
-    "seed": "node scripts/seed.mjs"
+    "seed": "node scripts/seed.mjs",
+    "verifica-mongodb": "node scripts/verifica-mongodb.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

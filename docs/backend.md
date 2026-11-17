@@ -42,8 +42,10 @@ backend/
 │           ├── pianificazione.dto.ts       classi per documentare la risposta in Swagger
 │           ├── mesi.ts                     utilità sui mesi AAAAMM
 │           ├── pesi.ts                     pesi di probabilità
-│           └── mesi.spec.ts                test
+│           ├── mesi.spec.ts                test delle utilità dei mesi
+│           └── pianificazione.service.spec.ts  test della griglia e del filtro per skill
 ├── scripts/seed.mjs                 import dei JSON di db/ (vedi database.md)
+├── scripts/verifica-mongodb.mjs     verifica di connessione, replica set e transazioni
 ├── Dockerfile
 └── package.json
 ```
@@ -163,7 +165,7 @@ Il tipo determina il campo (`tecnico` → `skillTecnici`, `funzionale` → `skil
 
 ### Health — `/api/health`
 
-`GET /api/health` → `{ "status": "ok", "database": "toolpm", "mongodb": "connesso" | "non connesso" }`.
+`GET /api/health` → `{ "status": "ok", "database": "toolpm", "mongodb": "connesso" | "non connesso", "replicaSet": "rs0" | null }`. `replicaSet` è il nome del replica set di MongoDB, `null` con un'istanza singola (vedi [mongodb-replica-set.md](mongodb-replica-set.md)).
 
 ## Gestione degli errori
 
@@ -191,6 +193,7 @@ npm install
 npm run start:dev     # avvio con ricaricamento automatico, http://localhost:3001/api
 npm run build         # compilazione in dist/
 npm test              # test Vitest
+npm run verifica-mongodb  # connessione, replica set e transazioni di MongoDB
 npm run seed          # import dei dati di esempio (solo collection vuote)
 ```
 

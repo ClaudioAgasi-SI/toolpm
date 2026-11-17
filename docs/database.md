@@ -1,7 +1,8 @@
 # Database (MongoDB)
 
 - **Database**: `toolpm` (stessa istanza MongoDB del vecchio database `pianificazione`)
-- **Connessione**: variabile `MONGODB_URI` del backend (default in Docker: `mongodb://host.docker.internal:27017/toolpm`; default fuori da Docker: `mongodb://localhost:27017/toolpm`)
+- **Connessione**: variabile `MONGODB_URI` del backend (default in Docker: `mongodb://host.docker.internal:27017/toolpm?directConnection=true`; default fuori da Docker: `mongodb://localhost:27017/toolpm`)
+- **Replica set**: dalla fase 1 MongoDB gira come replica set a un nodo (`rs0`), necessario per le transazioni. Procedura e verifica in [mongodb-replica-set.md](mongodb-replica-set.md); `npm run verifica-mongodb` nel backend controlla connessione, replica set e transazioni.
 - **Collection**: `risorse`, `skills`, `rate`, `certificazioni`
 - **Accesso**: solo tramite il backend (Mongoose). Gli schemi sono in `backend/src/pianificatore/risorse/risorsa.schema.ts` e `backend/src/pianificatore/anagrafiche/anagrafiche.schema.ts`.
 
@@ -161,6 +162,8 @@ Script: `backend/scripts/seed.mjs`
 Variabili: `MONGODB_URI` (connessione), `SEED_DIR` (cartella dei JSON; in Docker `/db`).
 
 ## Backup e ripristino
+
+Prima di ogni migrazione della fase 1 serve un backup: i comandi da usare con MongoDB in un container sono in [mongodb-replica-set.md](mongodb-replica-set.md#2-backup).
 
 Con gli strumenti standard di MongoDB (dal container di MongoDB o da un PC con i MongoDB Database Tools):
 
