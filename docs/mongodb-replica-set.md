@@ -14,6 +14,7 @@ docker inspect <nome-container> --format "{{json .Mounts}}"
 ```
 
 Annotare nome del container, immagine (es. `mongo:8`) e volume o cartella montata su `/data/db`. Negli esempi seguenti il container si chiama `mongodb` e il volume `mongodb-data`.
+                 mongodb                mongo:latest      52bdea6b28b5b270851e35a3b0bd00c72c8323657bb0bfbfc879457a5e183b56 
 
 ## 2. Backup
 
@@ -35,6 +36,8 @@ docker stop mongodb
 docker rename mongodb mongodb-vecchio
 docker run -d --name mongodb -p 27017:27017 -v mongodb-data:/data/db --restart unless-stopped mongo:8 --replSet rs0 --bind_ip_all
 ```
+docker run -d --name mongodb -p 27017:27017 -v  52bdea6b28b5b270851e35a3b0bd00c72c8323657bb0bfbfc879457a5e183b56:/data/db --restart unless-stopped mongo:latest --replSet rs0 --bind_ip_all
+
 
 Usare la stessa immagine e lo stesso volume del container originale, e riportare le altre opzioni eventualmente presenti (variabili d'ambiente, porte aggiuntive).
 
