@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { PermessiService } from './permessi.service.js';
 import {
   filtroProgettiGestibili,
+  motivoNegatoModificaRisorsa,
   permessiGlobali,
   type ProgettoPerPermessi,
   profiloSulProgetto,
@@ -111,6 +112,47 @@ describe('permessi sulle risorse', () => {
     expect(puoModificareCaratteristicheRisorsa(TL, miei, [])).toBe(false);
     expect(puoModificareCaratteristicheRisorsa(RISORSA, miei, ['p1'])).toBe(false);
     expect(puoModificareCaratteristicheRisorsa(CONTROLLER, miei, ['p1'])).toBe(false);
+  });
+});
+
+describe('modifica delle caratteristiche dal Pianificatore (decisioni del 19/11/2026)', () => {
+  const miei = ['p1'];
+  const prima = {
+    skillTecnici: [{ skillName: 'Java', rate: 'buono' }],
+    planned: [
+      { mese: '202701', progettoId: 'p9', percentualeAllocazione: 50 },
+      { mese: '202702' },
+    ],
+  };
+  const conAllocazione = (a: object) => ({ ...prima, planned: [...prima.planned, a] });
+
+  it('il TL alloca qualsiasi risorsa sui propri progetti, e poi ne cura anche le skill', () => {
+    const dopo = conAllocazione({ mese: '202703', progettoId: 'p1', percentualeAllocazione: 30 });
+    expect(motivoNegatoModificaRisorsa(TL, miei, prima, dopo)).toBeNull();
+    expect(motivoNegatoModificaRisorsa(TL, miei, prima, { ...dopo, skillTecnici: [{ skillName: 'Go' }] })).toBeNull();
+    // modifica e rimozione delle proprie allocazioni
+    expect(motivoNegatoModificaRisorsa(TL, miei, dopo, { ...dopo, planned: prima.planned })).toBeNull();
+  });
+
+  it('il TL non tocca le allocazioni su altri progetti né i mesi liberi', () => {
+    const cambiata = { ...prima, planned: [{ mese: '202701', progettoId: 'p9', percentualeAllocazione: 80 }, { mese: '202702' }] };
+    expect(motivoNegatoModificaRisorsa(TL, miei, prima, cambiata)).toMatch(/non sei approvatore/);
+    expect(motivoNegatoModificaRisorsa(TL, miei, prima, { ...prima, planned: [prima.planned[0]] })).toMatch(/non sei approvatore/);
+    // stesso contenuto in un altro ordine, con i campi ricavati e id come oggetti: nessuna modifica
+    const riordinata = { ...prima, planned: [{ mese: '202702' }, { percentualeAllocazione: 50, progetto: 'P9', progettoId: { toString: () => 'p9' }, mese: '202701' }] };
+    expect(motivoNegatoModificaRisorsa(TL, miei, prima, riordinata)).toBeNull();
+  });
+
+  it('skill di una risorsa che non lavora sui progetti del TL: no', () => {
+    expect(motivoNegatoModificaRisorsa(TL, miei, prima, { ...prima, skillTecnici: [] })).toMatch(/non lavora sui tuoi progetti/);
+  });
+
+  it('PM e PMSenior tutto; risorse semplici e controller niente', () => {
+    const tutto = { skillTecnici: [], planned: [] };
+    expect(motivoNegatoModificaRisorsa(PM_ESTERNO, [], prima, tutto)).toBeNull();
+    expect(motivoNegatoModificaRisorsa(PMSENIOR, [], prima, tutto)).toBeNull();
+    expect(motivoNegatoModificaRisorsa(RISORSA, miei, prima, tutto)).not.toBeNull();
+    expect(motivoNegatoModificaRisorsa(CONTROLLER, miei, prima, prima)).not.toBeNull();
   });
 });
 

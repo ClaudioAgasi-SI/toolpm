@@ -5,6 +5,7 @@ import type { Model } from 'mongoose';
 import type { UtenteAutenticato } from '../../auth/decoratori.js';
 import { Attivita, Progetto } from '../../comuni/schemi/progetto.schema.js';
 import { PermessiService } from '../../permessi/permessi.service.js';
+import type { CaratteristicheRisorsa } from '../../permessi/regole.js';
 import { AllocazioniService } from './allocazioni.service.js';
 import { Risorsa } from './risorsa.schema.js';
 
@@ -17,8 +18,9 @@ type RisorsaLetta = Risorsa & { _id: mongoose.Types.ObjectId };
 
 /**
  * Risorse viste dal Pianificatore (fase 1, blocchi B4 e B5). Il modello è quello del modulo Comuni.
- * - Caratteristiche (skill, certificazioni, allocazioni): PM e PMSenior su tutte le risorse, TL solo su
- *   quelle allocate su un suo progetto (permessi del blocco B3).
+ * - Caratteristiche (skill, certificazioni, allocazioni): PM e PMSenior su tutte le risorse; il TL alloca
+ *   qualsiasi risorsa sui propri progetti e modifica skill e certificazioni delle risorse che lavorano sui
+ *   suoi progetti (regole.motivoNegatoModificaRisorsa).
  * - Cognome e nome, creazione ed eliminazione: anagrafica, permesso gestireRisorse (PM, PMSenior).
  * Le richieste anonime passano finché AUTH_OBBLIGATORIA=false (fino al blocco B6).
  * Le allocazioni puntano al progetto con progettoId (vedi AllocazioniService).
@@ -64,32 +66,33 @@ export class RisorseService {
 
   /**
    * Sostituisce le caratteristiche della risorsa (skill, certificazioni, allocazioni) con quelle ricevute:
-   * quelle non inviate tornano vuote. Cognome e nome si cambiano solo con il permesso gestireRisorse;
+   * quelle non inviate tornano vuote. I permessi si controllano confrontando prima e dopo.
+   * Cognome e nome si cambiano solo con il permesso gestireRisorse;
    * i dati anagrafici (email, cellulare, ruolo, orario...) non si toccano: sono di /api/comuni/risorse.
    */
   async update(utente: UtenteAutenticato | undefined, id: string, data: Partial<Risorsa> & { _id?: unknown }) {
     const attuale = await this.carica(id);
-    await this.permessi.verificaSeAutenticato(
-      utente,
-      async () =>
-        this.permessi.puoModificareCaratteristicheRisorsa(
-          utente!,
-          await this.allocazioni.progettiDelSoggetto(utente!.risorsaId),
-          this.allocazioni.progettiDellaRisorsa(attuale.planned),
-        ),
-      'modificare le caratteristiche di questa risorsa',
-    );
     const $set: Record<string, unknown> = {};
     for (const campo of ['cognome', 'nome'] as const) {
       if (data?.[campo] === undefined) continue;
       if (typeof data[campo] !== 'string' || !data[campo].trim()) throw new BadRequestException(`${campo}: obbligatorio`);
       if (data[campo].trim() !== attuale[campo]) $set[campo] = data[campo];
     }
-    if ($set.cognome !== undefined || $set.nome !== undefined) {
-      await this.permessi.verificaSeAutenticato(utente, () => this.permessi.puoGestireRisorse(utente!), 'cambiare cognome e nome');
-    }
     for (const campo of CARATTERISTICHE) $set[campo] = data?.[campo] ?? [];
     $set.planned = await this.allocazioni.risolvi($set.planned);
+
+    if (utente) {
+      if ($set.cognome !== undefined || $set.nome !== undefined) {
+        this.permessi.verifica(utente, this.permessi.puoGestireRisorse(utente), 'cambiare cognome e nome');
+      }
+      const negato = this.permessi.motivoNegatoModificaRisorsa(
+        utente,
+        await this.allocazioni.progettiDelSoggetto(utente.risorsaId),
+        attuale,
+        $set as CaratteristicheRisorsa,
+      );
+      this.permessi.verifica(utente, negato === null, negato ?? '');
+    }
     await this.model.updateOne({ _id: attuale._id }, { $set }, { runValidators: true }).exec();
     return this.findOne(id);
   }

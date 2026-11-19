@@ -150,14 +150,35 @@ describe.skipIf(!URI_BASE)('Pianificatore adattato con MongoDB vero', () => {
   it('caratteristiche: TL solo sulle risorse dei suoi progetti; cognome e nome solo PM e PMSenior', async () => {
     const skill = (r: Record<string, unknown>) => (r.skillTecnici = [{ skillName: 'Angular', rate: 'buono' }]);
     expect((await come('tullio').put(`/api/pianificatore/risorse/${String(id.rita)}`, await risorsaDaModificare(String(id.rita), skill))).status).toBe(200);
-    // Sara non è allocata su progetti di Tullio (Mario sì, dal test precedente: P1).
+    // Sara non è allocata su progetti di Tullio.
     expect((await come('tullio').put(`/api/pianificatore/risorse/${String(id.sara)}`, await risorsaDaModificare(String(id.sara), skill))).status).toBe(403);
-    expect((await come('tullio').put(`/api/pianificatore/risorse/${String(id.mario)}`, await risorsaDaModificare(String(id.mario), skill))).status).toBe(200);
     expect((await come('rita').put(`/api/pianificatore/risorse/${String(id.rita)}`, await risorsaDaModificare(String(id.rita), skill))).status).toBe(403);
     expect((await come('sara').put(`/api/pianificatore/risorse/${String(id.mario)}`, await risorsaDaModificare(String(id.mario), skill))).status).toBe(200);
     const rinomina = await risorsaDaModificare(String(id.rita), (r) => (r.cognome = 'Rossi'));
     expect((await come('tullio').put(`/api/pianificatore/risorse/${String(id.rita)}`, rinomina)).body.message).toMatch(/cambiare cognome e nome/);
     expect((await come('paola').put(`/api/pianificatore/risorse/${String(id.rita)}`, rinomina)).body.cognome).toBe('Rossi');
+  });
+
+  it('il TL alloca qualsiasi risorsa sui suoi progetti, ma non tocca le allocazioni su progetti altrui', async () => {
+    // Sara non lavora su P1: Tullio la alloca su P1 e nella stessa modifica ne aggiorna le skill.
+    const allocaSara = await risorsaDaModificare(String(id.sara), (r) => {
+      r.planned.push({ mese: '202705', progetto: 'P1', percentualeAllocazione: 20 });
+      r.skillTecnici = [{ skillName: 'Java' }];
+    });
+    const r = await come('tullio').put(`/api/pianificatore/risorse/${String(id.sara)}`, allocaSara);
+    expect(r.status).toBe(200);
+    expect(r.body.planned).toEqual([expect.objectContaining({ mese: '202705', progetto: 'P1' })]);
+    // Mario è allocato su P2 (non di Tullio): Tullio non può cambiare quella riga né spostarla su P1.
+    const toccaP2 = await risorsaDaModificare(String(id.mario), (r) => {
+      const p2 = r.planned.find((a) => a.progetto === 'P2')!;
+      p2.percentualeAllocazione = 10;
+    });
+    expect((await come('tullio').put(`/api/pianificatore/risorse/${String(id.mario)}`, toccaP2)).body.message).toMatch(/non sei approvatore/);
+    const spostaSuP1 = await risorsaDaModificare(String(id.mario), (r) => (r.planned.find((a) => a.progetto === 'P2')!.progetto = 'P1'));
+    expect((await come('tullio').put(`/api/pianificatore/risorse/${String(id.mario)}`, spostaSuP1)).status).toBe(403);
+    // Tullio toglie l'allocazione di Sara su P1: consentito.
+    const togli = await risorsaDaModificare(String(id.sara), (r) => (r.planned = []));
+    expect((await come('tullio').put(`/api/pianificatore/risorse/${String(id.sara)}`, togli)).status).toBe(200);
   });
 
   it('creazione ed eliminazione dal Pianificatore: solo PM e PMSenior', async () => {

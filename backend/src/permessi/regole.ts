@@ -161,6 +161,67 @@ export function puoModificareCaratteristicheRisorsa(
   return false;
 }
 
+/** Caratteristiche di una risorsa prima e dopo una modifica dal Pianificatore. */
+export interface CaratteristicheRisorsa {
+  skillTecnici?: unknown[];
+  skillAmbiti?: unknown[];
+  skillFunzionali?: unknown[];
+  certificazioni?: unknown[];
+  planned?: { progettoId?: unknown }[];
+}
+
+/** Campi delle allocazioni che non si salvano (ricavati dal progetto): non contano nei confronti. */
+const CAMPI_RICAVATI = new Set(['cliente', 'progetto', 'progettoTitolo', 'clienteRagioneSociale']);
+
+/** Id come testo (stringa, ObjectId o altro oggetto con toString). */
+const comeTesto = (v: unknown) => (v == null ? undefined : typeof v === 'string' ? v : (v as { toString(): string }).toString());
+
+/** Forma canonica (chiavi ordinate, id come testo) per confrontare due valori. */
+function canonico(v: unknown): string {
+  return JSON.stringify(v, (k, x: unknown) => {
+    if (k === 'progettoId') return comeTesto(x);
+    if (x && typeof x === 'object' && !Array.isArray(x)) {
+      return Object.fromEntries(
+        Object.entries(x as Record<string, unknown>)
+          .filter(([k, val]) => val !== undefined && !CAMPI_RICAVATI.has(k))
+          .sort(([a], [b]) => a.localeCompare(b)),
+      );
+    }
+    return x;
+  });
+}
+
+/**
+ * Modifica delle caratteristiche di una risorsa dal Pianificatore (decisioni del 19/11/2026).
+ * - PM e PMSenior: tutto, su tutte le risorse.
+ * - TL: alloca qualsiasi risorsa sui progetti di cui è approvatore e ne modifica o toglie quelle
+ *   allocazioni; le allocazioni su altri progetti (e i mesi liberi) restano come sono. Skill e
+ *   certificazioni solo se la risorsa lavora su un suo progetto, prima o dopo la modifica.
+ * - Gli altri: nulla.
+ * Restituisce null se la modifica è consentita, altrimenti l'azione negata (per il messaggio 403).
+ *
+ * @param progettiDelSoggetto id dei progetti di cui il soggetto è approvatore (TL o PM)
+ */
+export function motivoNegatoModificaRisorsa(
+  s: Soggetto,
+  progettiDelSoggetto: Iterable<string>,
+  prima: CaratteristicheRisorsa,
+  dopo: CaratteristicheRisorsa,
+): string | null {
+  if (ePMoPMSenior(s)) return null;
+  if (s.abilitazione !== 'TL') return 'modificare le caratteristiche di questa risorsa';
+  const miei = new Set(progettiDelSoggetto);
+  const mia = (a: { progettoId?: unknown }) => a.progettoId != null && miei.has(comeTesto(a.progettoId)!);
+  const altrui = (c: CaratteristicheRisorsa) => (c.planned ?? []).filter((a) => !mia(a)).map(canonico).sort();
+  if (canonico(altrui(prima)) !== canonico(altrui(dopo))) {
+    return 'modificare le allocazioni su progetti di cui non sei approvatore (o i mesi liberi)';
+  }
+  const altre = (c: CaratteristicheRisorsa) => canonico([c.skillTecnici, c.skillAmbiti, c.skillFunzionali, c.certificazioni].map((v) => v ?? []));
+  const lavoraConMe = (prima.planned ?? []).some(mia) || (dopo.planned ?? []).some(mia);
+  if (altre(prima) !== altre(dopo) && !lavoraConMe) return 'modificare skill e certificazioni di una risorsa che non lavora sui tuoi progetti';
+  return null;
+}
+
 /**
  * Filtro MongoDB per i progetti che il soggetto può gestire (elenco "I miei progetti", scelte nei menu):
  * tutti per il PMSenior, quelli in cui è approvatore per TL e PM, nessuno per gli altri.

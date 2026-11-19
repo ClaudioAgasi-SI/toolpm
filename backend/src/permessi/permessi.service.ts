@@ -1,7 +1,14 @@
 import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import mongoose from 'mongoose';
 import * as regole from './regole.js';
-import type { AttivitaPerPermessi, PermessoGlobale, ProgettoPerPermessi, Soggetto, StatoProgetto } from './regole.js';
+import type {
+  AttivitaPerPermessi,
+  CaratteristicheRisorsa,
+  PermessoGlobale,
+  ProgettoPerPermessi,
+  Soggetto,
+  StatoProgetto,
+} from './regole.js';
 
 /**
  * Permessi (fase 1, blocco B3). Ogni metodo `puo...` risponde sì o no; `verifica(...)` lancia
@@ -54,6 +61,10 @@ export class PermessiService {
 
   puoModificareCaratteristicheRisorsa(s: Soggetto, progettiDelSoggetto: Iterable<string>, progettiDellaRisorsa: Iterable<string>) {
     return regole.puoModificareCaratteristicheRisorsa(s, progettiDelSoggetto, progettiDellaRisorsa);
+  }
+
+  motivoNegatoModificaRisorsa(s: Soggetto, progettiDelSoggetto: Iterable<string>, prima: CaratteristicheRisorsa, dopo: CaratteristicheRisorsa) {
+    return regole.motivoNegatoModificaRisorsa(s, progettiDelSoggetto, prima, dopo);
   }
 
   /** Filtro per gli elenchi dei progetti gestibili; null = nessun progetto. */

@@ -149,6 +149,7 @@ Modulo globale `src/permessi/`, con le regole decise nell'analisi. Le regole son
 | `puoModificarePercentualeAttivita` | risorse assegnate all'attività, TL e PM del progetto, PMSenior |
 | `puoGestireRisorse` | PM, PMSenior |
 | `puoModificareCaratteristicheRisorsa` | PM e PMSenior su tutte; TL sulle risorse che lavorano su un suo progetto (fase 1: allocate nel Pianificatore) |
+| `motivoNegatoModificaRisorsa` (modifica dal Pianificatore, confronto prima/dopo) | PM e PMSenior tutto; TL: alloca qualsiasi risorsa sui propri progetti e ne modifica o toglie quelle allocazioni, non tocca le allocazioni su altri progetti né i mesi liberi, skill e certificazioni solo se la risorsa lavora su un suo progetto (prima o dopo la modifica) |
 
 - **Elenchi.** `filtroProgettiGestibili(utente)` dà il filtro MongoDB dei progetti che l'utente può gestire: tutti per il PMSenior, quelli in cui è approvatore per TL e PM, nessuno (`null`) per gli altri.
 - Le regole controllano solo chi può agire. Se un passaggio di stato è ammesso (date, almeno un PM) lo controlla il modulo Comuni (blocco B4). Il collegamento ai dati veri (progetti, attività, allocazioni) arriva con i blocchi B4 e B5.
@@ -189,7 +190,7 @@ Le risorse sono quelle del modulo Comuni: qui si gestiscono le **caratteristiche
 | GET | `/api/pianificatore/risorse` | Elenco, ordinato per cognome e nome | Tutti | 200 |
 | GET | `/api/pianificatore/risorse/:id` | Dettaglio | Tutti | 200, 404 |
 | POST | `/api/pianificatore/risorse` | Crea (**mantenuto per un rilascio**, senza email obbligatoria; la creazione completa è `POST /api/comuni/risorse`) | PM, PMSenior | 201, 400, 403 |
-| PUT | `/api/pianificatore/risorse/:id` | **Sostituisce** skill, certificazioni e allocazioni: quelle non inviate tornano vuote. Cognome e nome si cambiano solo con il permesso `gestireRisorse`; l'anagrafica non si tocca | PM e PMSenior su tutte; TL sulle risorse allocate su un suo progetto | 200, 400, 403, 404 |
+| PUT | `/api/pianificatore/risorse/:id` | **Sostituisce** skill, certificazioni e allocazioni: quelle non inviate tornano vuote. Cognome e nome si cambiano solo con il permesso `gestireRisorse`; l'anagrafica non si tocca | PM e PMSenior su tutte; TL: allocazioni solo sui propri progetti (anche di risorse nuove per il progetto), skill e certificazioni delle risorse che lavorano sui suoi progetti | 200, 400, 403, 404 |
 | DELETE | `/api/pianificatore/risorse/:id` | Elimina (**mantenuto per un rilascio**), se la risorsa non è approvatore di un progetto né assegnata a un'attività | PM, PMSenior | 200 `{ "deleted": true }`, 403, 404, 409 |
 
 Un `id` non valido come ObjectId restituisce 404.
