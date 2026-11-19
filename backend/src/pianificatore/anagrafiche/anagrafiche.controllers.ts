@@ -22,6 +22,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import type { Model } from 'mongoose';
+import { PermessoTransitorio } from '../../auth/decoratori.js';
 import { Certificazione, Rate, Skill } from './anagrafiche.schema.js';
 import { CrudService } from './crud.service.js';
 
@@ -82,6 +83,10 @@ function conId(Modello: Classe): Classe {
   return ConId;
 }
 
+/** Chi può modificare le anagrafiche del Pianificatore (blocco B5). */
+const SCRITTURA =
+  'Con accesso: PM e PMSenior (permesso gestireCaratteristicheTutteLeRisorse). Senza accesso ammesso finché AUTH_OBBLIGATORIA=false.';
+
 /** Crea un controller CRUD standard (con documentazione Swagger) per un percorso e un servizio. */
 function crudController<T>(
   path: string,
@@ -105,7 +110,8 @@ function crudController<T>(
     }
 
     @Post()
-    @ApiOperation({ summary: `Crea un elemento in ${nome}` })
+    @PermessoTransitorio('gestireCaratteristicheTutteLeRisorse')
+    @ApiOperation({ summary: `Crea un elemento in ${nome}`, description: SCRITTURA })
     @ApiBody({ type: Modello })
     @ApiCreatedResponse({ type: Risposta })
     @ApiBadRequestResponse({ description: noteValidazione })
@@ -114,7 +120,8 @@ function crudController<T>(
     }
 
     @Put(':id')
-    @ApiOperation({ summary: `Modifica un elemento di ${nome}` })
+    @PermessoTransitorio('gestireCaratteristicheTutteLeRisorse')
+    @ApiOperation({ summary: `Modifica un elemento di ${nome}`, description: SCRITTURA })
     @ApiParam({ name: 'id', description: 'ObjectId MongoDB' })
     @ApiBody({ type: Modello })
     @ApiOkResponse({ type: Risposta })
@@ -125,7 +132,8 @@ function crudController<T>(
     }
 
     @Delete(':id')
-    @ApiOperation({ summary: `Elimina un elemento di ${nome}` })
+    @PermessoTransitorio('gestireCaratteristicheTutteLeRisorse')
+    @ApiOperation({ summary: `Elimina un elemento di ${nome}`, description: SCRITTURA })
     @ApiParam({ name: 'id', description: 'ObjectId MongoDB' })
     @ApiOkResponse({ schema: { example: { deleted: true } } })
     @ApiNotFoundResponse({ description: 'Elemento non trovato' })

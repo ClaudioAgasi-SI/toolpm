@@ -16,7 +16,7 @@ certificazioni ┘            ├── skillTecnici[]     { skillName, rate }
                             ├── skillFunzionali[]  { skillName, rate }
                             ├── skillAmbiti[]      { skillName, rate }
                             ├── certificazioni[]   (struttura libera)
-                            └── planned[]          { mese, cliente, progetto, ..., percentualeAllocazione }
+                            └── planned[]          { mese, progettoId ─► progetti, ..., percentualeAllocazione }
 ```
 
 Le anagrafiche del Pianificatore non sono collegate alle risorse da riferimenti: le risorse contengono i **valori** (testo), non gli `_id` delle anagrafiche.
@@ -80,16 +80,16 @@ Un documento per persona, con skill e pianificazione incorporate. Dal blocco B4 
 | Campo | Tipo | Obbl. | Vincoli / scala di riferimento |
 |---|---|---|---|
 | `mese` | string | sì | Formato `AAAAMM` (regex `^\d{6}$`) |
-| `cliente` | string | no | Testo libero |
-| `progetto` | string | no | Testo libero |
-| `progettoId` | ObjectId | no | Progetto della collection `progetti`, impostato dalla migrazione B7 ([migrazione-dati.md](migrazione-dati.md)) e, per le righe scritte a testo, dal backend quando il testo corrisponde a un progetto importato |
-| `clienteTesto`, `progettoTesto` | string | no | Testi originali conservati dalla migrazione per un rilascio |
+| `progettoId` | ObjectId | no | Progetto della collection `progetti`; il cliente si ricava dal progetto. Assente nei mesi liberi |
+| `clienteTesto`, `progettoTesto` | string | no | Testi originali conservati dalla migrazione B7 ([migrazione-dati.md](migrazione-dati.md)) per un rilascio, poi si eliminano |
 | `competenzaTecnica` | string | no | Scala `rate.competenzaTecnica` |
 | `conoscenzaAmbito` | string | no | Scala `rate.conoscenzaAmbito` |
 | `conoscenzaFunzionale` | string | no | Scala `rate.conoscenzaFunzionale` |
 | `importanzaStrategica` | string | no | Scala `rate.importanzaStrategica` |
 | `probabilitaAllocazione` | string | no | Scala `rate.probabilitaAllocazione` |
 | `percentualeAllocazione` | number | no | 0–100 |
+
+Dal blocco B5 i campi `cliente` e `progetto` (testo libero) non si salvano più: le API li restituiscono ricavandoli da `progettoId` (vedi [backend.md](backend.md#risorsemodule--apipianificatorerisorse)). La migrazione `006-allocazioni-progettoid` li toglie dalle allocazioni già collegate; i dati di esempio di `db/` li contengono ancora finché non si esegue la migrazione B7.
 
 Più righe con lo stesso `mese` rappresentano più progetti nello stesso mese. Una riga **senza `percentualeAllocazione`** (o con 0) è un *segnaposto*: indica solo che la risorsa è libera e viene ignorata nei calcoli.
 
@@ -108,7 +108,7 @@ Esempio:
   "certificazioni": [],
   "planned": [
     {
-      "mese": "202701", "cliente": "TIM", "progetto": "TIMBUFE",
+      "mese": "202701", "progettoId": { "$oid": "6740a1c2e1f0a1b2c3d4e501" },
       "competenzaTecnica": "buono", "conoscenzaAmbito": "buono", "conoscenzaFunzionale": "buono",
       "importanzaStrategica": "imprescindibile", "probabilitaAllocazione": "sicura",
       "percentualeAllocazione": 30
@@ -245,12 +245,13 @@ Registro delle migrazioni eseguite da `npm run migra`: `_id` è il nome dello sc
 | `003-indici-utenti` | Indice unico su `utenti.email` |
 | `004-comuni` | Crea `clienti`, `centri_costo`, `ruoli`, `progetti`, `attivita`, `avanzamenti` con i validatori `$jsonSchema` (o li aggiorna se esistono) e i loro indici; indice unico parziale su `risorse.email` |
 | `005-alias-pianificatore` | Indice su `progetti.aliasPianificatore` |
+| `006-allocazioni-progettoid` | Toglie i testi `cliente` e `progetto` dalle allocazioni che hanno `progettoId` (conservando `clienteTesto` e `progettoTesto`); non tocca quelle non collegate |
 
 L'importazione della migrazione dei dati del Pianificatore (blocco B7, `npm run migrazione-dati -- importa`) si registra nella stessa collection con `_id` `B7-importa` e il riepilogo dell'ultima esecuzione.
 
 ## Regole sui dati
 
-1. **Le anagrafiche sono suggerimenti, non vincoli.** Una risorsa può avere skill, livelli, clienti o progetti non presenti nelle anagrafiche; il backend non li rifiuta. Rinominare o eliminare un valore di anagrafica **non** modifica le risorse che lo usano.
+1. **Le anagrafiche del Pianificatore sono suggerimenti, non vincoli.** Una risorsa può avere skill e livelli non presenti nelle anagrafiche; il backend non li rifiuta. I progetti invece, dal blocco B5, devono esistere nella collection `progetti`. Rinominare o eliminare un valore di anagrafica **non** modifica le risorse che lo usano.
 2. **L'ordine nelle scale conta**: il primo valore è il livello più alto. È la base per confronti tra livelli.
 3. **`n.a.`** significa "non applicabile/non valutato": nei filtri per skill una skill valutata `n.a.` non conta come posseduta.
 4. **Pesi di probabilità**: la percentuale pesata usa i pesi definiti nel codice del backend (`backend/src/pianificatore/pianificazione/pesi.ts`), legati ai nomi dei valori: sicura 1, probabile 0,75, forse 0,5, improbabile 0,25, nessuna 0; un valore sconosciuto pesa 0, una probabilità assente pesa 1. Rinominare questi valori nella scala `rate.probabilitaAllocazione` richiede di aggiornare anche `pesi.ts`.

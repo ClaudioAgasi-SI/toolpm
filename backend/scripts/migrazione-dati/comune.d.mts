@@ -10,3 +10,4 @@ export function codiceProposto(testo: string): string;
 export function fotografiaGriglia(
   risorse: { _id: unknown; planned?: { mese: string; percentualeAllocazione?: number }[] }[],
 ): Record<string, { righe: number; percentuale: number }>;
+export function testiAllocazione(a: Record<string, unknown>): { cliente: string; progetto: string };

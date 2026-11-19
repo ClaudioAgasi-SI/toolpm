@@ -29,7 +29,7 @@ backend/
 │   │   ├── password.ts                 cifratura e verifica delle password (scrypt)
 │   │   ├── auth.service.ts             accesso, token, profilo, cambio password, primo amministratore
 │   │   ├── autenticazione.guard.ts     guard globale: utente dal token, @Pubblica, @Ruoli, @Permesso
-│   │   ├── decoratori.ts               @Pubblica(), @Ruoli(...), @Permesso(...), @UtenteRichiesta()
+│   │   ├── decoratori.ts               @Pubblica(), @Ruoli(...), @Permesso(...), @PermessoTransitorio(...), @UtenteRichiesta()
 │   │   ├── auth.controller.ts          /api/auth/login, logout, me (con i permessi globali), cambia-password
 │   │   ├── utenti.service.ts / utenti.controller.ts  /api/utenti (solo admin)
 │   │   ├── auth.module.ts
@@ -61,7 +61,8 @@ backend/
 │       ├── pianificatore.module.ts  raccoglie i moduli della sezione
 │       ├── risorse/
 │       │   ├── risorsa.schema.ts       rimando allo schema Risorsa, spostato in comuni/schemi/ (B4)
-│       │   ├── risorse.service.ts      risorse viste dal Pianificatore: nome, skill, certificazioni, allocazioni
+│       │   ├── risorse.service.ts      caratteristiche delle risorse (skill, certificazioni, allocazioni), con i permessi
+│       │   ├── allocazioni.service.ts  allocazioni ↔ progetti: progettoId in scrittura, codice e cliente in risposta
 │       │   ├── risorse.controller.ts   /api/pianificatore/risorse
 │       │   └── risorse.module.ts
 │       ├── anagrafiche/
@@ -181,15 +182,24 @@ Convenzioni: le date si inviano come `AAAA-MM-GG`; nei PUT si aggiornano solo i 
 
 ### RisorseModule — `/api/pianificatore/risorse`
 
-| Metodo | Percorso | Descrizione | Risposte |
-|---|---|---|---|
-| GET | `/api/pianificatore/risorse` | Elenco, ordinato per cognome e nome | 200 |
-| GET | `/api/pianificatore/risorse/:id` | Dettaglio | 200, 404 |
-| POST | `/api/pianificatore/risorse` | Crea | 201, 400 |
-| PUT | `/api/pianificatore/risorse/:id` | **Sostituisce** i dati del Pianificatore (cognome, nome, skill, certificazioni, allocazioni): quelli non inviati tornano ai default. I dati anagrafici (email, cellulare, ruolo, orario...) restano intatti. Le allocazioni senza `progettoId` il cui testo cliente/progetto corrisponde a un progetto importato (`aliasPianificatore`) vengono collegate in automatico (anche in POST) | 200, 400, 404 |
-| DELETE | `/api/pianificatore/risorse/:id` | Elimina, se la risorsa non è approvatore di un progetto né assegnata a un'attività | 200 `{ "deleted": true }`, 404, 409 |
+Le risorse sono quelle del modulo Comuni: qui si gestiscono le **caratteristiche** (skill, certificazioni, allocazioni). L'anagrafica (email, cellulare, ruolo, orario) è di `/api/comuni/risorse`.
+
+| Metodo | Percorso | Descrizione | Chi (con accesso) | Risposte |
+|---|---|---|---|---|
+| GET | `/api/pianificatore/risorse` | Elenco, ordinato per cognome e nome | Tutti | 200 |
+| GET | `/api/pianificatore/risorse/:id` | Dettaglio | Tutti | 200, 404 |
+| POST | `/api/pianificatore/risorse` | Crea (**mantenuto per un rilascio**, senza email obbligatoria; la creazione completa è `POST /api/comuni/risorse`) | PM, PMSenior | 201, 400, 403 |
+| PUT | `/api/pianificatore/risorse/:id` | **Sostituisce** skill, certificazioni e allocazioni: quelle non inviate tornano vuote. Cognome e nome si cambiano solo con il permesso `gestireRisorse`; l'anagrafica non si tocca | PM e PMSenior su tutte; TL sulle risorse allocate su un suo progetto | 200, 400, 403, 404 |
+| DELETE | `/api/pianificatore/risorse/:id` | Elimina (**mantenuto per un rilascio**), se la risorsa non è approvatore di un progetto né assegnata a un'attività | PM, PMSenior | 200 `{ "deleted": true }`, 403, 404, 409 |
 
 Un `id` non valido come ObjectId restituisce 404.
+
+**Allocazioni e progetti (blocco B5).** Nel database ogni allocazione punta al progetto con `progettoId`; il cliente si ricava dal progetto (`AllocazioniService`).
+
+- In **risposta** (risorse e griglia) ogni allocazione con `progettoId` ha anche `progetto` (codice), `progettoTitolo`, `cliente` (codice) e `clienteRagioneSociale`, in sola lettura.
+- In **scrittura** il progetto si indica con `progettoId` oppure con il suo **codice** nel campo `progetto` (senza distinzione tra maiuscole e minuscole); valgono anche i vecchi testi importati dalla migrazione B7 (`aliasPianificatore`). Il codice prevale su `progettoId`, così nel frontend di oggi si cambia progetto scrivendone il codice. Un campo `progetto` vuoto toglie il progetto dalla riga (mese libero). Un progetto inesistente dà 400 con l'elenco delle righe da correggere. Si salvano solo `progettoId` e, se c'erano, `clienteTesto` e `progettoTesto`.
+
+**Periodo di transizione.** Finché il frontend non ha la pagina di accesso (blocco B6) e `AUTH_OBBLIGATORIA=false`, le API del Pianificatore accettano anche richieste anonime, senza controllo dei permessi, come prima. Per chi ha fatto l'accesso i permessi valgono già. Nel codice: `@PermessoTransitorio(...)` sui controller e `PermessiService.verificaSeAutenticato()` nei servizi; con il blocco B6 diventano `@Permesso(...)` e `verifica()`.
 
 ### AnagraficheModule — `/api/pianificatore/skills`, `/api/pianificatore/certificazioni`, `/api/pianificatore/rate`
 
@@ -201,6 +211,8 @@ I tre controller sono generati dalla funzione `crudController()` sopra un serviz
 | POST | `/api/pianificatore/{...}` | Crea |
 | PUT | `/api/pianificatore/{...}/:id` | Aggiorna i campi inviati (`findByIdAndUpdate`); l'`_id` nel corpo è ignorato |
 | DELETE | `/api/pianificatore/{...}/:id` | Elimina |
+
+Creazione, modifica ed eliminazione: con accesso, PM e PMSenior (`@PermessoTransitorio('gestireCaratteristicheTutteLeRisorse')`); la lettura è libera.
 
 `RateService` aggiunge una validazione su creazione e modifica:
 
@@ -235,7 +247,7 @@ Risposta:
           "totale": 70,
           "pesato": 50,
           "allocazioni": [
-            { "mese": "202701", "cliente": "TIM", "progetto": "TIMBUFE", "probabilitaAllocazione": "sicura",
+            { "mese": "202701", "progettoId": "6740a1c2e1f0a1b2c3d4e501", "cliente": "TIM", "progetto": "TIMBUFE", "probabilitaAllocazione": "sicura",
               "importanzaStrategica": "imprescindibile", "percentualeAllocazione": 30, "pesato": 30 }
           ]
         }

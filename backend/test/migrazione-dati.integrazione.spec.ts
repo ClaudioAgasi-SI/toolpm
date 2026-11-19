@@ -7,10 +7,14 @@ import { mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { BadRequestException } from '@nestjs/common';
 import mongoose from 'mongoose';
 import { verificaPassword } from '../src/auth/password.js';
+import { Cliente, ClienteSchema } from '../src/comuni/schemi/anagrafiche.schema.js';
 import { Attivita, AttivitaSchema, Progetto, ProgettoSchema } from '../src/comuni/schemi/progetto.schema.js';
 import { Risorsa, RisorsaSchema } from '../src/comuni/schemi/risorsa.schema.js';
+import { PermessiService } from '../src/permessi/permessi.service.js';
+import { AllocazioniService } from '../src/pianificatore/risorse/allocazioni.service.js';
 import { RisorseService } from '../src/pianificatore/risorse/risorse.service.js';
 import { leggiCsv, scriviCsv } from '../scripts/migrazione-dati/csv.mjs';
 import { COLONNE_PROGETTI, COLONNE_RISORSE } from '../scripts/migrazione-dati/comune.mjs';
@@ -161,25 +165,31 @@ describe.skipIf(!URI_BASE)('Migrazione dei dati del Pianificatore con MongoDB ve
     expect(await db.collection('progetti').countDocuments()).toBe(4);
   });
 
-  it('il Pianificatore conserva il collegamento e collega le nuove allocazioni scritte a testo', async () => {
-    const conn = await mongoose.createConnection(new URL(`/${NOME_DB}`, URI_BASE!).toString().replace(/\/\/\/?/, '//')).asPromise();
+  it('il Pianificatore conserva il collegamento e risolve le nuove allocazioni scritte con il vecchio testo', async () => {
+    const url = new URL(URI_BASE!);
+    url.pathname = `/${NOME_DB}`;
+    const conn = await mongoose.createConnection(url.toString()).asPromise();
     try {
+      const progettiModel = conn.model(Progetto.name, ProgettoSchema);
       const servizio = new RisorseService(
         conn.model(Risorsa.name, RisorsaSchema) as never,
-        conn.model(Progetto.name, ProgettoSchema) as never,
+        progettiModel as never,
         conn.model(Attivita.name, AttivitaSchema) as never,
+        new AllocazioniService(progettiModel as never, conn.model(Cliente.name, ClienteSchema) as never),
+        new PermessiService(),
       );
       const risorsa = await db.collection('risorse').findOne({ 'planned.progettoTesto': 'TIMBUFE' });
-      // Come il frontend: JSON in andata e ritorno, più una riga nuova scritta a testo.
-      const dalBrowser = JSON.parse(JSON.stringify(risorsa)) as { planned: Record<string, unknown>[] };
+      // Come il frontend: JSON in andata e ritorno, più una riga nuova scritta con il vecchio testo.
+      const dalBrowser = JSON.parse(JSON.stringify(await servizio.findOne(String(risorsa!._id)))) as { planned: Record<string, unknown>[] };
       dalBrowser.planned.push({ mese: '209912', cliente: 'TIM', progetto: 'TIMBUSINESS', percentualeAllocazione: 10 });
-      dalBrowser.planned.push({ mese: '209912', cliente: 'Nuovo', progetto: 'Sconosciuto', percentualeAllocazione: 5 });
-      const salvata = await servizio.update(String(risorsa!._id), dalBrowser as never);
+      const salvata = await servizio.update(undefined, String(risorsa!._id), dalBrowser as never);
       const timbufe = await db.collection('progetti').findOne({ codice: 'TIMBUFE' });
-      const collegate = salvata.planned.filter((a) => String(a.progettoId) === String(timbufe!._id));
-      expect(collegate.length).toBeGreaterThan(1);
-      expect(salvata.planned.find((a) => a.mese === '209912' && a.progetto === 'TIMBUSINESS')).toMatchObject({ progettoTesto: 'TIMBUSINESS' });
-      expect(salvata.planned.find((a) => a.progetto === 'Sconosciuto')?.progettoId).toBeUndefined();
+      expect(salvata.planned.find((a) => a.mese === '209912')).toMatchObject({ progetto: 'TIMBUFE', progettoId: timbufe!._id });
+      const salvataNelDb = await db.collection('risorse').findOne({ _id: risorsa!._id });
+      expect(salvataNelDb!.planned.every((a: Record<string, unknown>) => a.cliente === undefined && a.progetto === undefined)).toBe(true);
+
+      dalBrowser.planned.push({ mese: '209912', cliente: 'Nuovo', progetto: 'Sconosciuto', percentualeAllocazione: 5 });
+      await expect(servizio.update(undefined, String(risorsa!._id), dalBrowser as never)).rejects.toThrow(BadRequestException);
     } finally {
       await conn.close();
     }

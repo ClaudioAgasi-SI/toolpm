@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
+import { AllocazioniService } from '../risorse/allocazioni.service.js';
 import { Allocazione, Risorsa, SkillValutata } from '../risorse/risorsa.schema.js';
 import { MESE_RE, aggiungiMesi, intervalloMesi, meseCorrente } from './mesi.js';
 import { pesoProbabilita } from './pesi.js';
@@ -41,7 +42,10 @@ export interface RigaPianificazione {
 
 @Injectable()
 export class PianificazioneService {
-  constructor(@InjectModel(Risorsa.name) private readonly model: Model<Risorsa>) {}
+  constructor(
+    @InjectModel(Risorsa.name) private readonly model: Model<Risorsa>,
+    private readonly allocazioni: AllocazioniService,
+  ) {}
 
   async griglia(da?: string, a?: string, filtro: FiltroSkill = {}) {
     const inizio = da ?? meseCorrente();
@@ -51,7 +55,8 @@ export class PianificazioneService {
     }
     const mesi = intervalloMesi(inizio, fine);
     const { query, corrisponde } = this.filtroSkill(filtro);
-    const risorse = await this.model.find(query).sort({ cognome: 1, nome: 1 }).lean().exec();
+    // Allocazioni con codice e titolo del progetto e del cliente, ricavati da progettoId (blocco B5).
+    const risorse = await this.allocazioni.arricchisci(await this.model.find(query).sort({ cognome: 1, nome: 1 }).lean().exec());
 
     const righe: RigaPianificazione[] = risorse.map((r) => {
       const celle: Record<string, CellaMese> = {};

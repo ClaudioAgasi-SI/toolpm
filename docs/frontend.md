@@ -122,7 +122,7 @@ La riga di un progetto è definita una sola volta come `<ng-template #riga>` e r
 
 - **`RisorseElenco`**: tabella con nome, skill tecniche, skill funzionali/ambito e numero di mesi pianificati (esclusi i segnaposto); ricerca immediata per nome o skill; pulsante "Nuova risorsa".
 - **`RisorsaDettaglio`**: form per cognome e nome, tre gruppi di skill (nome + livello) e tabella delle allocazioni (mese, cliente, progetto, %, probabilità, importanza, competenze).
-  - I campi usano `<datalist>`: suggeriscono i valori delle anagrafiche (skill per tipo, scale `rate`, clienti e progetti già usati dalla risorsa) ma **accettano testo libero**.
+  - I campi usano `<datalist>`: suggeriscono i valori delle anagrafiche (skill per tipo, scale `rate`, clienti e progetti già usati dalla risorsa) ma **accettano testo libero**. Dal blocco B5 il backend accetta come progetto solo il **codice** di un progetto esistente (il cliente si ricava dal progetto e il campo cliente non conta); la scelta da un elenco arriva con il blocco B6.
   - "Aggiungi allocazione" copia mese, cliente e progetto dell'ultima riga.
   - Al salvataggio le skill senza nome vengono scartate e le allocazioni ordinate per mese; POST per una risorsa nuova (poi naviga alla scheda), PUT per una esistente.
 

@@ -5,6 +5,7 @@ import type { Abilitazione, Ruolo } from './utente.schema.js';
 export const CHIAVE_PUBBLICA = 'toolpm:pubblica';
 export const CHIAVE_RUOLI = 'toolpm:ruoli';
 export const CHIAVE_PERMESSI = 'toolpm:permessi';
+export const CHIAVE_PERMESSI_TRANSITORI = 'toolpm:permessi-transitori';
 
 /** Endpoint accessibile senza accesso (login, health). */
 export const Pubblica = () => SetMetadata(CHIAVE_PUBBLICA, true);
@@ -18,6 +19,13 @@ export const Ruoli = (...ruoli: Ruolo[]) => SetMetadata(CHIAVE_RUOLI, ruoli);
  * I permessi che dipendono da un progetto o da una risorsa si controllano nei servizi con PermessiService.
  */
 export const Permesso = (...permessi: PermessoGlobale[]) => SetMetadata(CHIAVE_PERMESSI, permessi);
+
+/**
+ * Come @Permesso(...), ma per le API che il frontend usa già senza accesso (Pianificatore, blocco B5):
+ * chi ha fatto l'accesso deve avere i permessi indicati; le richieste anonime passano finché
+ * AUTH_OBBLIGATORIA=false. Con il blocco B6 (pagina di accesso) diventa @Permesso(...).
+ */
+export const PermessoTransitorio = (...permessi: PermessoGlobale[]) => SetMetadata(CHIAVE_PERMESSI_TRANSITORI, permessi);
 
 /** Utente che ha fatto l'accesso, come lo vede il resto del backend. */
 export interface UtenteAutenticato {

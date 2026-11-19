@@ -22,26 +22,32 @@ export class Allocazione {
   @Prop({ required: true, match: /^\d{6}$/ })
   mese: string;
 
-  @ApiPropertyOptional({ example: 'TIM' })
-  @Prop({ trim: true })
-  cliente?: string;
-
-  @ApiPropertyOptional({ example: 'TIMBUFE' })
-  @Prop({ trim: true })
-  progetto?: string;
-
   @ApiPropertyOptional({
     example: '6740a1c2e1f0a1b2c3d4e501',
-    description: 'Progetto (collection progetti), impostato dalla migrazione B7; dal blocco B5 sostituisce i testi cliente e progetto',
+    description: 'Progetto (collection progetti). Dal blocco B5 è il riferimento vero dell\'allocazione; il cliente si ricava dal progetto.',
   })
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Progetto' })
   progettoId?: mongoose.Types.ObjectId;
 
-  @ApiPropertyOptional({ example: 'TIM', description: 'Cliente scritto a testo prima della migrazione (resta per un rilascio)' })
+  // Campi non salvati (blocco B5): nelle risposte li aggiunge il backend dal progetto; in scrittura
+  // "progetto" è accettato, per compatibilità, come codice del progetto al posto di progettoId.
+  @ApiPropertyOptional({ example: 'TIMBUFE', description: 'Codice del progetto. In risposta: ricavato da progettoId. In scrittura: accettato al posto di progettoId' })
+  progetto?: string;
+
+  @ApiPropertyOptional({ example: 'TIM — front end Business', readOnly: true, description: 'Titolo del progetto, ricavato da progettoId' })
+  progettoTitolo?: string;
+
+  @ApiPropertyOptional({ example: 'TIM', readOnly: true, description: 'Codice del cliente del progetto, ricavato da progettoId' })
+  cliente?: string;
+
+  @ApiPropertyOptional({ example: 'Telecom Italia S.p.A.', readOnly: true, description: 'Ragione sociale del cliente, ricavata da progettoId' })
+  clienteRagioneSociale?: string;
+
+  @ApiPropertyOptional({ example: 'TIM', description: 'Cliente scritto a testo prima della migrazione B7 (resta per un rilascio, poi si elimina)' })
   @Prop({ trim: true })
   clienteTesto?: string;
 
-  @ApiPropertyOptional({ example: 'TIMBUFE', description: 'Progetto scritto a testo prima della migrazione (resta per un rilascio)' })
+  @ApiPropertyOptional({ example: 'TIMBUFE', description: 'Progetto scritto a testo prima della migrazione B7 (resta per un rilascio, poi si elimina)' })
   @Prop({ trim: true })
   progettoTesto?: string;
 

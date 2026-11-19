@@ -44,11 +44,21 @@ export const norm = (v) => (typeof v === 'string' ? v.trim() : '');
 /** Chiave di una coppia cliente/progetto testuale. */
 export const chiaveCoppia = (cliente, progetto) => `${norm(cliente)}\u0000${norm(progetto)}`;
 
+/**
+ * Testi cliente/progetto di un'allocazione: quelli scritti a mano (cliente, progetto) oppure, dopo la
+ * migrazione e il blocco B5, quelli conservati in clienteTesto e progettoTesto.
+ */
+export const testiAllocazione = (a) => ({
+  cliente: norm(a.cliente) || norm(a.clienteTesto),
+  progetto: norm(a.progetto) || norm(a.progettoTesto),
+});
+
 /** Allocazioni con un progetto scritto a testo (le righe senza progetto sono segnaposto). */
 export function* allocazioniConTesto(risorse) {
   for (const r of risorse) {
     for (const [i, a] of (r.planned ?? []).entries()) {
-      if (norm(a.progetto) || norm(a.cliente)) yield { risorsa: r, allocazione: a, indice: i };
+      const t = testiAllocazione(a);
+      if (t.progetto || t.cliente) yield { risorsa: r, allocazione: a, indice: i, ...t };
     }
   }
 }

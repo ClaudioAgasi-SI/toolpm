@@ -69,6 +69,15 @@ export class PermessiService {
    * Interrompe la richiesta se il permesso è negato.
    * @param azione cosa si voleva fare, per il messaggio: "Non hai il permesso di <azione>"
    */
+  /**
+   * Come verifica(), ma una richiesta anonima passa: serve alle API che il frontend usa ancora senza
+   * accesso (Pianificatore). Il guard lascia arrivare richieste anonime solo con AUTH_OBBLIGATORIA=false.
+   */
+  verificaSeAutenticato(s: Soggetto | undefined, consentito: () => boolean | Promise<boolean>, azione: string) {
+    if (!s) return Promise.resolve();
+    return Promise.resolve(consentito()).then((ok) => this.verifica(s, ok, azione));
+  }
+
   verifica(s: Soggetto | undefined, consentito: boolean, azione: string): asserts s is Soggetto {
     if (!s) throw new UnauthorizedException('Accesso richiesto');
     if (!consentito) throw new ForbiddenException(`Non hai il permesso di ${azione}`);

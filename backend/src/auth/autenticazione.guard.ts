@@ -10,7 +10,7 @@ import { Reflector } from '@nestjs/core';
 import { contestoCorrente } from '../infrastruttura/contesto-utente.js';
 import { AuthService } from './auth.service.js';
 import { permessoGlobale, type PermessoGlobale } from '../permessi/regole.js';
-import { CHIAVE_PERMESSI, CHIAVE_PUBBLICA, CHIAVE_RUOLI, type UtenteAutenticato } from './decoratori.js';
+import { CHIAVE_PERMESSI, CHIAVE_PERMESSI_TRANSITORI, CHIAVE_PUBBLICA, CHIAVE_RUOLI, type UtenteAutenticato } from './decoratori.js';
 import type { Ruolo } from './utente.schema.js';
 
 /** Nome del cookie con il token di accesso. */
@@ -40,6 +40,8 @@ export function estraiToken(headers: RichiestaHttp['headers']): string | null {
  * - Gli endpoint @Pubblica() passano sempre.
  * - Gli endpoint @Ruoli(...) richiedono l'accesso e uno dei ruoli indicati.
  * - Gli endpoint @Permesso(...) richiedono l'accesso e tutti i permessi globali indicati (blocco B3).
+ * - Gli endpoint @PermessoTransitorio(...) controllano i permessi di chi ha fatto l'accesso; le richieste
+ *   anonime seguono AUTH_OBBLIGATORIA (blocco B5, fino alla pagina di accesso del blocco B6).
  * - Gli altri richiedono l'accesso solo se AUTH_OBBLIGATORIA=true. Finché il frontend non ha la
  *   pagina di accesso (blocco B6) il valore predefinito è false: le richieste anonime passano come "anonimo".
  */
@@ -75,7 +77,8 @@ export class AutenticazioneGuard implements CanActivate {
     if (ruoli.length && !ruoli.some((r) => utente.ruoli.includes(r))) {
       throw new ForbiddenException(`Operazione riservata a: ${ruoli.join(', ')}`);
     }
-    const negato = permessi?.find((p) => !permessoGlobale(utente, p));
+    const transitori = this.reflector.getAllAndOverride<PermessoGlobale[] | undefined>(CHIAVE_PERMESSI_TRANSITORI, bersagli) ?? [];
+    const negato = [...(permessi ?? []), ...transitori].find((p) => !permessoGlobale(utente, p));
     if (negato) throw new ForbiddenException(`Permesso mancante: ${negato}`);
     return true;
   }

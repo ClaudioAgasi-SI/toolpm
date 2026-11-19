@@ -9,6 +9,7 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { type UtenteAutenticato, UtenteRichiesta } from '../../auth/decoratori.js';
 import { Risorsa, RisorsaConId } from './risorsa.schema.js';
 import { RisorseService } from './risorse.service.js';
 
@@ -34,34 +35,45 @@ export class RisorseController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Crea una nuova risorsa' })
+  @ApiOperation({
+    summary: 'Crea una nuova risorsa (da sostituire con POST /api/comuni/risorse)',
+    description: 'Mantenuto per un rilascio, senza email obbligatoria. Con accesso: permesso gestireRisorse (PM, PMSenior).',
+    deprecated: true,
+  })
   @ApiBody({ type: Risorsa })
   @ApiCreatedResponse({ type: RisorsaConId })
-  @ApiBadRequestResponse({ description: 'Dati non validi (es. cognome mancante, mese non nel formato AAAAMM)' })
-  create(@Body() body: Partial<Risorsa>) {
-    return this.service.create(body);
+  @ApiBadRequestResponse({ description: 'Dati non validi (es. cognome mancante, mese non nel formato AAAAMM, progetto inesistente)' })
+  create(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Body() body: Partial<Risorsa>) {
+    return this.service.create(utente, body);
   }
 
   @Put(':id')
   @ApiOperation({
-    summary: 'Sostituisce una risorsa',
-    description: 'Il documento viene sostituito per intero: i campi non inviati tornano ai valori predefiniti.',
+    summary: 'Sostituisce le caratteristiche della risorsa (skill, certificazioni, allocazioni)',
+    description:
+      'Le caratteristiche non inviate tornano vuote; i dati anagrafici (email, cellulare, ruolo, orario) non si toccano. ' +
+      'Ogni allocazione indica il progetto con progettoId oppure con il suo codice nel campo progetto. ' +
+      'Con accesso: PM e PMSenior su tutte le risorse, TL su quelle allocate su un suo progetto; cognome e nome solo PM e PMSenior.',
   })
   @ApiParam({ name: 'id', description: 'ObjectId MongoDB della risorsa' })
   @ApiBody({ type: Risorsa })
   @ApiOkResponse({ type: RisorsaConId })
   @ApiBadRequestResponse({ description: 'Dati non validi' })
   @ApiNotFoundResponse({ description: 'Risorsa non trovata' })
-  update(@Param('id') id: string, @Body() body: Partial<Risorsa>) {
-    return this.service.update(id, body);
+  update(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Param('id') id: string, @Body() body: Partial<Risorsa>) {
+    return this.service.update(utente, id, body);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Elimina una risorsa' })
+  @ApiOperation({
+    summary: 'Elimina una risorsa (mantenuto per un rilascio)',
+    description: 'Nel modulo Comuni le risorse non si cancellano: si imposta la data di uscita. Con accesso: permesso gestireRisorse.',
+    deprecated: true,
+  })
   @ApiParam({ name: 'id', description: 'ObjectId MongoDB della risorsa' })
   @ApiOkResponse({ schema: { example: { deleted: true } } })
   @ApiNotFoundResponse({ description: 'Risorsa non trovata' })
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Param('id') id: string) {
+    return this.service.remove(utente, id);
   }
 }

@@ -115,6 +115,6 @@ Mostra anche il riepilogo: risorse senza email, utenti collegati, progetti per s
 
 ## Dopo la migrazione
 
-- Finché il Pianificatore non sceglie i progetti da un elenco (blocco B5), le allocazioni si scrivono ancora a testo. Il backend collega in automatico quelle il cui testo cliente/progetto è uno di quelli importati. Le altre restano senza progetto e la verifica le segnala.
-- I campi `cliente` e `progetto` delle allocazioni restano per ora: li rimuove il blocco B5, insieme a `clienteTesto` e `progettoTesto` dopo un rilascio.
+- Dal blocco B5 le allocazioni salvano solo `progettoId`: la migrazione `006-allocazioni-progettoid` (`npm run migra`) toglie i testi `cliente` e `progetto` da quelle già collegate. `clienteTesto` e `progettoTesto` restano per un rilascio.
+- Finché il frontend non sceglie i progetti da un elenco (blocco B6), nel Pianificatore il progetto si scrive come **codice** (es. `TIMBUFE`); valgono anche i vecchi testi importati. Un progetto che non esiste viene rifiutato: va creato prima tra i progetti (`/api/comuni/progetti`).
 - Per tornare indietro: ripristinare il backup del passo 1 (vedi [mongodb-replica-set.md](mongodb-replica-set.md#2-backup)).

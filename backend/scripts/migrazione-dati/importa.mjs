@@ -11,6 +11,7 @@ import {
   FILE_PROGETTI,
   FILE_RISORSE,
   norm,
+  testiAllocazione,
   tracciaModifica,
   tracciaNuovo,
   UTENTE,
@@ -157,7 +158,7 @@ export async function controlla(db, cartella) {
 
   // ---- progetti.csv
   const coppieDati = new Set();
-  for (const { allocazione: a } of allocazioniConTesto(risorse)) coppieDati.add(chiaveCoppia(a.cliente, a.progetto));
+  for (const { cliente, progetto } of allocazioniConTesto(risorse)) coppieDati.add(chiaveCoppia(cliente, progetto));
   const coppieFile = new Map();
   const perCodice = new Map();
   const nuoviClienti = new Map();
@@ -372,15 +373,17 @@ async function applica(db, session, piano, ora) {
   }
 
   // Collegamento delle allocazioni: progettoId + testi originali in clienteTesto/progettoTesto.
-  // I campi cliente e progetto restano finché il Pianificatore non usa progettoId (blocco B5).
+  // Dal blocco B5 i campi cliente e progetto non si salvano più: il cliente si ricava dal progetto.
   for (const r of piano.risorse) {
     let cambiata = false;
     const planned = (r.planned ?? []).map((a) => {
-      const id = (norm(a.progetto) || norm(a.cliente)) && progettoPerCoppia.get(chiaveCoppia(a.cliente, a.progetto));
+      const t = testiAllocazione(a);
+      const id = (t.progetto || t.cliente) && progettoPerCoppia.get(chiaveCoppia(t.cliente, t.progetto));
       if (!id) return a;
       cambiata = true;
       conteggi.allocazioniCollegate++;
-      return { ...a, progettoId: id, clienteTesto: norm(a.cliente), progettoTesto: norm(a.progetto) };
+      const { cliente: _c, progetto: _p, ...resto } = a;
+      return { ...resto, progettoId: id, clienteTesto: t.cliente, progettoTesto: t.progetto };
     });
     if (cambiata) await db.collection('risorse').updateOne({ _id: r._id }, { $set: { planned, ...tracciaModifica(ora) } }, o);
   }

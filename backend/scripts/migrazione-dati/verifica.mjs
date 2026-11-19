@@ -19,8 +19,8 @@ export async function verifica(db, cartella) {
   const collegateMale = allocazioni.filter(({ allocazione: a }) => a.progettoId && !idProgetti.has(String(a.progettoId)));
   const attiviSenzaPM = progetti.filter((p) => p.stato !== 'inValutazione' && !(p.approvatori ?? []).some((a) => a.profilo === 'PM'));
 
-  for (const { risorsa: r, allocazione: a } of nonCollegate) {
-    problemi.push(`Allocazione non collegata: ${r.cognome} ${r.nome}, mese ${a.mese}, "${a.cliente ?? ''}" / "${a.progetto ?? ''}"`);
+  for (const { risorsa: r, allocazione: a, cliente, progetto } of nonCollegate) {
+    problemi.push(`Allocazione non collegata: ${r.cognome} ${r.nome}, mese ${a.mese}, "${cliente}" / "${progetto}"`);
   }
   for (const { risorsa: r, allocazione: a } of collegateMale) problemi.push(`Allocazione collegata a un progetto inesistente: ${r.cognome} ${r.nome}, mese ${a.mese}`);
   for (const p of attiviSenzaPM) problemi.push(`Progetto ${p.codice} (${p.stato}) senza PM`);

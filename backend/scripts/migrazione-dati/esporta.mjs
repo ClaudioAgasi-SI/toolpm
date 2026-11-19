@@ -70,9 +70,9 @@ export async function esporta(db, cartella, { sovrascrivi = false } = {}) {
 
   // progetti.csv: una riga per coppia cliente/progetto trovata nelle allocazioni.
   const coppie = new Map();
-  for (const { allocazione: a } of allocazioniConTesto(risorse)) {
-    const k = chiaveCoppia(a.cliente, a.progetto);
-    const c = coppie.get(k) ?? { cliente: norm(a.cliente), progetto: norm(a.progetto), righe: 0, mesi: new Set() };
+  for (const { allocazione: a, cliente, progetto } of allocazioniConTesto(risorse)) {
+    const k = chiaveCoppia(cliente, progetto);
+    const c = coppie.get(k) ?? { cliente, progetto, righe: 0, mesi: new Set() };
     c.righe++;
     c.mesi.add(a.mese);
     coppie.set(k, c);

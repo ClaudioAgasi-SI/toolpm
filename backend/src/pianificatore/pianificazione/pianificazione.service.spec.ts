@@ -1,7 +1,11 @@
 import { BadRequestException } from '@nestjs/common';
 import type { Model } from 'mongoose';
 import type { Risorsa } from '../risorse/risorsa.schema.js';
+import type { AllocazioniService } from '../risorse/allocazioni.service.js';
 import { PianificazioneService } from './pianificazione.service.js';
+
+/** Le righe dei test non hanno progettoId: l'arricchimento non cambia nulla. */
+const allocazioni = { arricchisci: async <T>(r: T) => r } as unknown as AllocazioniService;
 
 /**
  * Test della griglia del Pianificatore (blocco B0 della fase 1): fissano il comportamento attuale,
@@ -55,7 +59,7 @@ const BIANCHI: RisorsaTest = {
 describe('PianificazioneService.griglia', () => {
   it('somma percentuali e percentuali pesate per mese, ignorando segnaposto e mesi fuori intervallo', async () => {
     const { model } = modelFinto([ROSSI]);
-    const { mesi, righe } = await new PianificazioneService(model).griglia('202701', '202703');
+    const { mesi, righe } = await new PianificazioneService(model, allocazioni).griglia('202701', '202703');
 
     expect(mesi).toEqual(['202701', '202702', '202703']);
     expect(righe).toHaveLength(1);
@@ -70,18 +74,18 @@ describe('PianificazioneService.griglia', () => {
 
   it('pesa 0 le probabilità sconosciute', async () => {
     const { model } = modelFinto([BIANCHI]);
-    const { righe } = await new PianificazioneService(model).griglia('202701', '202701');
+    const { righe } = await new PianificazioneService(model, allocazioni).griglia('202701', '202701');
     expect(righe[0].mesi['202701']).toMatchObject({ totale: 20, pesato: 0 });
   });
 
   it('senza parametri mostra 12 mesi dal mese corrente', async () => {
     const { model } = modelFinto([]);
-    const { mesi } = await new PianificazioneService(model).griglia();
+    const { mesi } = await new PianificazioneService(model, allocazioni).griglia();
     expect(mesi).toHaveLength(12);
   });
 
   it('rifiuta intervalli non validi', async () => {
-    const servizio = new PianificazioneService(modelFinto([]).model);
+    const servizio = new PianificazioneService(modelFinto([]).model, allocazioni);
     await expect(servizio.griglia('2027-01', '202702')).rejects.toBeInstanceOf(BadRequestException);
     await expect(servizio.griglia('202703', '202701')).rejects.toBeInstanceOf(BadRequestException);
   });
@@ -90,7 +94,7 @@ describe('PianificazioneService.griglia', () => {
 describe('PianificazioneService: filtro per skill', () => {
   it('cerca le skill del tipo indicato senza distinguere maiuscole e minuscole, escludendo "n.a."', async () => {
     const { model, chiamate } = modelFinto([ROSSI, BIANCHI]);
-    const { righe } = await new PianificazioneService(model).griglia('202701', '202701', {
+    const { righe } = await new PianificazioneService(model, allocazioni).griglia('202701', '202701', {
       tipo: 'tecnico',
       skill: ['java', 'angular'],
     });
@@ -105,18 +109,18 @@ describe('PianificazioneService: filtro per skill', () => {
 
   it('con il solo tipo cerca risorse con almeno una skill di quel tipo', async () => {
     const { model, chiamate } = modelFinto([ROSSI]);
-    await new PianificazioneService(model).griglia('202701', '202701', { tipo: 'funzionale' });
+    await new PianificazioneService(model, allocazioni).griglia('202701', '202701', { tipo: 'funzionale' });
     expect(Object.keys(chiamate[0])).toEqual(['skillFunzionali']);
   });
 
   it('senza filtro non applica condizioni', async () => {
     const { model, chiamate } = modelFinto([ROSSI]);
-    await new PianificazioneService(model).griglia('202701', '202701');
+    await new PianificazioneService(model, allocazioni).griglia('202701', '202701');
     expect(chiamate[0]).toEqual({});
   });
 
   it('rifiuta skill senza tipo o con un tipo sconosciuto', async () => {
-    const servizio = new PianificazioneService(modelFinto([]).model);
+    const servizio = new PianificazioneService(modelFinto([]).model, allocazioni);
     await expect(servizio.griglia('202701', '202701', { skill: 'java' })).rejects.toBeInstanceOf(BadRequestException);
     await expect(servizio.griglia('202701', '202701', { tipo: 'altro', skill: 'java' })).rejects.toBeInstanceOf(
       BadRequestException,
