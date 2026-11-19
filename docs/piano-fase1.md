@@ -18,7 +18,7 @@ La fase 1 prepara ToolPM per la Consuntivazione: accesso con utenti e profili, m
 | B5 — Pianificatore adattato | Fatto | Allocazioni salvate solo con `progettoId` (cliente ricavato dal progetto; migrazione `006-allocazioni-progettoid`); in risposta codice e titolo di progetto e cliente, in scrittura `progettoId` o codice del progetto (compatibile con il frontend di oggi). Permessi: caratteristiche PM e PMSenior su tutte; il TL alloca qualsiasi risorsa sui propri progetti (non tocca le allocazioni su progetti altrui) e modifica skill e certificazioni delle risorse che lavorano sui suoi progetti (decisioni del 19/11/2026); cognome, nome, creazione ed eliminazione PM e PMSenior; anagrafiche skill/certificazioni/scale PM e PMSenior. Periodo di transizione: richieste anonime ammesse finché `AUTH_OBBLIGATORIA=false` (`@PermessoTransitorio`, da trasformare in `@Permesso` con B6). POST e DELETE di `/api/pianificatore/risorse` mantenuti per un rilascio. Test: 90 in tutto (68 unitari + 22 di integrazione). |
 | B6 — Frontend | Fatto | Pagina di accesso e cambio password (obbligatorio con password provvisoria), sessione da `/api/auth/me`, interceptor 401, guardie per accesso, permessi e ruoli; barra con utente e profilo. Sezione **Anagrafiche** (`/toolpm/comuni`): progetti (dati e stime, stato, percentuale, approvatori, attività con risorse e percentuali, storico), risorse (anagrafica e storico dei ruoli), clienti, centri di costo, ruoli, utenti (solo admin). **Pianificatore**: progetto scelto da elenco, cliente ricavato, righe altrui bloccate per il TL, catalogo in sola lettura per chi non è PM o PMSenior, risorse nuove dall'anagrafica. **Backend**: accesso obbligatorio per tutte le API non pubbliche, tolti `AUTH_OBBLIGATORIA` e il periodo di transizione. Test: 89 backend (67 unitari + 22 di integrazione), 12 frontend; percorso completo provato nel browser con backend e MongoDB veri. |
 | B7 — Migrazione dei dati | Fatto | Comando `npm run migrazione-dati` con `esporta` (risorse.csv, progetti.csv precompilati e fotografia della griglia nella cartella `migrazione/`, esclusa da Git), `importa --prova` / `importa` (controllo completo con errori per riga, poi scrittura in un'unica transazione: ruoli, risorse, utenti con password provvisoria, clienti, centri di costo, progetti con approvatori, collegamento delle allocazioni con `progettoId`) e `verifica` (allocazioni collegate, PM, griglia uguale a prima). Le nuove allocazioni scritte a testo si collegano in automatico. Guida: [migrazione-dati.md](migrazione-dati.md). Test: 64 unitari + 14 di integrazione. Il 19/11/2026 i CSV sono stati compilati e l'importazione eseguita sul PC; la verifica non ha riscontrato problemi. |
-| B8 — Test e documentazione | Da fare | |
+| B8 — Test e documentazione | Fatto | Test dei criteri di completamento (`profili.integrazione.spec.ts`: 401 su tutte le API elencate da Swagger, 15 operazioni per 7 profili, tracciamento dell'utente giusto); documentazione riletta e aggiornata (README, architettura, analisi del Pianificatore, indice); Swagger con descrizione e gruppi. Test: 107 backend (67 unitari + 40 di integrazione), 12 frontend. Criteri di completamento spuntati, tranne la verifica finale di `docker compose` sul PC. |
 
 ## Obiettivo e perimetro
 
@@ -144,14 +144,14 @@ Gli script si registrano nella collection `migrazioni`: rieseguirli non duplica 
 
 La fase 1 è finita quando tutte queste verifiche passano, con test automatici dove possibile.
 
-- [ ] Senza accesso ogni API risponde 401, tranne login e `/api/health`.
-- [ ] Per ogni profilo (risorsa, TL, PM, PMSenior, controller, admin) un test verifica cosa può e cosa non può fare su progetti, attività, risorse e caratteristiche.
-- [ ] Un progetto non si attiva senza un PM, non passa In corso senza data di inizio e non passa a Chiuso senza data di fine.
-- [ ] Ogni documento salvato ha `creatoIl`, `creatoDa`, `modificatoIl`, `modificatoDa` con l'utente giusto.
-- [ ] Ogni cambio di percentuale di completamento compare nello storico `avanzamenti`.
-- [ ] Tutte le allocazioni del Pianificatore puntano a un progetto e la griglia dà le stesse percentuali di prima della migrazione.
-- [ ] `docker compose up` avvia ToolPM su MongoDB in replica set; il vecchio pianificatore sulle porte 4200/3000 continua a funzionare.
-- [ ] Documentazione in `docs/` e Swagger aggiornati.
+- [x] Senza accesso ogni API risponde 401, tranne login e `/api/health` (e logout). *Test `profili.integrazione.spec.ts`: prova tutte le API elencate da Swagger, così anche quelle future.*
+- [x] Per ogni profilo (risorsa, TL, PM, PMSenior, controller, admin) un test verifica cosa può e cosa non può fare su progetti, attività, risorse e caratteristiche. *Test `profili.integrazione.spec.ts` (15 operazioni × 7 profili, compreso un PM non del progetto), più `permessi.spec.ts` e `pianificatore.integrazione.spec.ts`.*
+- [x] Un progetto non si attiva senza un PM, non passa In corso senza data di inizio e non passa a Chiuso senza data di fine. *Test `comuni.integrazione.spec.ts`.*
+- [x] Ogni documento salvato ha `creatoIl`, `creatoDa`, `modificatoIl`, `modificatoDa` con l'utente giusto. *Test `tracciamento.spec.ts` e `profili.integrazione.spec.ts`; validatori `$jsonSchema` sui tipi.*
+- [x] Ogni cambio di percentuale di completamento compare nello storico `avanzamenti`. *Test `comuni.integrazione.spec.ts`; scritto nella stessa transazione.*
+- [x] Tutte le allocazioni del Pianificatore puntano a un progetto e la griglia dà le stesse percentuali di prima della migrazione. *`migrazione-dati -- verifica` sul PC il 19/11/2026: nessun problema; test `migrazione-dati.integrazione.spec.ts`.*
+- [ ] `docker compose up` avvia ToolPM su MongoDB in replica set; il vecchio pianificatore sulle porte 4200/3000 continua a funzionare. *Verificato sul PC il 19/11/2026 dopo B0; da riconfermare con la versione finale (B6–B8).*
+- [x] Documentazione in `docs/` e Swagger aggiornati. *Rilettura del blocco B8: README, architettura, analisi del Pianificatore, frontend, backend, database, migrazione; Swagger con descrizione e gruppi di API.*
 
 ## Rischi e decisioni prima di iniziare
 

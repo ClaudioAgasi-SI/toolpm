@@ -8,7 +8,7 @@
 
 Il Pianificatore mostra, mese per mese, quanto ogni persona è allocata sui progetti e con quale grado di certezza. Serve a chi gestisce le persone per capire chi è libero, chi è sovraccarico e chi ha le competenze giuste per un nuovo progetto. Ogni allocazione è descritta da percentuale, probabilità, importanza strategica del progetto e livello di competenza della persona su quel progetto.
 
-**Perimetro attuale.** Pianificazione mensile delle allocazioni, anagrafica delle risorse con le loro skill, anagrafiche di supporto (skill, certificazioni, scale di valutazione). Restano fuori: consuntivazione delle ore e costi (sezione Consuntivazione, in analisi), autenticazione e permessi, pianificazione a granularità inferiore al mese.
+**Perimetro attuale.** Pianificazione mensile delle allocazioni, anagrafica delle risorse con le loro skill, anagrafiche di supporto (skill, certificazioni, scale di valutazione). Restano fuori: consuntivazione delle ore e costi (sezione Consuntivazione, in analisi), pianificazione a granularità inferiore al mese. Autenticazione, permessi e progetti come anagrafica comune sono arrivati con la fase 1 (novembre 2026).
 
 **Glossario**
 
@@ -54,9 +54,9 @@ Oggi non ci sono utenti né ruoli: chiunque raggiunga l'applicazione può legger
 **Risorse**
 
 10. **RF-P10 Elenco.** Tabella con nome, skill tecniche, skill funzionali e di ambito, numero di mesi pianificati (esclusi i segnaposto); ricerca immediata per nome o skill.
-11. **RF-P11 Scheda risorsa.** Inserimento e modifica di cognome, nome, skill dei tre tipi con livello, e delle allocazioni: mese, cliente, progetto, percentuale, probabilità, importanza strategica, competenza tecnica, conoscenza funzionale e di ambito sul progetto.
-12. **RF-P12 Suggerimenti.** I campi propongono i valori delle anagrafiche e i clienti e progetti già usati dalla risorsa, ma accettano anche testo libero.
-13. **RF-P13 Inserimento rapido.** "Aggiungi allocazione" copia mese, cliente e progetto dell'ultima riga.
+11. **RF-P11 Scheda risorsa.** Modifica delle skill dei tre tipi con livello e delle allocazioni: mese, progetto (scelto da un elenco; il cliente si ricava dal progetto), percentuale, probabilità, importanza strategica, competenza tecnica, conoscenza funzionale e di ambito sul progetto. Dalla fase 1 nome, cognome e gli altri dati anagrafici si gestiscono nelle Anagrafiche, e le modifiche seguono i permessi del profilo.
+12. **RF-P12 Suggerimenti.** Skill e livelli propongono i valori del catalogo ma accettano anche testo libero; il progetto invece si sceglie tra quelli esistenti.
+13. **RF-P13 Inserimento rapido.** "Aggiungi allocazione" copia mese e progetto dell'ultima riga modificabile.
 14. **RF-P14 Eliminazione.** Una risorsa si elimina dalla sua scheda, dopo conferma.
 
 **Anagrafiche**
@@ -101,10 +101,10 @@ Esempio: in gennaio una risorsa ha 30% su un progetto "sicura", 30% su uno "fors
 
 | Limite | Conseguenza | Evoluzione prevista |
 | --- | --- | --- |
-| Nessuna autenticazione | Chiunque raggiunga l'applicazione legge e modifica tutto | Accesso con utenti e ruoli, fase 1 del piano della Consuntivazione |
-| Clienti e progetti sono testo libero nelle allocazioni | Errori di battitura creano progetti diversi; nessun collegamento con altre sezioni | Anagrafica comune di clienti, progetti e attività; migrazione dei testi esistenti |
-| Risorse dentro la sezione Pianificatore | Le altre sezioni non possono usarle senza dipendere dal Pianificatore | Spostamento delle risorse nel modulo Comuni (`/api/comuni/risorse`) |
-| Nessun tracciamento di chi modifica | Non si sa chi ha cambiato un'allocazione e quando | Campi `creatoIl`, `creatoDa`, `modificatoIl`, `modificatoDa` su tutti i documenti |
+| ~~Nessuna autenticazione~~ | — | **Risolto nella fase 1** (novembre 2026): accesso con email e password, profili e permessi |
+| ~~Clienti e progetti sono testo libero nelle allocazioni~~ | — | **Risolto nella fase 1**: progetti scelti da un elenco (`progettoId`), testi esistenti migrati |
+| ~~Risorse dentro la sezione Pianificatore~~ | — | **Risolto nella fase 1**: risorse nel modulo Comuni (`/api/comuni/risorse`) |
+| ~~Nessun tracciamento di chi modifica~~ | — | **Risolto nella fase 1**: `creatoIl`, `creatoDa`, `modificatoIl`, `modificatoDa` su tutti i documenti |
 | Pesi di probabilità nel codice | Cambiare un peso richiede un rilascio | Da valutare: pesi configurabili nella scala |
 
 ## Analisi tecnica

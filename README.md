@@ -5,14 +5,18 @@ Il prodotto è diviso in **sezioni**; ognuna ha le proprie pagine (sotto `/<sezi
 
 | Sezione | Frontend | API | Stato |
 |---|---|---|---|
-| Pianificatore risorse allocate — allocazione delle persone sui progetti nel tempo, in base a skill, importanza strategica e probabilità di allocazione | `/pianificatore` | `/api/pianificatore/...` | disponibile (codice di partenza dal repository `pianificatore-risorse`) |
-| altre sezioni | — | — | da definire |
+| Pianificatore risorse allocate — allocazione delle persone sui progetti nel tempo, in base a skill, importanza strategica e probabilità di allocazione | `/pianificatore` | `/api/pianificatore/...` | disponibile |
+| Anagrafiche — dati comuni a tutte le sezioni: progetti con attività e approvatori, risorse, clienti, centri di costo, ruoli, utenti | `/comuni` | `/api/comuni/...`, `/api/utenti` | disponibile (fase 1) |
+| Consuntivazione costi di progetto | — | — | in analisi ([analisi-consuntivazione.md](docs/analisi-consuntivazione.md)), fasi 2–4 |
 
-- **frontend/** — Angular: shell ToolPM (home + menu delle sezioni); in `src/app/pianificatore/` griglia di pianificazione, gestione risorse, anagrafiche
-- **backend/** — NestJS: API REST su MongoDB
+Si entra con email e password; ogni utente vede e modifica solo ciò che il suo profilo (TL, PM, PMSenior) e i suoi ruoli (risorsa, controller, admin) consentono.
+
+- **frontend/** — Angular: accesso, home e menu delle sezioni; `src/app/pianificatore/` (griglia, risorse, catalogo), `src/app/comuni/` (Anagrafiche)
+- **backend/** — NestJS: API REST su MongoDB, autenticazione e permessi, script di migrazione
 - **db/** — dati di esempio delle collection (`skills`, `rate`, `certificazioni`, `risorse`)
+- **migrazione/** — file della migrazione dei dati del Pianificatore (esclusi da Git, vedi [migrazione-dati.md](docs/migrazione-dati.md))
 - **docker-compose.yml** — avvio di frontend e backend su Docker Desktop
-- **docs/** — documentazione tecnica: [architettura](docs/architettura.md), [frontend](docs/frontend.md), [backend](docs/backend.md), [database](docs/database.md)
+- **docs/** — documentazione tecnica: [indice](docs/README.md), [architettura](docs/architettura.md), [frontend](docs/frontend.md), [backend](docs/backend.md), [database](docs/database.md), [piano della fase 1](docs/piano-fase1.md)
 
 ## Avvio con Docker Desktop
 
@@ -39,10 +43,16 @@ Dentro un container `localhost` indica il container stesso, quindi il backend si
 `mongodb://host.docker.internal:27017/toolpm`, il nome con cui Docker Desktop espone le porte del PC.
 Per usare un indirizzo diverso copia `.env.example` in `.env` e modifica `MONGODB_URI`.
 
-Per l'accesso con utenti e password imposta in `.env` almeno `JWT_SECRET`, `ADMIN_EMAIL` e `ADMIN_PASSWORD_INIZIALE` (vedi `.env.example`): al primo avvio il backend crea l'amministratore, che al primo accesso cambia la password.
+### Prima installazione (fase 1)
 
-Dalla fase 1 MongoDB deve girare come replica set a un nodo: la procedura è in [docs/mongodb-replica-set.md](docs/mongodb-replica-set.md).
-Per verificare connessione, replica set e transazioni: `docker compose exec backend npm run verifica-mongodb`.
+1. **MongoDB come replica set** a un nodo: procedura in [docs/mongodb-replica-set.md](docs/mongodb-replica-set.md). Verifica: `docker compose exec backend npm run verifica-mongodb`.
+2. **`.env`**: copia `.env.example` in `.env` e imposta almeno `JWT_SECRET`, `ADMIN_EMAIL` e `ADMIN_PASSWORD_INIZIALE`. Al primo avvio il backend crea l'amministratore.
+3. **Avvio**: `docker compose up -d --build`.
+4. **Migrazioni** (indici, validatori, parametri): `docker compose exec backend npm run migra`, dopo un backup.
+5. **Dati del Pianificatore** nelle anagrafiche comuni: [docs/migrazione-dati.md](docs/migrazione-dati.md) (esporta, compilazione dei CSV, importa, verifica).
+6. **Primo accesso** da http://localhost:4201/toolpm con `ADMIN_EMAIL` e la password iniziale: ToolPM chiede subito di cambiarla. Poi dalla pagina Anagrafiche → Utenti si gestiscono abilitazioni e ruoli.
+
+Ogni aggiornamento successivo: `git pull`, backup, `docker compose up -d --build`, `docker compose exec backend npm run migra`.
 
 ### Caricare i dati di esempio
 
@@ -102,15 +112,19 @@ Documentazione interattiva Swagger, con la possibilità di provare le chiamate: 
 | POST | `/api/auth/cambia-password` | Cambio della propria password |
 | GET / POST / PUT | `/api/utenti`, `/api/utenti/:id` | Gestione degli utenti (solo amministratore) |
 | POST | `/api/utenti/:id/password` | Password provvisoria (solo amministratore) |
-| GET | `/api/pianificatore/risorse` | Elenco risorse |
-| GET / PUT / DELETE | `/api/pianificatore/risorse/:id` | Lettura, sostituzione, cancellazione di una risorsa |
-| POST | `/api/pianificatore/risorse` | Nuova risorsa |
+| GET / POST / PUT | `/api/comuni/clienti`, `/centri-costo`, `/ruoli`, `/risorse` | Anagrafiche comuni |
+| GET / POST / PUT | `/api/comuni/progetti`, `/api/comuni/progetti/:id` | Progetti; in più `POST .../stato`, `PUT .../approvatori`, `PUT .../completamento`, `GET .../avanzamenti` |
+| GET / POST / PUT | `/api/comuni/progetti/:id/attivita` | Attività; in più `PUT .../risorse`, `PUT .../completamento` |
+| GET / PUT | `/api/parametri`, `/api/parametri/:chiave` | Parametri di sistema (modifica: controller) |
+| GET / PUT | `/api/pianificatore/risorse`, `/api/pianificatore/risorse/:id` | Skill, certificazioni e allocazioni delle risorse (POST e DELETE mantenuti per un rilascio) |
 | GET | `/api/pianificatore/pianificazione?da=AAAAMM&a=AAAAMM&tipoSkill=tecnico&skill=j2ee&skill=devOps` | Griglia risorse × mesi (default: 12 mesi dal mese corrente), con filtro facoltativo per una o più skill (in OR) |
-| GET / POST / PUT / DELETE | `/api/pianificatore/skills`, `/api/pianificatore/certificazioni`, `/api/pianificatore/rate` | Anagrafiche |
+| GET / POST / PUT / DELETE | `/api/pianificatore/skills`, `/api/pianificatore/certificazioni`, `/api/pianificatore/rate` | Catalogo del Pianificatore |
+
+Tutte le API richiedono l'accesso, tranne login, logout e health (401 senza accesso, 403 senza permesso). Dettagli: [docs/backend.md](docs/backend.md).
 
 ## Regole sui dati
 
-- Le anagrafiche (`skills`, `rate`, `certificazioni`) sono **suggerimenti**: nelle risorse si possono usare anche valori non presenti lì.
+- Il catalogo del Pianificatore (`skills`, `rate`, `certificazioni`) dà **suggerimenti**: nelle risorse si possono usare anche valori non presenti lì. I progetti delle allocazioni invece devono esistere (`progettoId`).
 - Nelle scale di `rate` l'ordine conta: il primo valore è il livello più alto.
-- `planned` è un array di righe, ciascuna con il proprio `mese` (formato `AAAAMM`). Le righe senza percentuale sono segnaposto e indicano un mese libero.
+- `planned` è un array di righe, ciascuna con il proprio `mese` (formato `AAAAMM`) e il progetto (`progettoId`; il cliente si ricava dal progetto). Le righe senza percentuale o senza progetto indicano un mese libero.
 - La **% pesata** moltiplica ogni allocazione per il peso della sua probabilità: sicura 100%, probabile 75%, forse 50%, improbabile 25%, nessuna 0%. I pesi sono in `backend/src/pianificatore/pianificazione/pesi.ts`.

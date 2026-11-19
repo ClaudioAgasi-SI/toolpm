@@ -325,6 +325,13 @@ npm run migrazione-dati -- esporta | importa [--prova] | verifica   # migrazione
 
 I **test di integrazione** (`test/*.integrazione.spec.ts`) avviano l'applicazione completa contro un MongoDB vero in replica set: creano un database `toolpm_test_<numero>`, eseguono le migrazioni, fanno l'accesso con utenti di prova di ogni profilo e lo cancellano alla fine. Non toccano il database `toolpm`.
 
+| File | Cosa verifica |
+|---|---|
+| `comuni.integrazione.spec.ts` | Modulo Comuni: anagrafiche, risorse, progetti (stati, approvatori, stime in euro), attività, avanzamenti, validatori |
+| `pianificatore.integrazione.spec.ts` | Pianificatore: allocazioni su `progettoId`, permessi sulle caratteristiche (anche il TL che alloca sui suoi progetti), migrazione 006 |
+| `migrazione-dati.integrazione.spec.ts` | Migrazione B7 sui dati di esempio: esporta, errori per riga, prova, importazione, verifica, ripetibilità |
+| `profili.integrazione.spec.ts` | Criteri di completamento della fase 1: 401 su tutte le API elencate da Swagger, 15 operazioni per ognuno dei 7 profili, tracciamento dell'utente giusto |
+
 ## Docker
 
 `backend/Dockerfile` (multi-stage):

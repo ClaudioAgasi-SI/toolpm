@@ -1,15 +1,17 @@
 # Documentazione tecnica — ToolPM
 
-Tool di project management organizzato in sezioni. La prima sezione è il **Pianificatore risorse allocate**
-(frontend `/toolpm/pianificatore`, API `/api/pianificatore`): allocazione delle risorse (persone) sui progetti, mese per mese,
-tenendo conto di skill, importanza strategica e probabilità di allocazione.
+Tool di project management organizzato in sezioni: il **Pianificatore risorse allocate**
+(frontend `/toolpm/pianificatore`, API `/api/pianificatore`), allocazione delle risorse (persone) sui progetti mese per mese
+tenendo conto di skill, importanza strategica e probabilità di allocazione, e le **Anagrafiche** comuni
+(frontend `/toolpm/comuni`, API `/api/comuni`): progetti con attività e approvatori, risorse, clienti, centri di costo, ruoli, utenti.
+Si accede con email e password; i permessi dipendono dal profilo (TL, PM, PMSenior) e dai ruoli (risorsa, controller, admin).
 
 | Documento | Contenuto |
 |---|---|
 | [architettura.md](architettura.md) | Visione d'insieme, componenti, flussi, deploy con Docker, convenzioni del repository |
-| [frontend.md](frontend.md) | Applicazione Angular: struttura, pagine, componenti, servizi, stile, build e test |
-| [backend.md](backend.md) | API NestJS: moduli, endpoint, regole di calcolo, validazione, Swagger, configurazione |
-| [database.md](database.md) | MongoDB: collection, schema dei documenti, regole sui dati, indici, import dei dati |
+| [frontend.md](frontend.md) | Applicazione Angular: struttura, accesso e permessi, pagine del Pianificatore e delle Anagrafiche, servizi, stile, build e test |
+| [backend.md](backend.md) | API NestJS: infrastruttura, autenticazione, permessi, modulo Comuni, Pianificatore, endpoint, errori, Swagger, configurazione, test |
+| [database.md](database.md) | MongoDB: collection, schema dei documenti, validatori, tracciamento, migrazioni, regole sui dati, indici, import dei dati |
 | [analisi-pianificatore.md](analisi-pianificatore.md) | Sezione Pianificatore risorse allocate: analisi funzionale (requisiti, calcolo della percentuale pesata, regole, limiti attuali) e analisi tecnica di sintesi con le evoluzioni previste |
 | [analisi-consuntivazione.md](analisi-consuntivazione.md) | Sezione Consuntivazione (in analisi): analisi funzionale e tecnica, progetti (stati, stime, percentuale di completamento) e attività, indicatori EVM di tempi e costi, profili di approvazione TL, PM e PMSenior, integrazioni con altri sistemi tramite script di estrazione, modello dei dati su MongoDB |
 | [piano-fase1.md](piano-fase1.md) | Piano della fase 1 (fondamenta): autenticazione e profili, modulo Comuni, permessi, adattamento del Pianificatore, migrazione dei dati, criteri di completamento e rischi |
