@@ -3,7 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 import { Parametro } from './parametro.schema.js';
 
-/** Lettura e scrittura dei parametri di sistema. La gestione via API (controller) arriva con i permessi (blocco B3). */
+/** Lettura e scrittura dei parametri di sistema. API in ParametriController (/api/parametri). */
 @Injectable()
 export class ParametriService {
   constructor(@InjectModel(Parametro.name) private readonly model: Model<Parametro>) {}

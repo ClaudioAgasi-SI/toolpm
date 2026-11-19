@@ -5,6 +5,7 @@ import type { Response } from 'express';
 import { AuthService } from './auth.service.js';
 import { COOKIE_TOKEN } from './autenticazione.guard.js';
 import { Pubblica, type UtenteAutenticato, UtenteRichiesta } from './decoratori.js';
+import { permessiGlobali } from '../permessi/regole.js';
 import { durataInMs } from './durata.js';
 
 const ESEMPIO_PROFILO = {
@@ -14,7 +15,19 @@ const ESEMPIO_PROFILO = {
   abilitazione: 'PMSenior',
   ruoli: ['risorsa', 'admin'],
   deveCambiarePassword: false,
+  permessi: {
+    gestireClienti: true,
+    gestireCentriDiCosto: true,
+    creareProgetto: true,
+    gestireRisorse: true,
+    gestireCaratteristicheTutteLeRisorse: true,
+    gestireParametri: false,
+    gestireUtenti: true,
+  },
 };
+
+/** Profilo con i permessi globali (blocco B3): il frontend li usa per mostrare solo le voci consentite. */
+const conPermessi = (utente: UtenteAutenticato) => ({ ...utente, permessi: permessiGlobali(utente) });
 
 @ApiTags('auth')
 @Controller('auth')
@@ -43,7 +56,7 @@ export class AuthController {
       path: '/',
       maxAge: durataInMs(this.config.get<string>('JWT_DURATA') ?? '8h'),
     });
-    return utente;
+    return conPermessi(utente);
   }
 
   @Post('logout')
@@ -56,12 +69,12 @@ export class AuthController {
   }
 
   @Get('me')
-  @ApiOperation({ summary: 'Profilo dell\'utente che ha fatto l\'accesso' })
+  @ApiOperation({ summary: 'Profilo dell\'utente che ha fatto l\'accesso, con i permessi globali' })
   @ApiOkResponse({ schema: { example: ESEMPIO_PROFILO } })
   @ApiUnauthorizedResponse({ description: 'Nessun accesso' })
   me(@UtenteRichiesta() utente?: UtenteAutenticato) {
     if (!utente) throw new UnauthorizedException('Accesso richiesto');
-    return utente;
+    return conPermessi(utente);
   }
 
   @Post('cambia-password')

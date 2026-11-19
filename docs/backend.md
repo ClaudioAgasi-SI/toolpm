@@ -28,9 +28,9 @@ backend/
 │   │   ├── utente.schema.ts            schema Utente (collection utenti), abilitazioni e ruoli
 │   │   ├── password.ts                 cifratura e verifica delle password (scrypt)
 │   │   ├── auth.service.ts             accesso, token, profilo, cambio password, primo amministratore
-│   │   ├── autenticazione.guard.ts     guard globale: utente dal token, @Pubblica, @Ruoli
-│   │   ├── decoratori.ts               @Pubblica(), @Ruoli(...), @UtenteRichiesta()
-│   │   ├── auth.controller.ts          /api/auth/login, logout, me, cambia-password
+│   │   ├── autenticazione.guard.ts     guard globale: utente dal token, @Pubblica, @Ruoli, @Permesso
+│   │   ├── decoratori.ts               @Pubblica(), @Ruoli(...), @Permesso(...), @UtenteRichiesta()
+│   │   ├── auth.controller.ts          /api/auth/login, logout, me (con i permessi globali), cambia-password
 │   │   ├── utenti.service.ts / utenti.controller.ts  /api/utenti (solo admin)
 │   │   ├── auth.module.ts
 │   │   └── auth.spec.ts                test di password, token, accesso e guard
@@ -40,8 +40,15 @@ backend/
 │   │   ├── tracciamento.plugin.ts      plugin Mongoose: creatoIl, creatoDa, modificatoIl, modificatoDa
 │   │   ├── parametro.schema.ts         schema dei parametri di sistema (collection parametri)
 │   │   ├── parametri.service.ts        lettura e scrittura dei parametri
+│   │   ├── parametri.controller.ts     /api/parametri: lettura con accesso, modifica solo controller (blocco B3)
 │   │   ├── infrastruttura.module.ts    modulo globale
-│   │   └── tracciamento.spec.ts        test di contesto, tracciamento e scelta delle migrazioni
+│   │   ├── tracciamento.spec.ts        test di contesto, tracciamento e scelta delle migrazioni
+│   │   └── parametri.controller.spec.ts  test delle API dei parametri
+│   ├── permessi/                    permessi su profili e ruoli (fase 1, blocco B3)
+│   │   ├── regole.ts                   regole pure: permessi globali, progetto, attività, risorse
+│   │   ├── permessi.service.ts         PermessiService: le regole per i servizi, verifica() → 401/403
+│   │   ├── permessi.module.ts          modulo globale
+│   │   └── permessi.spec.ts            test delle regole per ogni profilo
 │   └── pianificatore/               sezione "Pianificatore risorse" → prefisso /api/pianificatore
 │       ├── pianificatore.module.ts  raccoglie i moduli della sezione
 │       ├── risorse/
@@ -100,7 +107,7 @@ Servizi tecnici usati da tutte le sezioni, nella cartella `src/infrastruttura/`.
 
 - **Contesto dell'utente.** `ContestoUtenteMiddleware` apre per ogni richiesta un contesto (AsyncLocalStorage) con l'utente che sta lavorando; `utenteCorrente()` lo legge da qualsiasi punto del codice. Finché non c'è l'autenticazione (blocco B2) l'utente è `anonimo`; script e procedure usano utenti tecnici `sistema:...` con `eseguiCome()`.
 - **Tracciamento dei salvataggi.** `tracciamentoPlugin` è registrato sulla connessione Mongoose in `app.module.ts` e vale per ogni schema che dichiara `collection` (gli schemi incorporati, come skill e allocazioni, ne restano fuori). Aggiunge `creatoIl`, `creatoDa`, `modificatoIl`, `modificatoDa` e li valorizza in `save`, `insertMany`, `updateOne`, `updateMany`, `findOneAndUpdate`, `findOneAndReplace` e `replaceOne`. I valori mandati dal client vengono ignorati; in una sostituzione (PUT delle risorse) la creazione del documento esistente si conserva. **Regola:** ogni nuovo schema di primo livello deve dichiarare `collection` in `@Schema({ collection: ... })`.
-- **Parametri.** `ParametriService` (modulo globale `InfrastrutturaModule`) legge e scrive la collection `parametri`; per ora non ha API, arriveranno con i permessi (blocco B3).
+- **Parametri.** `ParametriService` (modulo globale `InfrastrutturaModule`) legge e scrive la collection `parametri`. API: `GET /api/parametri` per chi ha fatto l'accesso; `PUT /api/parametri/:chiave` con `{ valore }` solo per il ruolo `controller`. Si modificano solo i parametri creati dalle migrazioni, con un controllo sul valore: `oreGiorno` intero tra 1 e 24, `soglieEvm` con anticipo > ritardo > fortementeInRitardo.
 - **Migrazioni.** `npm run migra` esegue in ordine gli script `scripts/migrazioni/NNN-nome.mjs` non ancora eseguiti e li registra nella collection `migrazioni`; `npm run migra -- --elenco` mostra lo stato senza eseguire nulla. In Docker: `docker compose exec backend npm run migra`. Prima di eseguirle serve un backup ([mongodb-replica-set.md](mongodb-replica-set.md#2-backup)).
 
 ## Autenticazione (fase 1)
@@ -112,6 +119,27 @@ Modulo `src/auth/`. Il nome utente è l'email; le password sono cifrate con **sc
 - **Periodo di transizione.** Finché il frontend non ha la pagina di accesso (blocco B6), `AUTH_OBBLIGATORIA` vale `false`: le altre API accettano anche richieste anonime, registrate come `anonimo`. Con il blocco B6 il valore diventa `true` e ogni API senza accesso risponde 401.
 - **Gestione utenti.** `/api/utenti`, solo per il ruolo `admin`: elenco, creazione con password provvisoria, modifica di email, nome, risorsa collegata, abilitazione (TL, PM, PMSenior o nessuna), ruoli (`risorsa`, `controller`, `admin`) e stato attivo, reimpostazione della password. Gli utenti non si cancellano: si disattivano. Un amministratore non può disattivare se stesso né togliersi il ruolo admin. Chi riceve una password provvisoria deve cambiarla al primo accesso (`deveCambiarePassword`).
 - **Primo amministratore.** All'avvio, se non esiste nessun utente con ruolo `admin` e sono impostati `ADMIN_EMAIL` e `ADMIN_PASSWORD_INIZIALE`, il backend lo crea.
+
+## Permessi (fase 1)
+
+Modulo globale `src/permessi/`, con le regole decise nell'analisi. Le regole sono funzioni pure in `regole.ts`: ricevono chi agisce e i dati che servono e rispondono sì o no, senza leggere il database.
+
+- **Due livelli.** L'abilitazione generale dell'utente (TL, PM, PMSenior o nessuna) e il profilo sul singolo progetto (approvatore TL o PM, in `progetto.approvatori`), indipendenti tra loro: un utente abilitato TL può essere PM su un progetto. Se è assegnato in entrambi i modi, vale PM. I diritti da approvatore valgono solo con un'abilitazione: se l'amministratore la toglie, la persona non gestisce più i suoi progetti.
+- **Permessi globali** (non dipendono da un progetto): `gestireClienti` e `gestireCentriDiCosto` → PMSenior; `creareProgetto` → TL, PM, PMSenior; `gestireRisorse` (anagrafica, ruolo professionale, orario) e `gestireCaratteristicheTutteLeRisorse` → PM, PMSenior; `gestireParametri` → ruolo `controller`; `gestireUtenti` → ruolo `admin`. Sui controller si dichiarano con `@Permesso('gestireClienti')`; `@Permesso()` senza argomenti richiede solo l'accesso, anche con `AUTH_OBBLIGATORIA=false`. `POST /api/auth/login` e `GET /api/auth/me` li restituiscono nel campo `permessi`, per il menu del frontend.
+- **Permessi su progetto, attività e risorsa**, controllati dai servizi con `PermessiService` (`verifica(utente, consentito, 'azione')` risponde 401 senza accesso e 403 con "Non hai il permesso di …"):
+
+| Regola | Chi può |
+| --- | --- |
+| `puoModificareProgetto`, `puoModificarePercentualeProgetto`, `puoGestireAttivita` | TL e PM del progetto, PMSenior |
+| `puoCambiareStatoProgetto` in avanti (In valutazione → In corso → Chiuso) | TL e PM del progetto, PMSenior |
+| `puoCambiareStatoProgetto` da Chiuso (riapertura) | PM del progetto, PMSenior |
+| `puoGestireApprovatori` | PM del progetto, PMSenior |
+| `puoModificarePercentualeAttivita` | risorse assegnate all'attività, TL e PM del progetto, PMSenior |
+| `puoGestireRisorse` | PM, PMSenior |
+| `puoModificareCaratteristicheRisorsa` | PM e PMSenior su tutte; TL sulle risorse che lavorano su un suo progetto (fase 1: allocate nel Pianificatore) |
+
+- **Elenchi.** `filtroProgettiGestibili(utente)` dà il filtro MongoDB dei progetti che l'utente può gestire: tutti per il PMSenior, quelli in cui è approvatore per TL e PM, nessuno (`null`) per gli altri.
+- Le regole controllano solo chi può agire. Se un passaggio di stato è ammesso (date, almeno un PM) lo controlla il modulo Comuni (blocco B4). Il collegamento ai dati veri (progetti, attività, allocazioni) arriva con i blocchi B4 e B5.
 
 ## Moduli
 

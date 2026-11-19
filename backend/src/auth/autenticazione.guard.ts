@@ -9,7 +9,8 @@ import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { contestoCorrente } from '../infrastruttura/contesto-utente.js';
 import { AuthService } from './auth.service.js';
-import { CHIAVE_PUBBLICA, CHIAVE_RUOLI, type UtenteAutenticato } from './decoratori.js';
+import { permessoGlobale, type PermessoGlobale } from '../permessi/regole.js';
+import { CHIAVE_PERMESSI, CHIAVE_PUBBLICA, CHIAVE_RUOLI, type UtenteAutenticato } from './decoratori.js';
 import type { Ruolo } from './utente.schema.js';
 
 /** Nome del cookie con il token di accesso. */
@@ -38,6 +39,7 @@ export function estraiToken(headers: RichiestaHttp['headers']): string | null {
  * - Riconosce l'utente dal token e lo scrive nella richiesta e nel contesto (per il tracciamento).
  * - Gli endpoint @Pubblica() passano sempre.
  * - Gli endpoint @Ruoli(...) richiedono l'accesso e uno dei ruoli indicati.
+ * - Gli endpoint @Permesso(...) richiedono l'accesso e tutti i permessi globali indicati (blocco B3).
  * - Gli altri richiedono l'accesso solo se AUTH_OBBLIGATORIA=true. Finché il frontend non ha la
  *   pagina di accesso (blocco B6) il valore predefinito è false: le richieste anonime passano come "anonimo".
  */
@@ -63,8 +65,9 @@ export class AutenticazioneGuard implements CanActivate {
     if (this.reflector.getAllAndOverride<boolean>(CHIAVE_PUBBLICA, bersagli)) return true;
 
     const ruoli = this.reflector.getAllAndOverride<Ruolo[] | undefined>(CHIAVE_RUOLI, bersagli) ?? [];
+    const permessi = this.reflector.getAllAndOverride<PermessoGlobale[] | undefined>(CHIAVE_PERMESSI, bersagli);
     if (!utente) {
-      if (ruoli.length || this.config.get<string>('AUTH_OBBLIGATORIA') === 'true') {
+      if (ruoli.length || permessi || this.config.get<string>('AUTH_OBBLIGATORIA') === 'true') {
         throw new UnauthorizedException('Accesso richiesto');
       }
       return true;
@@ -72,6 +75,8 @@ export class AutenticazioneGuard implements CanActivate {
     if (ruoli.length && !ruoli.some((r) => utente.ruoli.includes(r))) {
       throw new ForbiddenException(`Operazione riservata a: ${ruoli.join(', ')}`);
     }
+    const negato = permessi?.find((p) => !permessoGlobale(utente, p));
+    if (negato) throw new ForbiddenException(`Permesso mancante: ${negato}`);
     return true;
   }
 }

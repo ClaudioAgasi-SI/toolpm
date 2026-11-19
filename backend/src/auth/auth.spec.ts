@@ -6,7 +6,7 @@ import mongoose, { type Model } from 'mongoose';
 import { eseguiNelContesto, utenteCorrente } from '../infrastruttura/contesto-utente.js';
 import { AuthService } from './auth.service.js';
 import { AutenticazioneGuard, estraiToken } from './autenticazione.guard.js';
-import { CHIAVE_PUBBLICA, CHIAVE_RUOLI, type UtenteAutenticato } from './decoratori.js';
+import { CHIAVE_PERMESSI, CHIAVE_PUBBLICA, CHIAVE_RUOLI, type UtenteAutenticato } from './decoratori.js';
 import { durataInMs } from './durata.js';
 import { cifraPassword, problemaPassword, verificaPassword } from './password.js';
 import type { Utente } from './utente.schema.js';
@@ -124,11 +124,12 @@ describe('AutenticazioneGuard', () => {
   };
 
   /** Prepara guard e contesto di esecuzione con i metadati indicati sull'endpoint. */
-  function prova(opzioni: { token?: string; pubblica?: boolean; ruoli?: string[]; obbligatoria?: boolean }) {
+  function prova(opzioni: { token?: string; pubblica?: boolean; ruoli?: string[]; permessi?: string[]; obbligatoria?: boolean }) {
     const auth = { utenteDaToken: async (t: string) => (t === 'buono' ? ANNA : null) } as unknown as AuthService;
     const handler = () => undefined;
     if (opzioni.pubblica) Reflect.defineMetadata(CHIAVE_PUBBLICA, true, handler);
     if (opzioni.ruoli) Reflect.defineMetadata(CHIAVE_RUOLI, opzioni.ruoli, handler);
+    if (opzioni.permessi) Reflect.defineMetadata(CHIAVE_PERMESSI, opzioni.permessi, handler);
     const req: { headers: Record<string, string>; utente?: UtenteAutenticato } = {
       headers: opzioni.token ? { authorization: `Bearer ${opzioni.token}` } : {},
     };
@@ -172,5 +173,17 @@ describe('AutenticazioneGuard', () => {
     await expect(senzaRuolo.guard.canActivate(senzaRuolo.ctx)).rejects.toThrow(ForbiddenException);
     const conRuolo = prova({ ruoli: ['admin', 'risorsa'], token: 'buono' });
     expect(await conRuolo.guard.canActivate(conRuolo.ctx)).toBe(true);
+  });
+
+  it('gli endpoint con @Permesso richiedono sempre l\'accesso e i permessi globali indicati', async () => {
+    const anonimo = prova({ permessi: [] });
+    await expect(anonimo.guard.canActivate(anonimo.ctx)).rejects.toThrow(UnauthorizedException);
+    const soloAccesso = prova({ permessi: [], token: 'buono' });
+    expect(await soloAccesso.guard.canActivate(soloAccesso.ctx)).toBe(true);
+    // Anna è TL: può creare progetti, non gestire i clienti (solo PMSenior).
+    const consentito = prova({ permessi: ['creareProgetto'], token: 'buono' });
+    expect(await consentito.guard.canActivate(consentito.ctx)).toBe(true);
+    const negato = prova({ permessi: ['creareProgetto', 'gestireClienti'], token: 'buono' });
+    await expect(negato.guard.canActivate(negato.ctx)).rejects.toThrow('Permesso mancante: gestireClienti');
   });
 });

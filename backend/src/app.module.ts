@@ -8,6 +8,7 @@ import { HealthController } from './health.controller.js';
 import { ContestoUtenteMiddleware } from './infrastruttura/contesto-utente.middleware.js';
 import { InfrastrutturaModule } from './infrastruttura/infrastruttura.module.js';
 import { tracciamentoPlugin } from './infrastruttura/tracciamento.plugin.js';
+import { PermessiModule } from './permessi/permessi.module.js';
 import { AnagraficheModule } from './pianificatore/anagrafiche/anagrafiche.module.js';
 import { PianificatoreModule } from './pianificatore/pianificatore.module.js';
 import { PianificazioneModule } from './pianificatore/pianificazione/pianificazione.module.js';
@@ -34,6 +35,7 @@ import { RisorseModule } from './pianificatore/risorse/risorse.module.js';
     }),
     InfrastrutturaModule,
     AuthModule,
+    PermessiModule,
     PianificatoreModule,
     RouterModule.register([
       {
