@@ -21,6 +21,19 @@ export class Approvatore {
 }
 export const ApprovatoreSchema = SchemaFactory.createForClass(Approvatore);
 
+/** Coppia cliente/progetto scritta a testo nelle allocazioni del Pianificatore che corrisponde al progetto. */
+@Schema({ _id: false })
+export class AliasPianificatore {
+  @ApiProperty({ example: 'TIM' })
+  @Prop({ default: '' })
+  cliente: string;
+
+  @ApiProperty({ example: 'TIMBUFE' })
+  @Prop({ default: '' })
+  progetto: string;
+}
+export const AliasPianificatoreSchema = SchemaFactory.createForClass(AliasPianificatore);
+
 /** Le quattro stime del progetto, impostate a mano e mai calcolate. Gli euro sono in centesimi. */
 @Schema({ _id: false })
 export class Stime {
@@ -92,11 +105,20 @@ export class Progetto {
   @ApiPropertyOptional({ type: Stime })
   @Prop({ type: StimeSchema, default: {} })
   stime: Stime;
+
+  @ApiPropertyOptional({
+    type: [AliasPianificatore],
+    description:
+      'Testi cliente/progetto delle allocazioni del Pianificatore che corrispondono a questo progetto (migrazione B7). Servono a collegare in automatico le allocazioni scritte ancora a testo.',
+  })
+  @Prop({ type: [AliasPianificatoreSchema], default: undefined })
+  aliasPianificatore?: AliasPianificatore[];
 }
 export const ProgettoSchema = SchemaFactory.createForClass(Progetto);
 ProgettoSchema.index({ codice: 1 }, { unique: true });
 ProgettoSchema.index({ 'approvatori.risorsaId': 1 });
 ProgettoSchema.index({ centroCostoId: 1 });
+ProgettoSchema.index({ 'aliasPianificatore.cliente': 1, 'aliasPianificatore.progetto': 1 });
 
 export const STATI_ATTIVITA = ['attiva', 'chiusa'] as const;
 export type StatoAttivita = (typeof STATI_ATTIVITA)[number];

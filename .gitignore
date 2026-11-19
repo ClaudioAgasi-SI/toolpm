@@ -8,3 +8,7 @@ coverage/
 *.tsbuildinfo
 # backup di MongoDB (docs/mongodb-replica-set.md)
 backup-*.archive.gz
+backup-*.gz
+# file della migrazione dei dati (blocco B7): contengono email, telefoni e password provvisorie
+migrazione/*
+!migrazione/README.md

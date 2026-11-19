@@ -11,6 +11,8 @@ services:
       # directConnection=true: necessario con il replica set a un nodo (docs/mongodb-replica-set.md), innocuo con un'istanza singola.
       MONGODB_URI: ${MONGODB_URI:-mongodb://host.docker.internal:27017/toolpm?directConnection=true}
       SEED_DIR: /db
+      # File della migrazione dei dati del Pianificatore (blocco B7): cartella "migrazione" del progetto.
+      MIGRAZIONE_DIR: /migrazione
       # Autenticazione (fase 1, blocco B2): valori da .env, vedi .env.example
       JWT_SECRET: ${JWT_SECRET:-}
       JWT_DURATA: ${JWT_DURATA:-8h}
@@ -21,6 +23,8 @@ services:
     volumes:
       # Dati di esempio, usati solo dallo script di import (scripts/seed.mjs).
       - ./db:/db:ro
+      # risorse.csv, progetti.csv e password provvisorie: restano sul PC, esclusi da Git.
+      - ./migrazione:/migrazione
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:

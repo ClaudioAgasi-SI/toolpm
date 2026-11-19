@@ -14,6 +14,7 @@ tenendo conto di skill, importanza strategica e probabilità di allocazione.
 | [analisi-consuntivazione.md](analisi-consuntivazione.md) | Sezione Consuntivazione (in analisi): analisi funzionale e tecnica, progetti (stati, stime, percentuale di completamento) e attività, indicatori EVM di tempi e costi, profili di approvazione TL, PM e PMSenior, integrazioni con altri sistemi tramite script di estrazione, modello dei dati su MongoDB |
 | [piano-fase1.md](piano-fase1.md) | Piano della fase 1 (fondamenta): autenticazione e profili, modulo Comuni, permessi, adattamento del Pianificatore, migrazione dei dati, criteri di completamento e rischi |
 | [mongodb-replica-set.md](mongodb-replica-set.md) | Passaggio di MongoDB a replica set a un nodo (fase 1, blocco B0): backup, nuovo container, inizializzazione, stringa di connessione, verifica |
+| [migrazione-dati.md](migrazione-dati.md) | Migrazione dei dati del Pianificatore verso le anagrafiche comuni (fase 1, blocco B7): esportazione dei CSV, come compilarli, importazione in prova e definitiva, verifica |
 
 ## In breve
 

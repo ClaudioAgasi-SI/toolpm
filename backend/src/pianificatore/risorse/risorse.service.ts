@@ -3,7 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import mongoose from 'mongoose';
 import type { Model } from 'mongoose';
 import { Attivita, Progetto } from '../../comuni/schemi/progetto.schema.js';
-import { Risorsa } from './risorsa.schema.js';
+import { type Allocazione, Risorsa } from './risorsa.schema.js';
 
 const { isValidObjectId } = mongoose;
 
@@ -38,10 +38,33 @@ export class RisorseService {
     return doc;
   }
 
-  create(data: Partial<Risorsa>) {
+  async create(data: Partial<Risorsa>) {
     const dati: Record<string, unknown> = {};
     for (const campo of CAMPI_PIANIFICATORE) if (data?.[campo] !== undefined) dati[campo] = data[campo];
+    if (Array.isArray(dati.planned)) dati.planned = await this.collegaAllocazioni(dati.planned as Allocazione[]);
     return this.model.create(dati);
+  }
+
+  /**
+   * Allocazioni scritte a testo (cliente/progetto) senza progettoId: se il testo corrisponde a un progetto
+   * importato dalla migrazione B7 (aliasPianificatore), ricevono il suo progettoId. Fino al blocco B5 il
+   * Pianificatore inserisce ancora i progetti come testo: così le nuove righe restano collegate.
+   */
+  private async collegaAllocazioni(planned: Allocazione[]) {
+    const testo = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+    const daCollegare = planned.filter((a) => a && !a.progettoId && (testo(a.progetto) || testo(a.cliente)));
+    if (!daCollegare.length) return planned;
+    const progetti = await this.progetti
+      .find({ aliasPianificatore: { $exists: true } }, { aliasPianificatore: 1 })
+      .lean()
+      .exec();
+    const perTesto = new Map<string, mongoose.Types.ObjectId>();
+    for (const p of progetti) for (const al of p.aliasPianificatore ?? []) perTesto.set(`${al.cliente}\u0000${al.progetto}`, p._id);
+    for (const a of daCollegare) {
+      const id = perTesto.get(`${testo(a.cliente)}\u0000${testo(a.progetto)}`);
+      if (id) Object.assign(a, { progettoId: id, clienteTesto: testo(a.cliente), progettoTesto: testo(a.progetto) });
+    }
+    return planned;
   }
 
   /**
@@ -54,6 +77,7 @@ export class RisorseService {
       const valore = data?.[campo] ?? PREDEFINITI[campo];
       if (valore !== undefined) $set[campo] = valore;
     }
+    if (Array.isArray($set.planned)) $set.planned = await this.collegaAllocazioni($set.planned as Allocazione[]);
     const doc = isValidObjectId(id)
       ? await this.model.findOneAndUpdate({ _id: id }, { $set }, { returnDocument: 'after', runValidators: true }).lean().exec()
       : null;

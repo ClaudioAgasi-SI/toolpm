@@ -81,7 +81,9 @@ backend/
 ├── scripts/verifica-mongodb.mjs     verifica di connessione, replica set e transazioni
 ├── scripts/migra.mjs                esecuzione delle migrazioni dei dati (npm run migra)
 ├── scripts/migrazioni/              migrazioni numerate NNN-nome.mjs (vedi database.md)
-├── test/comuni.integrazione.spec.ts test di integrazione contro MongoDB vero (MONGODB_URI_TEST)
+├── scripts/migrazione-dati.mjs      migrazione dei dati del Pianificatore, blocco B7 (vedi migrazione-dati.md)
+├── scripts/migrazione-dati/         esporta, importa, verifica, CSV, password provvisorie
+├── test/                            test di integrazione contro MongoDB vero (MONGODB_URI_TEST) e test degli script
 ├── Dockerfile
 └── package.json
 ```
@@ -184,7 +186,7 @@ Convenzioni: le date si inviano come `AAAA-MM-GG`; nei PUT si aggiornano solo i 
 | GET | `/api/pianificatore/risorse` | Elenco, ordinato per cognome e nome | 200 |
 | GET | `/api/pianificatore/risorse/:id` | Dettaglio | 200, 404 |
 | POST | `/api/pianificatore/risorse` | Crea | 201, 400 |
-| PUT | `/api/pianificatore/risorse/:id` | **Sostituisce** i dati del Pianificatore (cognome, nome, skill, certificazioni, allocazioni): quelli non inviati tornano ai default. I dati anagrafici (email, cellulare, ruolo, orario...) restano intatti | 200, 400, 404 |
+| PUT | `/api/pianificatore/risorse/:id` | **Sostituisce** i dati del Pianificatore (cognome, nome, skill, certificazioni, allocazioni): quelli non inviati tornano ai default. I dati anagrafici (email, cellulare, ruolo, orario...) restano intatti. Le allocazioni senza `progettoId` il cui testo cliente/progetto corrisponde a un progetto importato (`aliasPianificatore`) vengono collegate in automatico (anche in POST) | 200, 400, 404 |
 | DELETE | `/api/pianificatore/risorse/:id` | Elimina, se la risorsa non è approvatore di un progetto né assegnata a un'attività | 200 `{ "deleted": true }`, 404, 409 |
 
 Un `id` non valido come ObjectId restituisce 404.
@@ -306,6 +308,7 @@ MONGODB_URI_TEST="mongodb://localhost:27017/?directConnection=true" npm test   #
 npm run verifica-mongodb  # connessione, replica set e transazioni di MongoDB
 npm run migra         # migrazioni dei dati non ancora eseguite (--elenco per vederle)
 npm run seed          # import dei dati di esempio (solo collection vuote)
+npm run migrazione-dati -- esporta | importa [--prova] | verifica   # migrazione B7, vedi migrazione-dati.md
 ```
 
 I **test di integrazione** (`test/*.integrazione.spec.ts`) avviano l'applicazione completa contro un MongoDB vero in replica set: creano un database `toolpm_test_<numero>`, eseguono le migrazioni, fanno l'accesso con utenti di prova di ogni profilo e lo cancellano alla fine. Non toccano il database `toolpm`.

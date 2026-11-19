@@ -30,6 +30,21 @@ export class Allocazione {
   @Prop({ trim: true })
   progetto?: string;
 
+  @ApiPropertyOptional({
+    example: '6740a1c2e1f0a1b2c3d4e501',
+    description: 'Progetto (collection progetti), impostato dalla migrazione B7; dal blocco B5 sostituisce i testi cliente e progetto',
+  })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Progetto' })
+  progettoId?: mongoose.Types.ObjectId;
+
+  @ApiPropertyOptional({ example: 'TIM', description: 'Cliente scritto a testo prima della migrazione (resta per un rilascio)' })
+  @Prop({ trim: true })
+  clienteTesto?: string;
+
+  @ApiPropertyOptional({ example: 'TIMBUFE', description: 'Progetto scritto a testo prima della migrazione (resta per un rilascio)' })
+  @Prop({ trim: true })
+  progettoTesto?: string;
+
   @ApiPropertyOptional({ example: 'buono', description: 'Scala rate "competenzaTecnica"' })
   @Prop()
   competenzaTecnica?: string;

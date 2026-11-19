@@ -17,7 +17,7 @@ La fase 1 prepara ToolPM per la Consuntivazione: accesso con utenti e profili, m
 | B4 — Modulo Comuni | Fatto | Modulo `comuni/` su `/api/comuni`: clienti, centri di costo, ruoli (codice unico, si disattivano), risorse (anagrafica, email unica, storico dei ruoli, orario), progetti (stati con passaggi controllati, approvatori, stime, percentuale), attività (codice unico nel progetto, risorse assegnate, percentuale), storico `avanzamenti` scritto in transazione. Permessi di B3 applicati; stime in euro nascoste a chi non gestisce il progetto. Migrazione `004-comuni` con validatori `$jsonSchema` e indici. Il PUT del Pianificatore non cancella più i dati anagrafici. Test: 59 unitari + 10 di integrazione contro MongoDB vero (replica set). |
 | B5 — Pianificatore adattato | Da fare | |
 | B6 — Frontend | Da fare | |
-| B7 — Migrazione dei dati | Da fare | |
+| B7 — Migrazione dei dati | Strumenti pronti | Comando `npm run migrazione-dati` con `esporta` (risorse.csv, progetti.csv precompilati e fotografia della griglia nella cartella `migrazione/`, esclusa da Git), `importa --prova` / `importa` (controllo completo con errori per riga, poi scrittura in un'unica transazione: ruoli, risorse, utenti con password provvisoria, clienti, centri di costo, progetti con approvatori, collegamento delle allocazioni con `progettoId`) e `verifica` (allocazioni collegate, PM, griglia uguale a prima). Le nuove allocazioni scritte a testo si collegano in automatico. Guida: [migrazione-dati.md](migrazione-dati.md). Test: 64 unitari + 14 di integrazione. **Da fare: compilare i CSV ed eseguire l'importazione sul PC.** |
 | B8 — Test e documentazione | Da fare | |
 
 ## Obiettivo e perimetro
@@ -135,7 +135,7 @@ La migrazione trasforma i dati del database `toolpm` con script controllabili e 
    - `risorse.csv`: una riga per risorsa con cognome e nome già compilati; da completare con email, cellulare, matricola, ruolo, orario contrattuale e abilitazione.
    - `progetti.csv`: una riga per ogni coppia cliente/progetto trovata nelle allocazioni (nei dati di esempio sono 5); da completare con codice e titolo corretti, centro di costo, PM e TL, stato e date. È il momento per correggere i refusi, per esempio "Reigegnerizzazione ROC".
 5. **Importazione.** Un secondo script legge i due file compilati e crea clienti, centri di costo, progetti con approvatori e utenti. Le risorse senza email restano "da completare" e non possono accedere.
-6. **Collegamento delle allocazioni.** Ogni allocazione con cliente e progetto testuali riceve il `progettoId` corrispondente. I testi originali restano per un rilascio come `clienteTesto` e `progettoTesto`, poi si eliminano.
+6. **Collegamento delle allocazioni.** Ogni allocazione con cliente e progetto testuali riceve il `progettoId` corrispondente. I testi originali restano per un rilascio come `clienteTesto` e `progettoTesto`, poi si eliminano. I campi `cliente` e `progetto` restano finché il Pianificatore non usa `progettoId` (blocco B5), così l'interfaccia di oggi continua a funzionare.
 7. **Verifica.** Conteggi prima e dopo; nessuna allocazione con testo senza `progettoId`; la griglia del Pianificatore per gli stessi mesi deve dare le stesse percentuali di prima.
 
 Gli script si registrano nella collection `migrazioni`: rieseguirli non duplica nulla.

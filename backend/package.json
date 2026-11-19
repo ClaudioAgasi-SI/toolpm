@@ -20,7 +20,8 @@
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
     "seed": "node scripts/seed.mjs",
     "verifica-mongodb": "node scripts/verifica-mongodb.mjs",
-    "migra": "node scripts/migra.mjs"
+    "migra": "node scripts/migra.mjs",
+    "migrazione-dati": "node scripts/migrazione-dati.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

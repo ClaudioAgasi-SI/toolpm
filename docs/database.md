@@ -82,6 +82,8 @@ Un documento per persona, con skill e pianificazione incorporate. Dal blocco B4 
 | `mese` | string | sì | Formato `AAAAMM` (regex `^\d{6}$`) |
 | `cliente` | string | no | Testo libero |
 | `progetto` | string | no | Testo libero |
+| `progettoId` | ObjectId | no | Progetto della collection `progetti`, impostato dalla migrazione B7 ([migrazione-dati.md](migrazione-dati.md)) e, per le righe scritte a testo, dal backend quando il testo corrisponde a un progetto importato |
+| `clienteTesto`, `progettoTesto` | string | no | Testi originali conservati dalla migrazione per un rilascio |
 | `competenzaTecnica` | string | no | Scala `rate.competenzaTecnica` |
 | `conoscenzaAmbito` | string | no | Scala `rate.conoscenzaAmbito` |
 | `conoscenzaFunzionale` | string | no | Scala `rate.conoscenzaFunzionale` |
@@ -180,8 +182,9 @@ Il codice è fatto di lettere, cifre, punto, trattino e trattino basso e non si 
 | `stato` | string | sì | `inValutazione` (iniziale), `inCorso`, `chiuso` |
 | `percentualeCompletamento` | intero 0–100 | sì | Default 0; ogni cambio va in `avanzamenti` |
 | `stime` | `{ managerialeGiorni, managerialeCentesimi, definitivaGiorni, definitivaCentesimi }` | | Impostate a mano, mai calcolate; euro in centesimi (interi) |
+| `aliasPianificatore` | array di `{ cliente, progetto }` | | Testi delle allocazioni del Pianificatore che corrispondono al progetto (migrazione B7) |
 
-Indici: `{ codice: 1 }` unico, `{ "approvatori.risorsaId": 1 }`, `{ centroCostoId: 1 }`.
+Indici: `{ codice: 1 }` unico, `{ "approvatori.risorsaId": 1 }`, `{ centroCostoId: 1 }`, `{ "aliasPianificatore.cliente": 1, "aliasPianificatore.progetto": 1 }`.
 
 ## Collection `attivita`
 
@@ -241,6 +244,9 @@ Registro delle migrazioni eseguite da `npm run migra`: `_id` è il nome dello sc
 | `002-tracciamento-esistenti` | Aggiunge i campi di tracciamento ai documenti di `risorse`, `skills`, `rate`, `certificazioni` che non li hanno, con autore `sistema:migrazione` |
 | `003-indici-utenti` | Indice unico su `utenti.email` |
 | `004-comuni` | Crea `clienti`, `centri_costo`, `ruoli`, `progetti`, `attivita`, `avanzamenti` con i validatori `$jsonSchema` (o li aggiorna se esistono) e i loro indici; indice unico parziale su `risorse.email` |
+| `005-alias-pianificatore` | Indice su `progetti.aliasPianificatore` |
+
+L'importazione della migrazione dei dati del Pianificatore (blocco B7, `npm run migrazione-dati -- importa`) si registra nella stessa collection con `_id` `B7-importa` e il riepilogo dell'ultima esecuzione.
 
 ## Regole sui dati
 
