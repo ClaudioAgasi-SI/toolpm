@@ -119,7 +119,7 @@ export function puoCambiareStatoProgetto(s: Soggetto, progetto: ProgettoPerPerme
 }
 
 /**
- * Approvatori del progetto (chi è TL e chi è PM). Scelta di B3 da confermare: PM del progetto e PMSenior;
+ * Approvatori del progetto (chi è TL e chi è PM): PM del progetto e PMSenior (decisione del 19/11/2026);
  * il TL no, perché potrebbe togliere il PM o nominarne uno. Il creatore viene aggiunto in automatico (B4).
  */
 export function puoGestireApprovatori(s: Soggetto, progetto: ProgettoPerPermessi): boolean {

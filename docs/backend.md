@@ -133,7 +133,7 @@ Modulo globale `src/permessi/`, con le regole decise nell'analisi. Le regole son
 | `puoModificareProgetto`, `puoModificarePercentualeProgetto`, `puoGestireAttivita` | TL e PM del progetto, PMSenior |
 | `puoCambiareStatoProgetto` in avanti (In valutazione → In corso → Chiuso) | TL e PM del progetto, PMSenior |
 | `puoCambiareStatoProgetto` da Chiuso (riapertura) | PM del progetto, PMSenior |
-| `puoGestireApprovatori` | PM del progetto, PMSenior |
+| `puoGestireApprovatori` (chi è TL e chi è PM sul progetto) | PM del progetto, PMSenior; il TL no |
 | `puoModificarePercentualeAttivita` | risorse assegnate all'attività, TL e PM del progetto, PMSenior |
 | `puoGestireRisorse` | PM, PMSenior |
 | `puoModificareCaratteristicheRisorsa` | PM e PMSenior su tutte; TL sulle risorse che lavorano su un suo progetto (fase 1: allocate nel Pianificatore) |
