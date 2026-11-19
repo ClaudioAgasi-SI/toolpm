@@ -16,8 +16,9 @@ function controller() {
 describe('ParametriController', () => {
   it('lettura con il solo accesso, modifica solo con gestireParametri (controller)', () => {
     const r = new Reflector();
-    expect(r.get(CHIAVE_PERMESSI, ParametriController.prototype.elenco)).toEqual([]);
-    expect(r.get(CHIAVE_PERMESSI, ParametriController.prototype.modifica)).toEqual(['gestireParametri']);
+    const metodo = (nome: string) => Object.getOwnPropertyDescriptor(ParametriController.prototype, nome)?.value as () => unknown;
+    expect(r.get(CHIAVE_PERMESSI, metodo('elenco'))).toEqual([]);
+    expect(r.get(CHIAVE_PERMESSI, metodo('modifica'))).toEqual(['gestireParametri']);
   });
 
   it('modifica i parametri esistenti con valori validi', async () => {

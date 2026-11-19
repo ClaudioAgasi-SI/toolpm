@@ -53,6 +53,7 @@ export const PERMESSI_GLOBALI = [
   'creareProgetto',
   'gestireRisorse',
   'gestireCaratteristicheTutteLeRisorse',
+  'gestireRuoli',
   'gestireParametri',
   'gestireUtenti',
 ] as const;
@@ -89,6 +90,7 @@ export function permessoGlobale(s: Soggetto, permesso: PermessoGlobale): boolean
       return ePMoPMSenior(s);
     case 'gestireParametri':
       return s.ruoli.includes('controller');
+    case 'gestireRuoli':
     case 'gestireUtenti':
       return s.ruoli.includes('admin');
   }

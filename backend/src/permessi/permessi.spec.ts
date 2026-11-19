@@ -128,7 +128,7 @@ describe('permessi globali', () => {
       'gestireCaratteristicheTutteLeRisorse',
     ]);
     expect(riga(CONTROLLER)).toEqual(['gestireParametri']);
-    expect(riga(ADMIN)).toEqual(['gestireUtenti']);
+    expect(riga(ADMIN)).toEqual(['gestireRuoli', 'gestireUtenti']);
   });
 });
 

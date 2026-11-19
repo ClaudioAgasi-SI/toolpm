@@ -3,8 +3,9 @@
 - **Database**: `toolpm` (stessa istanza MongoDB del vecchio database `pianificazione`)
 - **Connessione**: variabile `MONGODB_URI` del backend (default in Docker: `mongodb://host.docker.internal:27017/toolpm?directConnection=true`; default fuori da Docker: `mongodb://localhost:27017/toolpm`)
 - **Replica set**: dalla fase 1 MongoDB gira come replica set a un nodo (`rs0`), necessario per le transazioni. Procedura e verifica in [mongodb-replica-set.md](mongodb-replica-set.md); `npm run verifica-mongodb` nel backend controlla connessione, replica set e transazioni.
-- **Collection**: `risorse`, `skills`, `rate`, `certificazioni`
-- **Accesso**: solo tramite il backend (Mongoose). Gli schemi sono in `backend/src/pianificatore/risorse/risorsa.schema.ts` e `backend/src/pianificatore/anagrafiche/anagrafiche.schema.ts`.
+- **Collection**: del Pianificatore `skills`, `rate`, `certificazioni`; comuni a tutte le sezioni (fase 1, blocco B4) `risorse`, `clienti`, `centri_costo`, `ruoli`, `progetti`, `attivita`, `avanzamenti`; tecniche `utenti`, `parametri`, `migrazioni`
+- **Accesso**: solo tramite il backend (Mongoose). Gli schemi sono in `backend/src/comuni/schemi/` (risorse e dati comuni), `backend/src/pianificatore/anagrafiche/anagrafiche.schema.ts`, `backend/src/auth/utente.schema.ts` e `backend/src/infrastruttura/parametro.schema.ts`.
+- **Validatori**: le collection del modulo Comuni (tranne `risorse`) hanno un validatore `$jsonSchema` creato dalla migrazione `004-comuni`: anche chi scrive direttamente nel database, senza passare dal backend, non può salvare documenti con campi obbligatori mancanti o di tipo sbagliato.
 
 ## Modello dei dati
 
@@ -18,7 +19,20 @@ certificazioni ┘            ├── skillTecnici[]     { skillName, rate }
                             └── planned[]          { mese, cliente, progetto, ..., percentualeAllocazione }
 ```
 
-Le anagrafiche non sono collegate alle risorse da riferimenti: le risorse contengono i **valori** (testo), non gli `_id` delle anagrafiche.
+Le anagrafiche del Pianificatore non sono collegate alle risorse da riferimenti: le risorse contengono i **valori** (testo), non gli `_id` delle anagrafiche.
+
+Dati comuni (fase 1, blocco B4), collegati da riferimenti (`ObjectId`):
+
+```
+clienti ◄────────── progetti ──────────► centri_costo
+                     │  approvatori[] { risorsaId ─► risorse, profilo TL|PM }
+                     │
+attivita ─ progettoId┘  risorseAssegnateIds[] ─► risorse
+avanzamenti ─ progettoId, attivitaId?          risorse.storicoRuoli[] { ruoloId ─► ruoli, dal }
+utenti ─ risorsaId ─► risorse
+```
+
+MongoDB non ha chiavi esterne: l'esistenza dei documenti collegati la controlla il backend.
 
 ## Campi di tracciamento
 
@@ -35,7 +49,7 @@ Fino all'autenticazione (fase 1, blocco B2) l'autore delle modifiche fatte dall'
 
 ## Collection `risorse`
 
-Un documento per persona, con skill e pianificazione incorporate.
+Un documento per persona, con skill e pianificazione incorporate. Dal blocco B4 appartiene al modulo Comuni: i dati anagrafici si gestiscono con `/api/comuni/risorse`, skill e allocazioni con `/api/pianificatore/risorse`. L'abilitazione (TL, PM, PMSenior) e i ruoli applicativi stanno sull'utente collegato (`utenti.risorsaId`).
 
 | Campo | Tipo | Obbl. | Descrizione |
 |---|---|---|---|
@@ -47,6 +61,12 @@ Un documento per persona, con skill e pianificazione incorporate.
 | `skillAmbiti` | array di `SkillValutata` | no (default `[]`) | Skill di tipo `ambito` |
 | `certificazioni` | array di oggetti | no (default `[]`) | Struttura libera, oggi non usata |
 | `planned` | array di `Allocazione` | no (default `[]`) | Pianificazione mese per mese |
+| `email` | string | per le nuove | Minuscolo, unica (indice unico parziale: le risorse senza email sono ammesse fino alla migrazione B7); è il nome utente per l'accesso |
+| `cellulare` | string | no | |
+| `matricola` | string | no | |
+| `dataIngresso`, `dataUscita` | Date | no | Le risorse non si cancellano dall'anagrafica: si imposta la data di uscita |
+| `oreContrattualiGiorno` | number | no | Orario contrattuale, 0–24 |
+| `storicoRuoli` | array di `{ ruoloId, dal }` | no (default `[]`) | Ruolo professionale con data di decorrenza, dal più vecchio |
 
 ### `SkillValutata`
 
@@ -133,6 +153,55 @@ Univocità del nome e assenza di duplicati sono verificate dal backend (`RateSer
 | `certName` | string | sì | Nome della certificazione |
 | `certType` | string | no | Categoria (es. `developer`, `project management`) |
 
+## Collection `clienti`, `centri_costo`, `ruoli`
+
+Anagrafiche semplici del modulo Comuni: un documento per voce, indice unico su `codice`, non si cancellano (si disattivano con `attivo: false`).
+
+| Collection | Campi | Chi le gestisce |
+|---|---|---|
+| `clienti` | `codice`, `ragioneSociale`, `attivo` | PMSenior |
+| `centri_costo` | `codice`, `descrizione`, `attivo` | PMSenior |
+| `ruoli` | `codice`, `descrizione`, `attivo` | Amministratore |
+
+Il codice è fatto di lettere, cifre, punto, trattino e trattino basso e non si modifica dopo la creazione.
+
+## Collection `progetti`
+
+| Campo | Tipo | Obbl. | Note |
+|---|---|---|---|
+| `codice` | string | sì | Unico, non modificabile |
+| `titolo` | string | sì | |
+| `descrizione` | string | | |
+| `clienteId` | ObjectId | | Cliente; assente nei progetti interni |
+| `centroCostoId` | ObjectId | sì | Un solo centro di costo; dalla fase 2 bloccato dopo il primo consuntivo |
+| `approvatori` | array di `{ risorsaId, profilo }` | sì (anche vuoto) | `profilo`: `TL` o `PM`; una risorsa compare una volta |
+| `soloSuAttivita` | boolean | | Default `false` |
+| `dataInizio`, `dataFine` | Date | | Inizio obbligatoria per In corso, fine per Chiuso; fine non prima dell'inizio |
+| `stato` | string | sì | `inValutazione` (iniziale), `inCorso`, `chiuso` |
+| `percentualeCompletamento` | intero 0–100 | sì | Default 0; ogni cambio va in `avanzamenti` |
+| `stime` | `{ managerialeGiorni, managerialeCentesimi, definitivaGiorni, definitivaCentesimi }` | | Impostate a mano, mai calcolate; euro in centesimi (interi) |
+
+Indici: `{ codice: 1 }` unico, `{ "approvatori.risorsaId": 1 }`, `{ centroCostoId: 1 }`.
+
+## Collection `attivita`
+
+| Campo | Tipo | Obbl. | Note |
+|---|---|---|---|
+| `progettoId` | ObjectId | sì | Progetto a cui appartiene |
+| `codice` | string | sì | Unico nel progetto, non modificabile |
+| `descrizione` | string | sì | |
+| `dataInizio`, `dataFine` | Date | | |
+| `stato` | string | sì | `attiva` (iniziale) o `chiusa` |
+| `stimaGiorni` | number | | Non concorre alle stime del progetto |
+| `percentualeCompletamento` | intero 0–100 | sì | Ogni cambio va in `avanzamenti` |
+| `risorseAssegnateIds` | ObjectId[] | sì (anche vuoto) | Risorse assegnate |
+
+Indici: `{ progettoId: 1, codice: 1 }` unico, `{ risorseAssegnateIds: 1 }`.
+
+## Collection `avanzamenti`
+
+Storico delle percentuali di completamento: un documento per ogni cambio, scritto nella stessa transazione dell'aggiornamento. Campi: `progettoId`, `attivitaId` (assente per il progetto), `valorePrecedente`, `valoreNuovo`, `il` (data), `da` (id dell'utente). Indice `{ progettoId: 1, il: -1 }`.
+
 ## Collection `utenti`
 
 Utenti che accedono a ToolPM (fase 1, blocco B2). Indice unico su `email` (migrazione `003-indici-utenti`).
@@ -171,6 +240,7 @@ Registro delle migrazioni eseguite da `npm run migra`: `_id` è il nome dello sc
 | `001-parametri` | Crea la collection `parametri` con indice unico e i valori iniziali (non tocca parametri già presenti) |
 | `002-tracciamento-esistenti` | Aggiunge i campi di tracciamento ai documenti di `risorse`, `skills`, `rate`, `certificazioni` che non li hanno, con autore `sistema:migrazione` |
 | `003-indici-utenti` | Indice unico su `utenti.email` |
+| `004-comuni` | Crea `clienti`, `centri_costo`, `ruoli`, `progetti`, `attivita`, `avanzamenti` con i validatori `$jsonSchema` (o li aggiorna se esistono) e i loro indici; indice unico parziale su `risorse.email` |
 
 ## Regole sui dati
 
@@ -182,12 +252,13 @@ Registro delle migrazioni eseguite da `npm run migra`: `_id` è il nome dello sc
 
 ## Indici
 
-Definiti nello schema di `risorse`:
+Gli indici delle collection comuni li crea la migrazione `004-comuni` (vedi le singole collection). Definiti nello schema di `risorse`:
 
 | Indice | Uso |
 |---|---|
 | `{ "planned.mese": 1 }` | Ricerche per mese |
 | `{ "skillTecnici.skillName": 1 }` | Filtro per skill tecnica |
+| `{ email: 1 }` unico, solo dove `email` è un testo | Email unica (creato dalla migrazione `004-comuni`) |
 
 Il backend **non crea gli indici automaticamente** (`autoIndex` disattivato) per non modificare un database esistente. Per crearli all'avvio impostare `MONGODB_AUTO_INDEX=true` nell'ambiente del backend, oppure crearli a mano:
 

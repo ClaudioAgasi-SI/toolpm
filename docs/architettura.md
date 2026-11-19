@@ -16,7 +16,7 @@
 | web server | nginx 1.27 | Serve i file statici di Angular e fa da reverse proxy verso il backend per i percorsi `/api/` |
 | backend | NestJS 12, Node.js 22, TypeScript 6 (ESM) | API REST, calcoli della griglia, validazione, documentazione Swagger |
 | ORM | Mongoose 9 (`@nestjs/mongoose`) | Schemi, validazione dei documenti, accesso a MongoDB |
-| database | MongoDB (istanza esistente su Docker Desktop) | Persistenza delle 4 collection |
+| database | MongoDB (istanza esistente su Docker Desktop, replica set `rs0`) | Persistenza: collection del Pianificatore, dei dati comuni e tecniche (vedi [database.md](database.md)) |
 
 Il frontend chiama sempre l'indirizzo **relativo** `/api/...`: nessun URL del backend è scritto nel codice Angular.
 

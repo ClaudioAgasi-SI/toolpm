@@ -21,6 +21,7 @@ const ESEMPIO_PROFILO = {
     creareProgetto: true,
     gestireRisorse: true,
     gestireCaratteristicheTutteLeRisorse: true,
+    gestireRuoli: true,
     gestireParametri: false,
     gestireUtenti: true,
   },

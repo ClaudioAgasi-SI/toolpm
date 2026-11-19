@@ -1,13 +1,10 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-import { Risorsa, RisorsaSchema } from './risorsa.schema.js';
 import { RisorseController } from './risorse.controller.js';
 import { RisorseService } from './risorse.service.js';
 
+/** Risorse viste dal Pianificatore. Il modello Risorsa è registrato in ComuniDatiModule (globale). */
 @Module({
-  imports: [MongooseModule.forFeature([{ name: Risorsa.name, schema: RisorsaSchema }])],
   controllers: [RisorseController],
   providers: [RisorseService],
-  exports: [MongooseModule],
 })
 export class RisorseModule {}

@@ -4,6 +4,8 @@ import { RouterModule } from '@nestjs/core';
 import { MongooseModule } from '@nestjs/mongoose';
 import type { Connection } from 'mongoose';
 import { AuthModule } from './auth/auth.module.js';
+import { ComuniDatiModule } from './comuni/comuni-dati.module.js';
+import { ComuniModule } from './comuni/comuni.module.js';
 import { HealthController } from './health.controller.js';
 import { ContestoUtenteMiddleware } from './infrastruttura/contesto-utente.middleware.js';
 import { InfrastrutturaModule } from './infrastruttura/infrastruttura.module.js';
@@ -36,8 +38,11 @@ import { RisorseModule } from './pianificatore/risorse/risorse.module.js';
     InfrastrutturaModule,
     AuthModule,
     PermessiModule,
+    ComuniDatiModule,
+    ComuniModule,
     PianificatoreModule,
     RouterModule.register([
+      { path: 'comuni', module: ComuniModule },
       {
         path: 'pianificatore',
         module: PianificatoreModule,
