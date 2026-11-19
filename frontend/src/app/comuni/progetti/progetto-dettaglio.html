@@ -1,0 +1,240 @@
+<p><a routerLink="/comuni/progetti">← Tutti i progetti</a></p>
+
+@if (errore()) {
+  <p class="errore">{{ errore() }}</p>
+}
+
+@if (modulo(); as m) {
+  <header class="testata">
+    <h1>
+      {{ nuovo() ? 'Nuovo progetto' : m.codice + ' — ' + m.titolo }}
+      @if (progetto(); as p) {
+        <span class="stato" [class]="p.stato">{{ etichettaStato(p.stato) }}</span>
+      }
+    </h1>
+    @if (messaggio()) {
+      <span class="ok">{{ messaggio() }}</span>
+    }
+  </header>
+
+  <!-- Dati e stime -->
+  <form class="blocco" (ngSubmit)="salvaDati()">
+    <h2>Dati del progetto</h2>
+    @if (!gestisce()) {
+      <p class="nota">Sola lettura: i dati li modificano TL e PM del progetto e i PMSenior.</p>
+    }
+    <fieldset class="modulo" [disabled]="!gestisce()">
+      @if (nuovo()) {
+        <label>Codice (univoco, non si cambia) <input name="codice" required placeholder="es. TIMBUFE" [(ngModel)]="m.codice" /></label>
+      }
+      <label>Titolo <input name="titolo" required [(ngModel)]="m.titolo" /></label>
+      <label>Cliente
+        <select name="cliente" [(ngModel)]="m.clienteId">
+          <option value="">— progetto interno —</option>
+          @for (c of selezionabili(clienti(), m.clienteId); track c._id) {
+            <option [value]="c._id">{{ c.ragioneSociale }} ({{ c.codice }})</option>
+          }
+        </select>
+      </label>
+      <label>Centro di costo
+        <select name="centro" required [(ngModel)]="m.centroCostoId">
+          <option value="" disabled>— scegli —</option>
+          @for (c of selezionabili(centri(), m.centroCostoId); track c._id) {
+            <option [value]="c._id">{{ c.descrizione }} ({{ c.codice }})</option>
+          }
+        </select>
+      </label>
+      <label>Data di inizio <input name="inizio" type="date" [(ngModel)]="m.dataInizio" /></label>
+      <label>Data di fine <input name="fine" type="date" [(ngModel)]="m.dataFine" /></label>
+      <label class="largo">Descrizione <textarea name="descrizione" rows="2" [(ngModel)]="m.descrizione"></textarea></label>
+      <label>Stima manageriale (giorni) <input name="mg" type="number" min="0" step="0.5" [(ngModel)]="m.managerialeGiorni" /></label>
+      <label>Stima definitiva / effort (giorni) <input name="dg" type="number" min="0" step="0.5" [(ngModel)]="m.definitivaGiorni" /></label>
+      @if (vedeEuro()) {
+        <label>Stima manageriale (€) <input name="me" type="number" min="0" step="0.01" [(ngModel)]="m.managerialeEuro" /></label>
+        <label>Stima definitiva (€) <input name="de" type="number" min="0" step="0.01" [(ngModel)]="m.definitivaEuro" /></label>
+      }
+      <label class="spunta"><input name="solo" type="checkbox" [(ngModel)]="m.soloSuAttivita" /> Ore solo sulle attività (fase 2)</label>
+    </fieldset>
+    @if (gestisce()) {
+      <button type="submit" class="primario">{{ nuovo() ? 'Crea il progetto' : 'Salva i dati' }}</button>
+      @if (nuovo()) {
+        <span class="nota"> Il progetto nasce In valutazione e tu ne diventi approvatore.</span>
+      }
+    }
+  </form>
+
+  @if (progetto(); as p) {
+    <!-- Stato e completamento -->
+    <section class="blocco">
+      <h2>Stato e completamento</h2>
+      <div class="azioni">
+        <span>Stato: <span class="stato" [class]="p.stato">{{ etichettaStato(p.stato) }}</span></span>
+        @for (x of passaggi(); track x.verso) {
+          <button type="button" (click)="cambiaStato(x.verso)">{{ x.etichetta }}</button>
+        }
+      </div>
+      <p class="nota">In corso richiede la data di inizio e almeno un PM; Chiuso richiede la data di fine. Riapre solo il PM del progetto o un PMSenior.</p>
+      <div class="azioni">
+        <span><span class="barra-percentuale"><span [style.width.%]="p.percentualeCompletamento"></span></span>{{ p.percentualeCompletamento }}% completato</span>
+        @if (gestisce()) {
+          <input type="number" min="0" max="100" step="1" style="width: 5rem" name="percentuale" [(ngModel)]="percentuale" aria-label="Percentuale" />
+          <button type="button" (click)="salvaPercentuale()">Aggiorna la percentuale</button>
+        }
+      </div>
+    </section>
+
+    <!-- Approvatori -->
+    <section class="blocco">
+      <h2>Approvatori</h2>
+      @if (!pm()) {
+        <p class="nota">Li assegnano il PM del progetto e i PMSenior.</p>
+      }
+      <table class="elenco">
+        <thead><tr><th>Risorsa</th><th style="width: 9rem">Profilo</th><th style="width: 4rem"></th></tr></thead>
+        <tbody>
+          @for (a of approvatori(); track $index; let i = $index) {
+            <tr>
+              <td>
+                @if (pm()) {
+                  <select [name]="'appr-' + i" [(ngModel)]="a.risorsaId">
+                    <option value="" disabled>— scegli —</option>
+                    @for (r of risorse(); track r._id) {
+                      <option [value]="r._id">{{ r.cognome }} {{ r.nome }}</option>
+                    }
+                  </select>
+                } @else {
+                  {{ nomeRisorsa(a.risorsaId) }}
+                }
+              </td>
+              <td>
+                @if (pm()) {
+                  <select [name]="'prof-' + i" [(ngModel)]="a.profilo">
+                    <option value="PM">PM</option>
+                    <option value="TL">TL</option>
+                  </select>
+                } @else {
+                  {{ a.profilo }}
+                }
+              </td>
+              <td>
+                @if (pm()) {
+                  <button type="button" (click)="rimuoviApprovatore(i)" aria-label="Rimuovi">×</button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="3" class="tenue">Nessun approvatore.</td></tr>
+          }
+        </tbody>
+      </table>
+      @if (pm()) {
+        <div class="azioni" style="margin-top: 0.5rem">
+          <button type="button" (click)="aggiungiApprovatore()">+ Aggiungi</button>
+          <button type="button" class="primario" (click)="salvaApprovatori()">Salva gli approvatori</button>
+        </div>
+      }
+    </section>
+
+    <!-- Attività -->
+    <section class="blocco">
+      <h2>Attività</h2>
+      <table class="elenco">
+        <thead>
+          <tr><th style="width: 8rem">Codice</th><th>Descrizione</th><th style="width: 7rem">Stato</th><th style="width: 7rem">Stima (gg)</th><th style="width: 12rem">Completamento</th><th>Risorse assegnate</th><th style="width: 9rem"></th></tr>
+        </thead>
+        <tbody>
+          @if (gestisce()) {
+            <tr>
+              <td><input name="na-codice" placeholder="es. SVIL" [(ngModel)]="nuovaAttivita.codice" /></td>
+              <td><input name="na-descr" placeholder="Descrizione" [(ngModel)]="nuovaAttivita.descrizione" /></td>
+              <td></td>
+              <td><input name="na-stima" type="number" min="0" step="0.5" [(ngModel)]="nuovaAttivita.stimaGiorni" /></td>
+              <td colspan="2"></td>
+              <td><button type="button" class="primario" [disabled]="!nuovaAttivita.codice || !nuovaAttivita.descrizione" (click)="creaAttivita()">Aggiungi</button></td>
+            </tr>
+          }
+          @for (r of attivita(); track r.attivita._id) {
+            <tr [class.disattivo]="r.attivita.stato === 'chiusa'">
+              <td><strong>{{ r.attivita.codice }}</strong></td>
+              @if (r.modifica) {
+                <td><input [name]="'d-' + r.attivita._id" [(ngModel)]="r.bozza.descrizione" /></td>
+                <td>
+                  <select [name]="'s-' + r.attivita._id" [(ngModel)]="r.bozza.stato">
+                    <option value="attiva">attiva</option>
+                    <option value="chiusa">chiusa</option>
+                  </select>
+                </td>
+                <td><input type="number" min="0" step="0.5" [name]="'g-' + r.attivita._id" [(ngModel)]="r.bozza.stimaGiorni" /></td>
+              } @else {
+                <td>{{ r.attivita.descrizione }}</td>
+                <td>{{ r.attivita.stato }}</td>
+                <td>{{ r.attivita.stimaGiorni }}</td>
+              }
+              <td>
+                @if (puoPercentuale(r.attivita)) {
+                  <input type="number" min="0" max="100" step="1" style="width: 4.5rem" [name]="'p-' + r.attivita._id" [(ngModel)]="r.percentuale" />
+                  @if (r.percentuale !== r.attivita.percentualeCompletamento) {
+                    <button type="button" (click)="salvaPercentualeAttivita(r)">OK</button>
+                  }
+                } @else {
+                  <span class="barra-percentuale"><span [style.width.%]="r.attivita.percentualeCompletamento"></span></span>{{ r.attivita.percentualeCompletamento }}%
+                }
+              </td>
+              <td>
+                @for (id of r.attivita.risorseAssegnateIds; track id) {
+                  <span class="etichetta">{{ nomeRisorsa(id) }}</span>
+                }
+                @if (r.risorseAperte) {
+                  <div class="scelta-risorse">
+                    @for (ris of risorse(); track ris._id) {
+                      <label><input type="checkbox" [checked]="r.risorse.has(ris._id!)" (change)="alternaRisorsa(r, ris._id!)" /> {{ ris.cognome }} {{ ris.nome }}</label>
+                    }
+                  </div>
+                  <button type="button" class="primario" (click)="salvaRisorse(r)">Salva le risorse</button>
+                  <button type="button" (click)="r.risorseAperte = false">Annulla</button>
+                }
+              </td>
+              <td class="azioni">
+                @if (gestisce()) {
+                  @if (r.modifica) {
+                    <button type="button" class="primario" (click)="salvaAttivita(r)">Salva</button>
+                    <button type="button" (click)="r.modifica = false">Annulla</button>
+                  } @else {
+                    <button type="button" (click)="r.modifica = true">Modifica</button>
+                    @if (!r.risorseAperte) {
+                      <button type="button" (click)="r.risorseAperte = true">Risorse</button>
+                    }
+                  }
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="7" class="tenue">Nessuna attività.</td></tr>
+          }
+        </tbody>
+      </table>
+      <p class="nota">Le attività le gestiscono TL e PM del progetto e i PMSenior; la percentuale di un'attività anche le risorse assegnate.</p>
+    </section>
+
+    <!-- Storico -->
+    <section class="blocco">
+      <h2>Storico del completamento</h2>
+      <table class="elenco">
+        <thead><tr><th style="width: 12rem">Quando</th><th>Su</th><th>Da</th><th>A</th></tr></thead>
+        <tbody>
+          @for (a of avanzamenti(); track a._id) {
+            <tr>
+              <td>{{ a.il.slice(0, 16).replace('T', ' ') }}</td>
+              <td>{{ nomeAttivita(a.attivitaId) }}</td>
+              <td>{{ a.valorePrecedente }}%</td>
+              <td>{{ a.valoreNuovo }}%</td>
+            </tr>
+          } @empty {
+            <tr><td colspan="4" class="tenue">Nessun cambio registrato.</td></tr>
+          }
+        </tbody>
+      </table>
+    </section>
+  }
+}
+

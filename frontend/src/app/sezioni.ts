@@ -16,4 +16,10 @@ export const SEZIONI: Sezione[] = [
     descrizione:
       'Allocazione delle persone sui progetti nel tempo, in base a skill tecniche, funzionali, di ambito e importanza strategica.',
   },
+  {
+    percorso: 'comuni',
+    nome: 'Anagrafiche',
+    descrizione:
+      'Dati comuni a tutte le sezioni: progetti con attività e approvatori, risorse, clienti, centri di costo, ruoli e utenti.',
+  },
 ];

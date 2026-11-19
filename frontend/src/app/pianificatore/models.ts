@@ -8,8 +8,16 @@ export interface SkillValutata {
 export interface Allocazione {
   /** Mese nel formato AAAAMM. */
   mese: string;
-  cliente?: string;
+  /** Progetto (collection progetti); assente nei mesi liberi. */
+  progettoId?: string;
+  /** In sola lettura, ricavati dal progetto dal backend: codice e titolo del progetto, codice e nome del cliente. */
   progetto?: string;
+  progettoTitolo?: string;
+  cliente?: string;
+  clienteRagioneSociale?: string;
+  /** Testi originali della migrazione B7, conservati per un rilascio. */
+  clienteTesto?: string;
+  progettoTesto?: string;
   competenzaTecnica?: string;
   conoscenzaAmbito?: string;
   conoscenzaFunzionale?: string;

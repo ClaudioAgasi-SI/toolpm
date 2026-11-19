@@ -15,7 +15,10 @@
   label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--testo-tenue); }
 }
 
-.skill {
+fieldset.skill {
+  border: none;
+  padding: 0;
+  min-width: 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1rem;
@@ -41,7 +44,11 @@
   input { width: 8.5rem; }
   input[type='month'] { width: 9.5rem; }
   .perc { width: 4.5rem; }
+  select.progetto { width: 16rem; }
+  .cliente { font-size: 0.85rem; color: var(--testo-tenue); white-space: nowrap; padding: 0 6px; }
+  tr.bloccata td { opacity: 0.6; }
 }
+.nota { font-size: 0.85rem; color: var(--testo-tenue); }
 
 .vuoto { color: var(--testo-tenue); font-size: 0.9rem; }
 .rimuovi { padding: 2px 8px; }

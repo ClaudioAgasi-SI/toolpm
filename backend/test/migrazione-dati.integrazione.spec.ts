@@ -23,6 +23,8 @@ import { importa } from '../scripts/migrazione-dati/importa.mjs';
 import { verifica } from '../scripts/migrazione-dati/verifica.mjs';
 
 const URI_BASE = process.env.MONGODB_URI_TEST;
+/** Utente PMSenior di prova: modifica tutte le risorse. */
+const PMSENIOR = { id: 'u-test', email: 'pmsenior@prova.it', abilitazione: 'PMSenior' as const, ruoli: ['risorsa' as const], deveCambiarePassword: false };
 const NOME_DB = `toolpm_test_b7_${Date.now()}`;
 
 describe.skipIf(!URI_BASE)('Migrazione dei dati del Pianificatore con MongoDB vero', () => {
@@ -182,14 +184,14 @@ describe.skipIf(!URI_BASE)('Migrazione dei dati del Pianificatore con MongoDB ve
       // Come il frontend: JSON in andata e ritorno, più una riga nuova scritta con il vecchio testo.
       const dalBrowser = JSON.parse(JSON.stringify(await servizio.findOne(String(risorsa!._id)))) as { planned: Record<string, unknown>[] };
       dalBrowser.planned.push({ mese: '209912', cliente: 'TIM', progetto: 'TIMBUSINESS', percentualeAllocazione: 10 });
-      const salvata = await servizio.update(undefined, String(risorsa!._id), dalBrowser as never);
+      const salvata = await servizio.update(PMSENIOR, String(risorsa!._id), dalBrowser as never);
       const timbufe = await db.collection('progetti').findOne({ codice: 'TIMBUFE' });
       expect(salvata.planned.find((a) => a.mese === '209912')).toMatchObject({ progetto: 'TIMBUFE', progettoId: timbufe!._id });
       const salvataNelDb = await db.collection('risorse').findOne({ _id: risorsa!._id });
       expect(salvataNelDb!.planned.every((a: Record<string, unknown>) => a.cliente === undefined && a.progetto === undefined)).toBe(true);
 
       dalBrowser.planned.push({ mese: '209912', cliente: 'Nuovo', progetto: 'Sconosciuto', percentualeAllocazione: 5 });
-      await expect(servizio.update(undefined, String(risorsa!._id), dalBrowser as never)).rejects.toThrow(BadRequestException);
+      await expect(servizio.update(PMSENIOR, String(risorsa!._id), dalBrowser as never)).rejects.toThrow(BadRequestException);
     } finally {
       await conn.close();
     }

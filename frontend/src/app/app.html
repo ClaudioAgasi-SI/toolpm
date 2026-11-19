@@ -1,7 +1,23 @@
 <nav class="barra">
   <a class="marchio" routerLink="/">ToolPM</a>
-  @for (s of sezioni; track s.percorso) {
-    <a [routerLink]="['/', s.percorso]" routerLinkActive="attivo">{{ s.nome }}</a>
+  @if (sessione.utente(); as u) {
+    @for (s of sezioni; track s.percorso) {
+      <a [routerLink]="['/', s.percorso]" routerLinkActive="attivo">{{ s.nome }}</a>
+    }
+    <span class="spazio"></span>
+    <span class="utente" [title]="u.email">
+      {{ sessione.nomeMostrato() }}
+      @if (u.abilitazione) {
+        <span class="profilo">{{ u.abilitazione }}</span>
+      }
+      @for (r of u.ruoli; track r) {
+        @if (r !== 'risorsa') {
+          <span class="profilo">{{ r }}</span>
+        }
+      }
+    </span>
+    <a routerLink="/cambia-password" routerLinkActive="attivo">Password</a>
+    <button type="button" class="esci" (click)="sessione.logout()">Esci</button>
   }
 </nav>
 <main>

@@ -18,7 +18,6 @@ services:
       JWT_DURATA: ${JWT_DURATA:-8h}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD_INIZIALE: ${ADMIN_PASSWORD_INIZIALE:-}
-      AUTH_OBBLIGATORIA: ${AUTH_OBBLIGATORIA:-false}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
     volumes:
       # Dati di esempio, usati solo dallo script di import (scripts/seed.mjs).

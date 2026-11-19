@@ -124,7 +124,7 @@ describe('AutenticazioneGuard', () => {
   };
 
   /** Prepara guard e contesto di esecuzione con i metadati indicati sull'endpoint. */
-  function prova(opzioni: { token?: string; pubblica?: boolean; ruoli?: string[]; permessi?: string[]; obbligatoria?: boolean }) {
+  function prova(opzioni: { token?: string; pubblica?: boolean; ruoli?: string[]; permessi?: string[] }) {
     const auth = { utenteDaToken: async (t: string) => (t === 'buono' ? ANNA : null) } as unknown as AuthService;
     const handler = () => undefined;
     if (opzioni.pubblica) Reflect.defineMetadata(CHIAVE_PUBBLICA, true, handler);
@@ -138,11 +138,7 @@ describe('AutenticazioneGuard', () => {
       getHandler: () => handler,
       getClass: () => class {},
     } as unknown as ExecutionContext;
-    const guard = new AutenticazioneGuard(
-      new Reflector(),
-      auth,
-      config({ AUTH_OBBLIGATORIA: opzioni.obbligatoria ? 'true' : 'false' }),
-    );
+    const guard = new AutenticazioneGuard(new Reflector(), auth);
     return { guard, ctx, req };
   }
 
@@ -154,16 +150,13 @@ describe('AutenticazioneGuard', () => {
     expect(contesto.utente).toBe('u-anna');
   });
 
-  it('nel periodo di transizione lascia passare le richieste anonime, se non obbligatorio', async () => {
-    const { guard, ctx } = prova({});
-    expect(await guard.canActivate(ctx)).toBe(true);
-  });
-
-  it('con AUTH_OBBLIGATORIA=true rifiuta le richieste anonime, tranne gli endpoint pubblici', async () => {
-    const anonima = prova({ obbligatoria: true });
+  it('rifiuta le richieste anonime (401), tranne gli endpoint pubblici', async () => {
+    const anonima = prova({});
     await expect(anonima.guard.canActivate(anonima.ctx)).rejects.toThrow(UnauthorizedException);
-    const pubblica = prova({ obbligatoria: true, pubblica: true });
+    const pubblica = prova({ pubblica: true });
     expect(await pubblica.guard.canActivate(pubblica.ctx)).toBe(true);
+    const conAccesso = prova({ token: 'buono' });
+    expect(await conAccesso.guard.canActivate(conAccesso.ctx)).toBe(true);
   });
 
   it('gli endpoint con ruoli richiedono sempre l\'accesso e il ruolo giusto', async () => {

@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { SessioneService } from '../../core/sessione.service';
 import { FormsModule } from '@angular/forms';
 import { ApiService, messaggioErrore } from '../api.service';
 import { Certificazione, Rate, Skill } from '../models';
@@ -13,11 +14,14 @@ import { ScalaEditor } from './scala-editor';
       Questi valori servono da suggerimento durante l'inserimento delle risorse: nelle risorse si possono
       usare anche valori non presenti qui.
     </p>
+    @if (!modificabile) {
+      <p class="nota"><strong>Sola lettura:</strong> il catalogo lo modificano PM e PMSenior.</p>
+    }
     @if (errore()) {
       <p class="errore">{{ errore() }}</p>
     }
 
-    <div class="colonne">
+    <fieldset class="colonne" [disabled]="!modificabile">
       <section>
         <h2>Skill</h2>
         @for (tipo of tipi; track tipo) {
@@ -69,11 +73,11 @@ import { ScalaEditor } from './scala-editor';
           <button type="button" (click)="nuovaScala.set(true)">+ Nuova scala</button>
         }
       </section>
-    </div>
+    </fieldset>
   `,
   styles: `
     .nota { color: var(--testo-tenue); font-size: 0.9rem; }
-    .colonne { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; }
+    .colonne { border: none; padding: 0; margin: 0; min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; }
     h3 { font-size: 0.9rem; text-transform: capitalize; color: var(--testo-tenue); margin: 1rem 0 0.25rem; }
     ul { list-style: none; padding: 0; margin: 0; }
     li { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-bottom: 1px solid var(--bordo); }
@@ -85,6 +89,8 @@ import { ScalaEditor } from './scala-editor';
 })
 export class Anagrafiche {
   private readonly api = inject(ApiService);
+  /** Catalogo: lo modificano PM e PMSenior (backend: @Permesso('gestireCaratteristicheTutteLeRisorse')). */
+  protected readonly modificabile = inject(SessioneService).puo('gestireCaratteristicheTutteLeRisorse');
 
   protected readonly tipi = ['tecnico', 'funzionale', 'ambito'];
   protected readonly skills = signal<Skill[]>([]);

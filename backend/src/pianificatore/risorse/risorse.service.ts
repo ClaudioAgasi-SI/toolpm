@@ -22,7 +22,6 @@ type RisorsaLetta = Risorsa & { _id: mongoose.Types.ObjectId };
  *   qualsiasi risorsa sui propri progetti e modifica skill e certificazioni delle risorse che lavorano sui
  *   suoi progetti (regole.motivoNegatoModificaRisorsa).
  * - Cognome e nome, creazione ed eliminazione: anagrafica, permesso gestireRisorse (PM, PMSenior).
- * Le richieste anonime passano finché AUTH_OBBLIGATORIA=false (fino al blocco B6).
  * Le allocazioni puntano al progetto con progettoId (vedi AllocazioniService).
  */
 @Injectable()
@@ -55,8 +54,8 @@ export class RisorseService {
    * Crea una risorsa dal Pianificatore (percorso mantenuto per un rilascio: la creazione completa,
    * con email, è POST /api/comuni/risorse). Permesso gestireRisorse.
    */
-  async create(utente: UtenteAutenticato | undefined, data: Partial<Risorsa>) {
-    await this.permessi.verificaSeAutenticato(utente, () => this.permessi.puoGestireRisorse(utente!), 'creare una risorsa');
+  async create(utente: UtenteAutenticato, data: Partial<Risorsa>) {
+    this.permessi.verifica(utente, this.permessi.puoGestireRisorse(utente), 'creare una risorsa');
     const dati: Record<string, unknown> = {};
     for (const campo of ['cognome', 'nome', ...CARATTERISTICHE] as const) if (data?.[campo] !== undefined) dati[campo] = data[campo];
     dati.planned = await this.allocazioni.risolvi(dati.planned);
@@ -70,7 +69,7 @@ export class RisorseService {
    * Cognome e nome si cambiano solo con il permesso gestireRisorse;
    * i dati anagrafici (email, cellulare, ruolo, orario...) non si toccano: sono di /api/comuni/risorse.
    */
-  async update(utente: UtenteAutenticato | undefined, id: string, data: Partial<Risorsa> & { _id?: unknown }) {
+  async update(utente: UtenteAutenticato, id: string, data: Partial<Risorsa> & { _id?: unknown }) {
     const attuale = await this.carica(id);
     const $set: Record<string, unknown> = {};
     for (const campo of ['cognome', 'nome'] as const) {
@@ -81,18 +80,16 @@ export class RisorseService {
     for (const campo of CARATTERISTICHE) $set[campo] = data?.[campo] ?? [];
     $set.planned = await this.allocazioni.risolvi($set.planned);
 
-    if (utente) {
-      if ($set.cognome !== undefined || $set.nome !== undefined) {
-        this.permessi.verifica(utente, this.permessi.puoGestireRisorse(utente), 'cambiare cognome e nome');
-      }
-      const negato = this.permessi.motivoNegatoModificaRisorsa(
-        utente,
-        await this.allocazioni.progettiDelSoggetto(utente.risorsaId),
-        attuale,
-        $set as CaratteristicheRisorsa,
-      );
-      this.permessi.verifica(utente, negato === null, negato ?? '');
+    if ($set.cognome !== undefined || $set.nome !== undefined) {
+      this.permessi.verifica(utente, this.permessi.puoGestireRisorse(utente), 'cambiare cognome e nome');
     }
+    const negato = this.permessi.motivoNegatoModificaRisorsa(
+      utente,
+      await this.allocazioni.progettiDelSoggetto(utente.risorsaId),
+      attuale,
+      $set as CaratteristicheRisorsa,
+    );
+    this.permessi.verifica(utente, negato === null, negato ?? '');
     await this.model.updateOne({ _id: attuale._id }, { $set }, { runValidators: true }).exec();
     return this.findOne(id);
   }
@@ -102,8 +99,8 @@ export class RisorseService {
    * si imposta la data di uscita). Permesso gestireRisorse; vietato se la risorsa è approvatore di un
    * progetto o assegnata a un'attività.
    */
-  async remove(utente: UtenteAutenticato | undefined, id: string) {
-    await this.permessi.verificaSeAutenticato(utente, () => this.permessi.puoGestireRisorse(utente!), 'eliminare una risorsa');
+  async remove(utente: UtenteAutenticato, id: string) {
+    this.permessi.verifica(utente, this.permessi.puoGestireRisorse(utente), 'eliminare una risorsa');
     if (isValidObjectId(id)) {
       const _id = new mongoose.Types.ObjectId(id);
       const [progetto, attivita] = await Promise.all([

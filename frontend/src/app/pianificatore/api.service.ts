@@ -74,10 +74,5 @@ export class ApiService {
   }
 }
 
-/** Messaggio leggibile da un errore HTTP del backend. */
-export function messaggioErrore(err: unknown): string {
-  const e = err as { error?: { message?: string | string[] }; message?: string; status?: number };
-  if (e?.status === 0) return 'Backend non raggiungibile.';
-  const m = e?.error?.message ?? e?.message ?? 'Errore sconosciuto';
-  return Array.isArray(m) ? m.join('; ') : m;
-}
+/** Messaggio leggibile da un errore HTTP del backend (condiviso con le altre sezioni). */
+export { messaggioErrore } from '../core/errori';

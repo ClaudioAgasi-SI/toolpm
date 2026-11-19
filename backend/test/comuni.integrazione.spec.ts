@@ -53,7 +53,6 @@ describe.skipIf(!URI_BASE)('Modulo Comuni con MongoDB vero', () => {
   beforeAll(async () => {
     process.env.MONGODB_URI = uriDiProva(URI_BASE!);
     process.env.JWT_SECRET = 'segreto-dei-test';
-    process.env.AUTH_OBBLIGATORIA = 'false';
     delete process.env.ADMIN_EMAIL;
 
     // Migrazioni vere (indici e validatori), come con npm run migra.

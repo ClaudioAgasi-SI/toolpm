@@ -29,7 +29,7 @@ backend/
 │   │   ├── password.ts                 cifratura e verifica delle password (scrypt)
 │   │   ├── auth.service.ts             accesso, token, profilo, cambio password, primo amministratore
 │   │   ├── autenticazione.guard.ts     guard globale: utente dal token, @Pubblica, @Ruoli, @Permesso
-│   │   ├── decoratori.ts               @Pubblica(), @Ruoli(...), @Permesso(...), @PermessoTransitorio(...), @UtenteRichiesta()
+│   │   ├── decoratori.ts               @Pubblica(), @Ruoli(...), @Permesso(...), @UtenteRichiesta()
 │   │   ├── auth.controller.ts          /api/auth/login, logout, me (con i permessi globali), cambia-password
 │   │   ├── utenti.service.ts / utenti.controller.ts  /api/utenti (solo admin)
 │   │   ├── auth.module.ts
@@ -103,7 +103,6 @@ Variabili d'ambiente (lette con `@nestjs/config`, anche da un file `.env` nella 
 | `JWT_SECRET` | casuale a ogni avvio | Segreto per firmare i token di accesso; senza, gli accessi scadono a ogni riavvio |
 | `JWT_DURATA` | `8h` | Durata dell'accesso (token e cookie) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD_INIZIALE` | — | Primo amministratore, creato all'avvio se non esiste nessun utente admin |
-| `AUTH_OBBLIGATORIA` | `false` | `true`: ogni API tranne login e health richiede l'accesso (da attivare con il blocco B6) |
 | `COOKIE_SECURE` | `false` | `true` se ToolPM è servito in HTTPS |
 
 ## Avvio dell'applicazione (`main.ts`)
@@ -127,8 +126,8 @@ Servizi tecnici usati da tutte le sezioni, nella cartella `src/infrastruttura/`.
 Modulo `src/auth/`. Il nome utente è l'email; le password sono cifrate con **scrypt** (incluso in Node.js, nessun modulo nativo da compilare nell'immagine Docker) nel formato `scrypt$N$r$p$sale$hash`.
 
 - **Accesso.** `POST /api/auth/login` con `{ email, password }` verifica le credenziali e imposta il cookie `toolpm_token` (httpOnly, SameSite=Lax, durata `JWT_DURATA`), con dentro un token JWT che contiene solo l'id dell'utente. Il messaggio d'errore è lo stesso per email sconosciuta, password errata e utente disattivato. `POST /api/auth/logout` cancella il cookie; `GET /api/auth/me` restituisce il profilo; `POST /api/auth/cambia-password` cambia la propria password (almeno 10 caratteri).
-- **Guard globale.** `AutenticazioneGuard` legge il token dal cookie o da `Authorization: Bearer`, carica l'utente (se esiste ed è attivo) e lo scrive nella richiesta e nel contesto, così il tracciamento dei salvataggi registra chi modifica. Gli endpoint `@Pubblica()` (login, logout, health) passano sempre; quelli `@Ruoli(...)` richiedono l'accesso e uno dei ruoli indicati (403 altrimenti).
-- **Periodo di transizione.** Finché il frontend non ha la pagina di accesso (blocco B6), `AUTH_OBBLIGATORIA` vale `false`: le altre API accettano anche richieste anonime, registrate come `anonimo`. Con il blocco B6 il valore diventa `true` e ogni API senza accesso risponde 401.
+- **Guard globale.** `AutenticazioneGuard` legge il token dal cookie o da `Authorization: Bearer`, carica l'utente (se esiste ed è attivo) e lo scrive nella richiesta e nel contesto, così il tracciamento dei salvataggi registra chi modifica. Gli endpoint `@Pubblica()` (login, logout, health) passano sempre; tutti gli altri richiedono l'accesso (401); quelli `@Ruoli(...)` anche uno dei ruoli indicati e quelli `@Permesso(...)` tutti i permessi globali indicati (403 altrimenti).
+- **Accesso obbligatorio (dal blocco B6).** Ogni API che non è `@Pubblica()` risponde 401 senza accesso. La variabile `AUTH_OBBLIGATORIA` del periodo di transizione è stata tolta: se è ancora nel `.env` viene ignorata.
 - **Gestione utenti.** `/api/utenti`, solo per il ruolo `admin`: elenco, creazione con password provvisoria, modifica di email, nome, risorsa collegata, abilitazione (TL, PM, PMSenior o nessuna), ruoli (`risorsa`, `controller`, `admin`) e stato attivo, reimpostazione della password. Gli utenti non si cancellano: si disattivano. Un amministratore non può disattivare se stesso né togliersi il ruolo admin. Chi riceve una password provvisoria deve cambiarla al primo accesso (`deveCambiarePassword`).
 - **Primo amministratore.** All'avvio, se non esiste nessun utente con ruolo `admin` e sono impostati `ADMIN_EMAIL` e `ADMIN_PASSWORD_INIZIALE`, il backend lo crea.
 
@@ -137,7 +136,7 @@ Modulo `src/auth/`. Il nome utente è l'email; le password sono cifrate con **sc
 Modulo globale `src/permessi/`, con le regole decise nell'analisi. Le regole sono funzioni pure in `regole.ts`: ricevono chi agisce e i dati che servono e rispondono sì o no, senza leggere il database.
 
 - **Due livelli.** L'abilitazione generale dell'utente (TL, PM, PMSenior o nessuna) e il profilo sul singolo progetto (approvatore TL o PM, in `progetto.approvatori`), indipendenti tra loro: un utente abilitato TL può essere PM su un progetto. Se è assegnato in entrambi i modi, vale PM. I diritti da approvatore valgono solo con un'abilitazione: se l'amministratore la toglie, la persona non gestisce più i suoi progetti.
-- **Permessi globali** (non dipendono da un progetto): `gestireClienti` e `gestireCentriDiCosto` → PMSenior; `creareProgetto` → TL, PM, PMSenior; `gestireRisorse` (anagrafica, ruolo professionale, orario) e `gestireCaratteristicheTutteLeRisorse` → PM, PMSenior; `gestireParametri` → ruolo `controller`; `gestireRuoli` (ruoli professionali) e `gestireUtenti` → ruolo `admin`. Sui controller si dichiarano con `@Permesso('gestireClienti')`; `@Permesso()` senza argomenti richiede solo l'accesso, anche con `AUTH_OBBLIGATORIA=false`. `POST /api/auth/login` e `GET /api/auth/me` li restituiscono nel campo `permessi`, per il menu del frontend.
+- **Permessi globali** (non dipendono da un progetto): `gestireClienti` e `gestireCentriDiCosto` → PMSenior; `creareProgetto` → TL, PM, PMSenior; `gestireRisorse` (anagrafica, ruolo professionale, orario) e `gestireCaratteristicheTutteLeRisorse` → PM, PMSenior; `gestireParametri` → ruolo `controller`; `gestireRuoli` (ruoli professionali) e `gestireUtenti` → ruolo `admin`. Sui controller si dichiarano con `@Permesso('gestireClienti')`; `@Permesso()` senza argomenti richiede solo l'accesso, come ogni endpoint non pubblico. `POST /api/auth/login` e `GET /api/auth/me` li restituiscono nel campo `permessi`, per il menu del frontend.
 - **Permessi su progetto, attività e risorsa**, controllati dai servizi con `PermessiService` (`verifica(utente, consentito, 'azione')` risponde 401 senza accesso e 403 con "Non hai il permesso di …"):
 
 | Regola | Chi può |
@@ -156,7 +155,7 @@ Modulo globale `src/permessi/`, con le regole decise nell'analisi. Le regole son
 
 ## Modulo Comuni (fase 1)
 
-Modulo `src/comuni/`, registrato su `/api/comuni`: i dati condivisi da tutte le sezioni. I modelli Mongoose sono in `ComuniDatiModule` (globale), così Pianificatore e Consuntivazione li usano senza registrarli di nuovo. Tutte le API richiedono l'accesso (`@Permesso()`), anche con `AUTH_OBBLIGATORIA=false`; i permessi sono quelli del blocco B3.
+Modulo `src/comuni/`, registrato su `/api/comuni`: i dati condivisi da tutte le sezioni. I modelli Mongoose sono in `ComuniDatiModule` (globale), così Pianificatore e Consuntivazione li usano senza registrarli di nuovo. Tutte le API richiedono l'accesso; i permessi sono quelli del blocco B3.
 
 | Metodo | Percorso | Chi | Note |
 |---|---|---|---|
@@ -185,10 +184,10 @@ Convenzioni: le date si inviano come `AAAA-MM-GG`; nei PUT si aggiornano solo i 
 
 Le risorse sono quelle del modulo Comuni: qui si gestiscono le **caratteristiche** (skill, certificazioni, allocazioni). L'anagrafica (email, cellulare, ruolo, orario) è di `/api/comuni/risorse`.
 
-| Metodo | Percorso | Descrizione | Chi (con accesso) | Risposte |
+| Metodo | Percorso | Descrizione | Chi | Risposte |
 |---|---|---|---|---|
-| GET | `/api/pianificatore/risorse` | Elenco, ordinato per cognome e nome | Tutti | 200 |
-| GET | `/api/pianificatore/risorse/:id` | Dettaglio | Tutti | 200, 404 |
+| GET | `/api/pianificatore/risorse` | Elenco, ordinato per cognome e nome | Chi ha fatto l'accesso | 200 |
+| GET | `/api/pianificatore/risorse/:id` | Dettaglio | Chi ha fatto l'accesso | 200, 404 |
 | POST | `/api/pianificatore/risorse` | Crea (**mantenuto per un rilascio**, senza email obbligatoria; la creazione completa è `POST /api/comuni/risorse`) | PM, PMSenior | 201, 400, 403 |
 | PUT | `/api/pianificatore/risorse/:id` | **Sostituisce** skill, certificazioni e allocazioni: quelle non inviate tornano vuote. Cognome e nome si cambiano solo con il permesso `gestireRisorse`; l'anagrafica non si tocca | PM e PMSenior su tutte; TL: allocazioni solo sui propri progetti (anche di risorse nuove per il progetto), skill e certificazioni delle risorse che lavorano sui suoi progetti | 200, 400, 403, 404 |
 | DELETE | `/api/pianificatore/risorse/:id` | Elimina (**mantenuto per un rilascio**), se la risorsa non è approvatore di un progetto né assegnata a un'attività | PM, PMSenior | 200 `{ "deleted": true }`, 403, 404, 409 |
@@ -200,7 +199,7 @@ Un `id` non valido come ObjectId restituisce 404.
 - In **risposta** (risorse e griglia) ogni allocazione con `progettoId` ha anche `progetto` (codice), `progettoTitolo`, `cliente` (codice) e `clienteRagioneSociale`, in sola lettura.
 - In **scrittura** il progetto si indica con `progettoId` oppure con il suo **codice** nel campo `progetto` (senza distinzione tra maiuscole e minuscole); valgono anche i vecchi testi importati dalla migrazione B7 (`aliasPianificatore`). Il codice prevale su `progettoId`, così nel frontend di oggi si cambia progetto scrivendone il codice. Un campo `progetto` vuoto toglie il progetto dalla riga (mese libero). Un progetto inesistente dà 400 con l'elenco delle righe da correggere. Si salvano solo `progettoId` e, se c'erano, `clienteTesto` e `progettoTesto`.
 
-**Periodo di transizione.** Finché il frontend non ha la pagina di accesso (blocco B6) e `AUTH_OBBLIGATORIA=false`, le API del Pianificatore accettano anche richieste anonime, senza controllo dei permessi, come prima. Per chi ha fatto l'accesso i permessi valgono già. Nel codice: `@PermessoTransitorio(...)` sui controller e `PermessiService.verificaSeAutenticato()` nei servizi; con il blocco B6 diventano `@Permesso(...)` e `verifica()`.
+Come tutte le API, anche quelle del Pianificatore richiedono l'accesso (dal blocco B6).
 
 ### AnagraficheModule — `/api/pianificatore/skills`, `/api/pianificatore/certificazioni`, `/api/pianificatore/rate`
 
@@ -213,7 +212,7 @@ I tre controller sono generati dalla funzione `crudController()` sopra un serviz
 | PUT | `/api/pianificatore/{...}/:id` | Aggiorna i campi inviati (`findByIdAndUpdate`); l'`_id` nel corpo è ignorato |
 | DELETE | `/api/pianificatore/{...}/:id` | Elimina |
 
-Creazione, modifica ed eliminazione: con accesso, PM e PMSenior (`@PermessoTransitorio('gestireCaratteristicheTutteLeRisorse')`); la lettura è libera.
+Creazione, modifica ed eliminazione: PM e PMSenior (`@Permesso('gestireCaratteristicheTutteLeRisorse')`); la lettura a chiunque abbia fatto l'accesso.
 
 `RateService` aggiunge una validazione su creazione e modifica:
 

@@ -21,11 +21,25 @@ Cartella: `frontend/`
 frontend/src/
 ├── index.html, main.ts, styles.scss
 └── app/
-    ├── app.ts / app.html / app.scss   shell ToolPM: barra con le sezioni + <router-outlet>
-    ├── app.config.ts                  provider: router (con input binding), HttpClient
-    ├── app.routes.ts                  rotte di primo livello: home + una rotta per sezione (lazy)
+    ├── app.ts / app.html / app.scss   shell ToolPM: barra con sezioni, utente, "Password" ed "Esci" + <router-outlet>
+    ├── app.config.ts                  provider: router (con input binding), HttpClient con interceptor 401, lettura della sessione all'avvio
+    ├── app.routes.ts                  rotte di primo livello: accesso + (dietro l'accesso) home, cambio password, sezioni (lazy)
     ├── sezioni.ts                     elenco delle sezioni (menu e home)
+    ├── core/                          sessione e accesso (fase 1, blocco B6)
+    │   ├── sessione.service.ts        SessioneService: utente, permessi globali, login, logout, cambio password
+    │   ├── accesso.ts                 interceptor401, guard accessoRichiesto, permessoRichiesto(), ruoloRichiesto()
+    │   └── errori.ts                  messaggioErrore()
+    ├── accesso/                       pagine Accesso e Cambia password
     ├── home/                          pagina iniziale con le schede delle sezioni
+    ├── comuni/                        sezione "Anagrafiche" (modulo Comuni del backend)
+    │   ├── comuni.routes.ts, comuni-layout.ts
+    │   ├── comuni-api.service.ts      chiamate a /api/comuni e /api/utenti
+    │   ├── modelli.ts                 tipi: progetti, attività, risorse, voci, utenti, avanzamenti
+    │   ├── permessi.ts                regole sui progetti per mostrare i comandi (come il backend)
+    │   ├── anagrafica-semplice.ts     clienti, centri di costo, ruoli (configurati dalla rotta)
+    │   ├── progetti/                  elenco e scheda del progetto
+    │   ├── risorse/                   elenco e scheda anagrafica delle risorse
+    │   └── utenti/                    gestione utenti (solo amministratore)
     └── pianificatore/                 sezione "Pianificatore risorse allocate"
         ├── pianificatore.routes.ts    rotte della sezione (sotto /pianificatore)
         ├── pianificatore-layout.ts    sotto-menu della sezione + <router-outlet>
@@ -40,14 +54,23 @@ frontend/src/
 
 ## Rotte
 
+Tutte le rotte, tranne `/accesso`, sono dietro la guardia `accessoRichiesto`: senza accesso portano alla pagina di accesso (con `?ritorno=` per tornare alla pagina richiesta), con una password provvisoria al cambio password.
+
 | Percorso | Componente | Descrizione |
 |---|---|---|
+| `/accesso` | `Accesso` | email e password |
+| `/cambia-password` | `CambiaPassword` | cambio della propria password; obbligatorio dopo una password provvisoria |
 | `/` | `Home` | elenco delle sezioni di ToolPM |
+| `/comuni` | `ComuniLayout` | sezione Anagrafiche; reindirizza a `/comuni/progetti` |
+| `/comuni/progetti`, `/comuni/progetti/:id` (`nuovo`) | `ProgettiElenco`, `ProgettoDettaglio` | progetti |
+| `/comuni/risorse`, `/comuni/risorse/:id` (`nuova`) | `RisorseAnagrafica`, `RisorsaAnagraficaDettaglio` | dati anagrafici delle risorse |
+| `/comuni/clienti`, `/comuni/centri-costo`, `/comuni/ruoli` | `AnagraficaSemplice` | anagrafiche semplici (configurazione in `data.definizione`) |
+| `/comuni/utenti` | `Utenti` | gestione utenti, solo ruolo `admin` (`ruoloRichiesto('admin')`) |
 | `/pianificatore` | `PianificatoreLayout` | sezione Pianificatore; reindirizza a `/pianificatore/pianificazione` |
 | `/pianificatore/pianificazione` | `Pianificazione` | griglia risorse × mesi |
 | `/pianificatore/risorse` | `RisorseElenco` | elenco con ricerca |
-| `/pianificatore/risorse/nuova` | `RisorsaDettaglio` | inserimento |
-| `/pianificatore/risorse/:id` | `RisorsaDettaglio` | modifica |
+| `/pianificatore/risorse/nuova` | — | reindirizza a `/comuni/risorse/nuova` (le risorse nuove si creano nell'anagrafica, con l'email) |
+| `/pianificatore/risorse/:id` | `RisorsaDettaglio` | skill e allocazioni |
 | `/pianificatore/anagrafiche` | `Anagrafiche` | skill, certificazioni, scale di valutazione |
 | `/pianificazione`, `/risorse[/:id]`, `/anagrafiche` | — | vecchi indirizzi: reindirizzano sotto `/pianificatore` |
 | `**` | — | reindirizza alla home |
@@ -56,9 +79,15 @@ Per aggiungere una sezione: cartella `app/<sezione>/` con il proprio file di rot
 
 I componenti sono caricati in modo lazy (`loadComponent`). Con `withComponentInputBinding()` il parametro `:id` arriva al componente come `input` (`id = input.required<string>()`).
 
+## Accesso e permessi (fase 1, blocco B6)
+
+- **Sessione.** Il backend mette il token in un cookie httpOnly: il frontend non lo vede e non lo salva. All'avvio (`provideAppInitializer`) `SessioneService.carica()` chiama `GET /api/auth/me`; il profilo (abilitazione, ruoli, `permessi` globali, `deveCambiarePassword`) sta nel signal `utente`.
+- **Scadenza.** `interceptor401` intercetta le risposte 401 delle API (tranne login e profilo): chiude la sessione e porta alla pagina di accesso, ricordando la pagina in cui si era.
+- **Comandi secondo i permessi.** Le pagine mostrano o disabilitano i comandi con `sessione.puo('...')` (permessi globali) e con le funzioni di `comuni/permessi.ts` (TL e PM del progetto, PMSenior), che rispecchiano `backend/src/permessi/regole.ts`. È solo comodità: il controllo vero è sempre nel backend, e i suoi messaggi 403 vengono mostrati.
+
 ## Comunicazione con il backend
 
-`ApiService` (`api.service.ts`) usa l'URL **relativo** `/api`:
+`ApiService` (`api.service.ts`) e `ComuniApiService` (`comuni/comuni-api.service.ts`) usano l'URL **relativo** `/api`:
 
 - in sviluppo il proxy di `ng serve` (`proxy.conf.json`) inoltra a `http://localhost:3001`;
 - in Docker nginx (`nginx.conf`) inoltra a `http://backend:3001`.
@@ -120,17 +149,34 @@ La riga di un progetto è definita una sola volta come `<ng-template #riga>` e r
 
 ### Risorse (`risorse/`)
 
-- **`RisorseElenco`**: tabella con nome, skill tecniche, skill funzionali/ambito e numero di mesi pianificati (esclusi i segnaposto); ricerca immediata per nome o skill; pulsante "Nuova risorsa".
-- **`RisorsaDettaglio`**: form per cognome e nome, tre gruppi di skill (nome + livello) e tabella delle allocazioni (mese, cliente, progetto, %, probabilità, importanza, competenze).
-  - I campi usano `<datalist>`: suggeriscono i valori delle anagrafiche (skill per tipo, scale `rate`, clienti e progetti già usati dalla risorsa) ma **accettano testo libero**. Dal blocco B5 il backend accetta come progetto solo il **codice** di un progetto esistente (il cliente si ricava dal progetto e il campo cliente non conta); la scelta da un elenco arriva con il blocco B6.
-  - "Aggiungi allocazione" copia mese, cliente e progetto dell'ultima riga.
-  - Al salvataggio le skill senza nome vengono scartate e le allocazioni ordinate per mese; POST per una risorsa nuova (poi naviga alla scheda), PUT per una esistente.
+- **`RisorseElenco`**: tabella con nome, skill tecniche, skill funzionali/ambito e numero di mesi pianificati (esclusi i segnaposto); ricerca immediata per nome o skill; "Nuova risorsa" (PM e PMSenior) apre la scheda anagrafica in `/comuni/risorse/nuova`.
+- **`RisorsaDettaglio`**: tre gruppi di skill (nome + livello) e tabella delle allocazioni (mese, progetto, cliente, %, probabilità, importanza, competenze). Nome e cognome si mostrano soltanto: si modificano in "Dati anagrafici".
+  - Il **progetto si sceglie da un elenco** (`/api/comuni/progetti`, "codice — titolo", con "(chiuso)" per i progetti chiusi); "— mese libero —" lascia la riga senza progetto. Il **cliente** si ricava dal progetto e si mostra soltanto.
+  - Skill e scale usano `<datalist>`: suggeriscono i valori delle anagrafiche ma accettano testo libero.
+  - **Permessi.** PM e PMSenior modificano tutto. Il TL vede nell'elenco solo i propri progetti, può aggiungere righe sui suoi progetti e modificare quelle; le righe su progetti altrui sono bloccate (in grigio). Le skill il TL le modifica solo se la risorsa lavora su un suo progetto. Gli altri vedono la scheda in sola lettura.
+  - "Aggiungi allocazione" copia mese e progetto dell'ultima riga modificabile.
+  - Al salvataggio le skill senza nome vengono scartate, le allocazioni ordinate per mese e inviate con il solo `progettoId` (senza i campi ricavati); PUT `/api/pianificatore/risorse/:id`.
 
-### Anagrafiche (`anagrafiche/`)
+### Anagrafiche del Pianificatore (`anagrafiche/`)
+
+Il catalogo lo modificano PM e PMSenior; per gli altri la pagina è in sola lettura (un `fieldset` disabilitato blocca tutti i comandi).
 
 - **Skill**: elenco raggruppato per tipo, aggiunta (nome + tipo) ed eliminazione.
 - **Certificazioni**: elenco, aggiunta (nome + tipo) ed eliminazione.
 - **Scale di valutazione**: un componente **`ScalaEditor`** per scala. Permette di rinominare, riordinare (↑ ↓), aggiungere e rimuovere valori; le modifiche restano in bozza (riquadro giallo) finché non si preme **Salva** o **Annulla**. "Nuova scala" crea una scala vuota con nome. Gli errori del backend (nome duplicato, valori ripetuti) sono mostrati nel riquadro.
+
+### Sezione Anagrafiche (`comuni/`)
+
+- **Progetti** (`ProgettiElenco`): codice, titolo, cliente, centro di costo, stato, completamento, PM e TL; filtri per stato, testo e "solo quelli che gestisco" (`?gestibili=true`); "Nuovo progetto" per chi ha `creareProgetto`.
+- **Scheda progetto** (`ProgettoDettaglio`), a blocchi:
+  - *Dati*: titolo, cliente (anche "progetto interno"), centro di costo, date, descrizione, stime in giorni e, per chi le vede, in euro (convertite da/in centesimi); il codice si sceglie solo alla creazione.
+  - *Stato e completamento*: pulsanti dei soli passaggi ammessi e consentiti (Avvia, Chiudi, Riapri per PM e PMSenior); percentuale del progetto.
+  - *Approvatori*: modificabili dal PM del progetto e dai PMSenior.
+  - *Attività*: aggiunta, modifica (descrizione, stato, stima), risorse assegnate (elenco con caselle), percentuale (anche per le risorse assegnate).
+  - *Storico del completamento*: i cambi di percentuale del progetto e delle attività.
+- **Risorse** (`RisorseAnagrafica`, `RisorsaAnagraficaDettaglio`): email (o "da completare"), cellulare, ruolo attuale, ore al giorno, uscita; scheda con i dati della persona e lo storico dei ruoli. Modifica: PM e PMSenior.
+- **Clienti, centri di costo, ruoli** (`AnagraficaSemplice`): elenco con aggiunta e modifica in riga, filtro "solo attivi". Il codice non cambia; le voci si disattivano invece di cancellarle. Modifica: PMSenior (clienti, centri di costo), amministratore (ruoli).
+- **Utenti** (`Utenti`, solo amministratore): creazione con password provvisoria generata (proposta email e nome dalla risorsa scelta), modifica di email, nome, risorsa, abilitazione, ruoli e stato attivo, nuova password provvisoria. La password provvisoria si mostra una sola volta, da comunicare alla persona.
 
 ## Componenti riutilizzabili
 
@@ -161,7 +207,7 @@ Input `scala: Rate` (senza `_id` = scala nuova), output `salvata` (emesso dopo s
 
 ## Stile
 
-Variabili in `styles.scss`: `--sfondo`, `--testo`, `--testo-tenue`, `--bordo`, `--accento` (#1c7ed6), `--pericolo`. Classi globali: `.primario`, `.pericolo`, `.errore`, `.etichetta`. Ogni componente ha il proprio SCSS incapsulato.
+Variabili in `styles.scss`: `--sfondo`, `--testo`, `--testo-tenue`, `--bordo`, `--accento` (#1c7ed6), `--pericolo`. Classi globali: `.primario`, `.pericolo`, `.errore`, `.etichetta`, e dal blocco B6 `.testata`, `.azioni`, `.ok`, `.nota`, `table.elenco`, `.modulo` (griglia dei form), `section.blocco`, `.stato` (In valutazione, In corso, Chiuso), `.barra-percentuale`. Ogni componente ha il proprio SCSS incapsulato.
 
 ## Sviluppo
 
@@ -172,6 +218,8 @@ npm start          # ng serve su http://localhost:4201/toolpm (richiede il backe
 npm run build      # build di produzione in dist/frontend/browser
 npm test           # test Vitest
 ```
+
+I test coprono la barra con e senza accesso, la guardia e l'interceptor 401, i messaggi d'errore e le regole sui progetti di `comuni/permessi.ts`. Il percorso completo (accesso, progetti, Pianificatore, profili TL e risorsa semplice, password provvisoria) è stato provato nel browser contro backend e MongoDB veri.
 
 ## Docker
 

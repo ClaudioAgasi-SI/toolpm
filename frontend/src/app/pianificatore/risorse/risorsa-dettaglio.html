@@ -7,22 +7,26 @@
 @if (risorsa(); as r) {
   <form (ngSubmit)="salva()">
     <header class="testata">
-      <h1>{{ nuova() ? 'Nuova risorsa' : r.cognome + ' ' + r.nome }}</h1>
+      <h1>{{ r.cognome }} {{ r.nome }}</h1>
       <div class="azioni">
         @if (messaggio()) {
           <span class="ok">{{ messaggio() }}</span>
         }
-        @if (!nuova()) {
-          <button type="button" class="pericolo" (click)="elimina()">Elimina</button>
+        <a class="bottone" [routerLink]="['/comuni/risorse', id()]">Dati anagrafici</a>
+        @if (puoSalvare()) {
+          <button type="submit" class="primario" [disabled]="salvataggio()">Salva</button>
         }
-        <button type="submit" class="primario" [disabled]="salvataggio()">Salva</button>
       </div>
     </header>
-
-    <section class="anagrafica">
-      <label>Cognome <input name="cognome" required [(ngModel)]="r.cognome" /></label>
-      <label>Nome <input name="nome" required [(ngModel)]="r.nome" /></label>
-    </section>
+    @if (!tutto()) {
+      <p class="nota">
+        @if (eTL()) {
+          Puoi allocare la risorsa sui tuoi progetti e modificare quelle allocazioni; le skill solo se la risorsa lavora su un tuo progetto.
+        } @else {
+          Sola lettura: skill e pianificazione le modificano PM, PMSenior e i TL dei progetti della risorsa.
+        }
+      </p>
+    }
 
     <!-- Suggerimenti: valori delle anagrafiche, ma è ammesso anche testo libero -->
     @for (t of tipiSkill; track t.campo) {
@@ -44,18 +48,8 @@
         }
       </datalist>
     }
-    <datalist id="clienti">
-      @for (c of clienti(); track c) {
-        <option [value]="c"></option>
-      }
-    </datalist>
-    <datalist id="progetti">
-      @for (p of progetti(); track p) {
-        <option [value]="p"></option>
-      }
-    </datalist>
 
-    <section class="skill">
+    <fieldset class="skill" [disabled]="!puoSkill()">
       @for (t of tipiSkill; track t.campo) {
         <fieldset>
           <legend>{{ t.etichetta }}</legend>
@@ -71,7 +65,7 @@
           <button type="button" (click)="aggiungiSkill(t.campo)">+ Aggiungi</button>
         </fieldset>
       }
-    </section>
+    </fieldset>
 
     <section>
       <h2>Pianificazione</h2>
@@ -79,23 +73,35 @@
         <table class="pianificazione">
           <thead>
             <tr>
-              <th>Mese</th><th>Cliente</th><th>Progetto</th><th>%</th><th>Probabilità</th>
+              <th>Mese</th><th>Progetto</th><th>Cliente</th><th>%</th><th>Probabilità</th>
               <th>Importanza</th><th>Tecnica</th><th>Ambito</th><th>Funzionale</th><th></th>
             </tr>
           </thead>
           <tbody>
             @for (al of r.planned; track $index; let i = $index) {
-              <tr>
-                <td><input type="month" [name]="'mese-' + i" [ngModel]="aInputMese(al.mese)" (ngModelChange)="impostaMese(al, $event)" /></td>
-                <td><input [name]="'cliente-' + i" list="clienti" [(ngModel)]="al.cliente" /></td>
-                <td><input [name]="'progetto-' + i" list="progetti" [(ngModel)]="al.progetto" /></td>
-                <td><input type="number" class="perc" min="0" max="100" [name]="'perc-' + i" [(ngModel)]="al.percentualeAllocazione" /></td>
-                <td><input [name]="'prob-' + i" list="scala-probabilitaAllocazione" [(ngModel)]="al.probabilitaAllocazione" /></td>
-                <td><input [name]="'imp-' + i" list="scala-importanzaStrategica" [(ngModel)]="al.importanzaStrategica" /></td>
-                <td><input [name]="'tec-' + i" list="scala-competenzaTecnica" [(ngModel)]="al.competenzaTecnica" /></td>
-                <td><input [name]="'amb-' + i" list="scala-conoscenzaAmbito" [(ngModel)]="al.conoscenzaAmbito" /></td>
-                <td><input [name]="'fun-' + i" list="scala-conoscenzaFunzionale" [(ngModel)]="al.conoscenzaFunzionale" /></td>
-                <td><button type="button" class="rimuovi" (click)="rimuoviAllocazione(i)" aria-label="Rimuovi">×</button></td>
+              @let modificabile = rigaModificabile(al);
+              <tr [class.bloccata]="!modificabile" [title]="modificabile ? '' : 'Allocazione su un progetto che non gestisci'">
+                <td><input type="month" [name]="'mese-' + i" [disabled]="!modificabile" [ngModel]="aInputMese(al.mese)" (ngModelChange)="impostaMese(al, $event)" /></td>
+                <td>
+                  <select [name]="'progetto-' + i" class="progetto" [disabled]="!modificabile" [ngModel]="al.progettoId ?? ''" (ngModelChange)="impostaProgetto(al, $event)">
+                    <option value="">— mese libero —</option>
+                    @for (p of progettiPerRiga(al); track p._id) {
+                      <option [value]="p._id">{{ p.codice }} — {{ p.titolo }}{{ p.stato === 'chiuso' ? ' (chiuso)' : '' }}</option>
+                    }
+                  </select>
+                </td>
+                <td class="cliente">{{ cliente(al) }}</td>
+                <td><input type="number" class="perc" min="0" max="100" [name]="'perc-' + i" [disabled]="!modificabile" [(ngModel)]="al.percentualeAllocazione" /></td>
+                <td><input [name]="'prob-' + i" list="scala-probabilitaAllocazione" [disabled]="!modificabile" [(ngModel)]="al.probabilitaAllocazione" /></td>
+                <td><input [name]="'imp-' + i" list="scala-importanzaStrategica" [disabled]="!modificabile" [(ngModel)]="al.importanzaStrategica" /></td>
+                <td><input [name]="'tec-' + i" list="scala-competenzaTecnica" [disabled]="!modificabile" [(ngModel)]="al.competenzaTecnica" /></td>
+                <td><input [name]="'amb-' + i" list="scala-conoscenzaAmbito" [disabled]="!modificabile" [(ngModel)]="al.conoscenzaAmbito" /></td>
+                <td><input [name]="'fun-' + i" list="scala-conoscenzaFunzionale" [disabled]="!modificabile" [(ngModel)]="al.conoscenzaFunzionale" /></td>
+                <td>
+                  @if (modificabile) {
+                    <button type="button" class="rimuovi" (click)="rimuoviAllocazione(i)" aria-label="Rimuovi">×</button>
+                  }
+                </td>
               </tr>
             } @empty {
               <tr><td colspan="10" class="vuoto">Nessuna allocazione.</td></tr>
@@ -103,7 +109,9 @@
           </tbody>
         </table>
       </div>
-      <button type="button" (click)="aggiungiAllocazione()">+ Aggiungi allocazione</button>
+      @if (puoSalvare()) {
+        <button type="button" (click)="aggiungiAllocazione()">+ Aggiungi allocazione</button>
+      }
     </section>
   </form>
 }

@@ -18,6 +18,8 @@ export const PIANIFICATORE_ROUTES: Routes = [
         title: 'Risorse · ToolPM',
         loadComponent: () => import('./risorse/risorse-elenco').then((m) => m.RisorseElenco),
       },
+      // Le risorse nuove si creano nell'anagrafica (con email): /comuni/risorse/nuova.
+      { path: 'risorse/nuova', redirectTo: '/comuni/risorse/nuova' },
       {
         path: 'risorse/:id',
         title: 'Risorsa · ToolPM',

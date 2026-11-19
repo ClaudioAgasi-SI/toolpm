@@ -34,7 +34,7 @@ describe.skipIf(!URI_BASE)('Pianificatore adattato con MongoDB vero', () => {
   };
   /** Corpo del PUT come lo manda il frontend: la risorsa letta, con le modifiche indicate. */
   const risorsaDaModificare = async (risorsa: string, modifica: (r: Record<string, unknown> & { planned: Record<string, unknown>[] }) => void) => {
-    const r = (await come().get(`/api/pianificatore/risorse/${risorsa}`)).body;
+    const r = (await come('sara').get(`/api/pianificatore/risorse/${risorsa}`)).body;
     modifica(r);
     return r as object;
   };
@@ -44,7 +44,6 @@ describe.skipIf(!URI_BASE)('Pianificatore adattato con MongoDB vero', () => {
     url.pathname = `/${NOME_DB}`;
     process.env.MONGODB_URI = url.toString();
     process.env.JWT_SECRET = 'segreto-dei-test';
-    process.env.AUTH_OBBLIGATORIA = 'false';
     delete process.env.ADMIN_EMAIL;
     client = await mongoose.mongo.MongoClient.connect(url.toString());
     db = client.db(NOME_DB);
@@ -115,9 +114,9 @@ describe.skipIf(!URI_BASE)('Pianificatore adattato con MongoDB vero', () => {
   });
 
   it('le risposte riportano progetto e cliente ricavati da progettoId, anche nella griglia', async () => {
-    const rita = (await come().get(`/api/pianificatore/risorse/${String(id.rita)}`)).body;
+    const rita = (await come('rita').get(`/api/pianificatore/risorse/${String(id.rita)}`)).body;
     expect(rita.planned[0]).toMatchObject({ progettoId: String(id.P1), progetto: 'P1', progettoTitolo: 'Progetto P1', cliente: 'TIM', clienteRagioneSociale: 'Telecom Italia' });
-    const griglia = (await come().get('/api/pianificatore/pianificazione?da=202701&a=202701')).body;
+    const griglia = (await come('rita').get('/api/pianificatore/pianificazione?da=202701&a=202701')).body;
     const riga = griglia.righe.find((r: { _id: string }) => r._id === String(id.rita));
     expect(riga.mesi['202701']).toMatchObject({ totale: 50, allocazioni: [{ progetto: 'P1', cliente: 'TIM' }] });
   });
@@ -196,12 +195,14 @@ describe.skipIf(!URI_BASE)('Pianificatore adattato con MongoDB vero', () => {
     expect((await come('tullio').get('/api/pianificatore/skills')).status).toBe(200);
   });
 
-  it('periodo di transizione: senza accesso il Pianificatore funziona come prima (AUTH_OBBLIGATORIA=false)', async () => {
+  it('senza accesso tutte le API rispondono 401 (blocco B6), tranne quelle pubbliche', async () => {
     const corpo = await risorsaDaModificare(String(id.mario), (r) => (r.skillAmbiti = [{ skillName: 'Telco' }]));
-    expect((await come().put(`/api/pianificatore/risorse/${String(id.mario)}`, corpo)).status).toBe(200);
-    expect((await come().post('/api/pianificatore/skills', { skillName: 'Go', skillType: 'tecnico' })).status).toBe(201);
-    // Le API dei Comuni invece richiedono sempre l'accesso.
+    expect((await come().put(`/api/pianificatore/risorse/${String(id.mario)}`, corpo)).status).toBe(401);
+    expect((await come().get('/api/pianificatore/risorse')).status).toBe(401);
+    expect((await come().get('/api/pianificatore/pianificazione')).status).toBe(401);
+    expect((await come().post('/api/pianificatore/skills', { skillName: 'Go', skillType: 'tecnico' })).status).toBe(401);
     expect((await come().get('/api/comuni/progetti')).status).toBe(401);
+    expect((await come().get('/api/health')).status).toBe(200);
   });
 
   it('migrazione 006: toglie i testi cliente e progetto dalle allocazioni collegate', async () => {

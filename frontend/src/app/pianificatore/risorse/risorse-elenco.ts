@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { SessioneService } from '../../core/sessione.service';
 import { ApiService, messaggioErrore } from '../api.service';
 import { Risorsa } from '../models';
 
@@ -12,7 +13,9 @@ import { Risorsa } from '../models';
       <h1>Risorse</h1>
       <div class="azioni">
         <input type="search" placeholder="Cerca per nome o skill…" [ngModel]="filtro()" (ngModelChange)="filtro.set($event)" />
-        <a class="bottone primario" routerLink="/pianificatore/risorse/nuova">+ Nuova risorsa</a>
+        @if (sessione.puo('gestireRisorse')) {
+          <a class="bottone primario" routerLink="/comuni/risorse/nuova">+ Nuova risorsa</a>
+        }
       </div>
     </header>
 
@@ -56,6 +59,7 @@ import { Risorsa } from '../models';
 })
 export class RisorseElenco {
   private readonly api = inject(ApiService);
+  protected readonly sessione = inject(SessioneService);
   protected readonly risorse = signal<Risorsa[]>([]);
   protected readonly filtro = signal('');
   protected readonly errore = signal('');

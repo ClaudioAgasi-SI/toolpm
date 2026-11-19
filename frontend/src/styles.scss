@@ -49,3 +49,34 @@ button:disabled { opacity: 0.6; cursor: default; }
   font-size: 0.85rem;
   small { color: var(--testo-tenue); }
 }
+
+/* --- Elementi comuni delle pagine (fase 1, blocco B6) --- */
+.testata { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+.testata h1 { margin: 0.5rem 0; }
+.azioni { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.ok { color: #2b8a3e; }
+.tenue { color: var(--testo-tenue); }
+.nota { font-size: 0.85rem; color: var(--testo-tenue); }
+
+table.elenco { width: 100%; border-collapse: collapse; }
+table.elenco th, table.elenco td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--bordo); vertical-align: middle; }
+table.elenco th { font-size: 0.85rem; color: var(--testo-tenue); font-weight: 600; }
+table.elenco tr.disattivo td { color: var(--testo-tenue); }
+table.elenco input:not([type='checkbox']), table.elenco select { width: 100%; box-sizing: border-box; }
+
+.modulo { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem 1rem; margin: 0.75rem 0 1rem; }
+.modulo label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.85rem; color: var(--testo-tenue); }
+.modulo label.largo { grid-column: 1 / -1; }
+.modulo label.spunta { flex-direction: row; align-items: center; gap: 0.4rem; color: var(--testo); }
+.modulo input, .modulo select, .modulo textarea { color: var(--testo); }
+textarea { font: inherit; font-size: 0.9rem; padding: 6px 10px; border: 1px solid #ced4da; border-radius: 6px; }
+
+section.blocco { border: 1px solid var(--bordo); border-radius: 8px; padding: 0.75rem 1rem 1rem; margin: 1rem 0; }
+section.blocco > h2 { margin: 0.25rem 0 0.5rem; }
+
+.stato { display: inline-block; border-radius: 10px; padding: 1px 9px; font-size: 0.8rem; font-weight: 600; }
+.stato.inValutazione { background: #fff3bf; color: #8a6d00; }
+.stato.inCorso { background: #d3f9d8; color: #2b8a3e; }
+.stato.chiuso { background: #e9ecef; color: #495057; }
+.barra-percentuale { display: inline-block; width: 70px; height: 8px; background: #e9ecef; border-radius: 4px; vertical-align: middle; margin-right: 6px; overflow: hidden; }
+.barra-percentuale span { display: block; height: 100%; background: var(--accento); }
