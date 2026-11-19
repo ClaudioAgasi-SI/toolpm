@@ -18,14 +18,23 @@ Annotare nome del container, immagine (es. `mongo:8`) e volume o cartella montat
 
 ## 2. Backup
 
-Prima di qualsiasi modifica, una copia dei due database:
+Prima di qualsiasi modifica, una copia dei due database. I file si creano dentro il container e poi si copiano nella cartella corrente con `docker cp`: funziona allo stesso modo in PowerShell, nel Prompt dei comandi e in bash.
 
 ```bash
-docker exec mongodb mongodump --db toolpm --archive --gzip > backup-toolpm-AAAAMMGG.archive.gz
-docker exec mongodb mongodump --db pianificazione --archive --gzip > backup-pianificazione-AAAAMMGG.archive.gz
+docker exec mongodb mongodump --db toolpm --gzip --archive=/tmp/backup-toolpm-AAAAMMGG.gz
+docker exec mongodb mongodump --db pianificazione --gzip --archive=/tmp/backup-pianificazione-AAAAMMGG.gz
+docker cp mongodb:/tmp/backup-toolpm-AAAAMMGG.gz .
+docker cp mongodb:/tmp/backup-pianificazione-AAAAMMGG.gz .
 ```
 
-Per ripristinare: `docker exec -i mongodb mongorestore --archive --gzip < backup-toolpm-AAAAMMGG.archive.gz`.
+Non usare `docker exec ... > file.gz`: in Windows PowerShell 5.1 il reindirizzamento `>` altera i file binari e il backup non si può ripristinare.
+
+Per ripristinare (esempio per `toolpm`):
+
+```bash
+docker cp backup-toolpm-AAAAMMGG.gz mongodb:/tmp/
+docker exec mongodb mongorestore --gzip --archive=/tmp/backup-toolpm-AAAAMMGG.gz
+```
 
 ## 3. Ricreare il container con il replica set
 

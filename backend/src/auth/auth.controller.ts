@@ -28,7 +28,10 @@ export class AuthController {
   @Pubblica()
   @HttpCode(200)
   @ApiOperation({ summary: 'Accesso con email e password; imposta il cookie httpOnly toolpm_token' })
-  @ApiBody({ schema: { example: { email: 'claudio.agasi@azienda.it', password: '••••••••••' } } })
+  @ApiBody({
+    description: 'Per il primo amministratore: ADMIN_EMAIL e la password impostate nel file .env',
+    schema: { example: { email: 'sostituire-con-la-propria-email@esempio.it', password: 'sostituire-con-la-password' } },
+  })
   @ApiOkResponse({ schema: { example: ESEMPIO_PROFILO } })
   @ApiUnauthorizedResponse({ description: 'Email o password non validi, oppure utente disattivato' })
   async login(@Body() body: { email?: unknown; password?: unknown }, @Res({ passthrough: true }) res: Response) {

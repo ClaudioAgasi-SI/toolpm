@@ -10,9 +10,9 @@ La fase 1 prepara ToolPM per la Consuntivazione: accesso con utenti e profili, m
 
 | Blocco | Stato | Note |
 | --- | --- | --- |
-| B0 — Preparazione | In corso | Codice e documentazione su GitHub (commit del 17/11/2026): test della griglia e del filtro per skill, `/api/health` con il replica set, script `npm run verifica-mongodb`, guida [mongodb-replica-set.md](mongodb-replica-set.md), nuove variabili in `.env.example`. Resta da eseguire sul PC il passaggio di MongoDB a replica set. |
-| B1 — Infrastruttura comune | Fatto | Contesto dell'utente, plugin di tracciamento su tutte le collection, `ParametriService`, script `npm run migra` con le migrazioni `001-parametri` e `002-tracciamento-esistenti`, test (23 in tutto nel backend). Da eseguire sul PC, dopo un backup: `docker compose exec backend npm run migra`. |
-| B2 — Autenticazione | Fatto | Collection `utenti`, accesso con email e password (scrypt), token JWT nel cookie httpOnly `toolpm_token`, guard globale con `@Pubblica` e `@Ruoli`, `/api/auth` e `/api/utenti` (solo admin), primo amministratore da `.env`, migrazione `003-indici-utenti`, test (36 in tutto nel backend). `AUTH_OBBLIGATORIA` resta `false` fino al blocco B6. |
+| B0 — Preparazione | Fatto | Codice e documentazione su GitHub (commit del 17/11/2026): test della griglia e del filtro per skill, `/api/health` con il replica set, script `npm run verifica-mongodb`, guida [mongodb-replica-set.md](mongodb-replica-set.md), nuove variabili in `.env.example`. Il 19/11/2026 MongoDB è passato a replica set `rs0` sul PC (verifica riuscita: replica set e transazioni disponibili; vecchio pianificatore e ToolPM con i loro dati). |
+| B1 — Infrastruttura comune | Fatto | Contesto dell'utente, plugin di tracciamento su tutte le collection, `ParametriService`, script `npm run migra` con le migrazioni `001-parametri` e `002-tracciamento-esistenti`, test (23 in tutto nel backend). Il 19/11/2026 le migrazioni sono state eseguite sul PC, dopo un backup. |
+| B2 — Autenticazione | Fatto | Collection `utenti`, accesso con email e password (scrypt), token JWT nel cookie httpOnly `toolpm_token`, guard globale con `@Pubblica` e `@Ruoli`, `/api/auth` e `/api/utenti` (solo admin), primo amministratore da `.env`, migrazione `003-indici-utenti`, test (36 in tutto nel backend). `AUTH_OBBLIGATORIA` resta `false` fino al blocco B6. Provato il 19/11/2026 su MongoDB reale: primo amministratore creato, accesso e cambio password riusciti. |
 | B3 — Permessi | Da fare | |
 | B4 — Modulo Comuni | Da fare | |
 | B5 — Pianificatore adattato | Da fare | |
