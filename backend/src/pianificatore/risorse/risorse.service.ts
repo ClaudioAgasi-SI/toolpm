@@ -151,7 +151,8 @@ export class RisorseService {
 }
 
 /**
- * Certificazioni della risorsa: { certName, conseguitaIl?, scadenza? } (date AAAA-MM-GG).
+ * Certificazioni della risorsa (decisioni del 20/11/2026): nome (dal catalogo), data di conseguimento
+ * obbligatoria, scadenza, ente certificatore, codice identificativo e link facoltativi. Date AAAA-MM-GG.
  * Il campo nasce a struttura libera ed è sempre stato vuoto: da qui in avanti ha questa forma.
  */
 function validaCertificazioni(valore: unknown): Record<string, unknown>[] {
@@ -159,16 +160,30 @@ function validaCertificazioni(valore: unknown): Record<string, unknown>[] {
   const data = /^\d{4}-\d{2}-\d{2}$/;
   return valore.map((c, i) => {
     const v = (c ?? {}) as Record<string, unknown>;
-    const nome = typeof v.certName === 'string' ? v.certName.trim() : '';
-    if (!nome) throw new BadRequestException(`certificazioni ${i + 1}: nome obbligatorio`);
+    const n = `certificazioni ${i + 1}`;
+    const testo = (campo: string, max: number) => {
+      const x = v[campo];
+      if (x === undefined || x === null || x === '') return undefined;
+      if (typeof x !== 'string') throw new BadRequestException(`${n}: ${campo} deve essere un testo`);
+      const pulito = x.trim();
+      if (pulito.length > max) throw new BadRequestException(`${n}: ${campo} troppo lungo (al massimo ${max} caratteri)`);
+      return pulito || undefined;
+    };
+    const nome = testo('certName', 200);
+    if (!nome) throw new BadRequestException(`${n}: nome obbligatorio`);
     const pulita: Record<string, unknown> = { certName: nome };
     for (const campo of ['conseguitaIl', 'scadenza'] as const) {
       if (v[campo] === undefined || v[campo] === null || v[campo] === '') continue;
-      if (typeof v[campo] !== 'string' || !data.test(v[campo] as string)) throw new BadRequestException(`certificazioni ${i + 1}: ${campo} nel formato AAAA-MM-GG`);
+      if (typeof v[campo] !== 'string' || !data.test(v[campo] as string)) throw new BadRequestException(`${n}: ${campo} nel formato AAAA-MM-GG`);
       pulita[campo] = v[campo];
     }
-    if (pulita.conseguitaIl && pulita.scadenza && (pulita.scadenza as string) < (pulita.conseguitaIl as string)) {
-      throw new BadRequestException(`certificazioni ${i + 1}: la scadenza precede il conseguimento`);
+    if (!pulita.conseguitaIl) throw new BadRequestException(`${n} (${nome}): data di conseguimento obbligatoria`);
+    if (pulita.scadenza && (pulita.scadenza as string) < (pulita.conseguitaIl as string)) {
+      throw new BadRequestException(`${n} (${nome}): la scadenza precede il conseguimento`);
+    }
+    for (const [campo, max] of [['ente', 200], ['codice', 100], ['link', 500]] as const) {
+      const x = testo(campo, max);
+      if (x) pulita[campo] = x;
     }
     return pulita;
   });

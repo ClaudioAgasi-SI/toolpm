@@ -45,11 +45,19 @@ export interface Skill {
   skillType: string;
 }
 
-/** Certificazione posseduta da una risorsa: nome dal catalogo, date AAAA-MM-GG facoltative. */
+/** Certificazione posseduta da una risorsa: nome dal catalogo, conseguimento obbligatorio, il resto facoltativo. */
 export interface CertificazioneRisorsa {
   certName: string;
+  /** AAAA-MM-GG */
   conseguitaIl?: string;
+  /** AAAA-MM-GG */
   scadenza?: string;
+  /** Ente certificatore */
+  ente?: string;
+  /** Codice identificativo della certificazione */
+  codice?: string;
+  /** Di solito un indirizzo web (badge, attestato) */
+  link?: string;
 }
 
 export interface Certificazione {

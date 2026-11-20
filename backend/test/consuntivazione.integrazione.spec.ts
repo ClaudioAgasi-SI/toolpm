@@ -761,17 +761,36 @@ describe.skipIf(!URI_BASE)('Consuntivazione con MongoDB vero', () => {
           ...io,
           skillTecnici: [{ skillName: 'NestJS', rate: 'buono' }],
           skillAmbiti: [{ skillName: 'Banche' }],
-          certificazioni: [{ certName: 'PMP', conseguitaIl: '2024-05-10', scadenza: '2027-05-10' }],
+          certificazioni: [
+            {
+              certName: 'PMP',
+              conseguitaIl: '2024-05-10',
+              scadenza: '2027-05-10',
+              ente: ' PMI ',
+              codice: 'PMP-123456',
+              link: 'https://www.credly.com/badges/abc',
+            },
+          ],
         });
         expect(ok.status).toBe(200);
-        expect(ok.body.certificazioni).toEqual([{ certName: 'PMP', conseguitaIl: '2024-05-10', scadenza: '2027-05-10' }]);
+        expect(ok.body.certificazioni).toEqual([
+          { certName: 'PMP', conseguitaIl: '2024-05-10', scadenza: '2027-05-10', ente: 'PMI', codice: 'PMP-123456', link: 'https://www.credly.com/badges/abc' },
+        ]);
+        // Data di conseguimento obbligatoria; scadenza, ente, codice e link facoltativi.
+        const senzaData = await come('carlo').put(url(risorsa.carlo), { ...ok.body, certificazioni: [{ certName: 'PMP' }] });
+        expect(senzaData.status).toBe(400);
+        expect(senzaData.body.message).toMatch(/data di conseguimento obbligatoria/);
+        const minima = await come('carlo').put(url(risorsa.carlo), { ...ok.body, certificazioni: [{ certName: 'PMP', conseguitaIl: '2024-05-10', ente: '', link: null }] });
+        expect(minima.body.certificazioni).toEqual([{ certName: 'PMP', conseguitaIl: '2024-05-10' }]);
+        expect((await come('carlo').put(url(risorsa.carlo), { ...ok.body, certificazioni: [{ certName: 'PMP', conseguitaIl: '2024-05-10', scadenza: '2024-01-01' }] })).status).toBe(400);
+        expect((await come('carlo').put(url(risorsa.carlo), { ...ok.body, certificazioni: [{ certName: 'PMP', conseguitaIl: '2024-05-10', link: 'x'.repeat(501) }] })).status).toBe(400);
         // Livello cambiato e cancellazione: sì.
         expect((await come('carlo').put(url(risorsa.carlo), { ...ok.body, skillTecnici: [{ skillName: 'NestJS', rate: 'ottimo' }], skillAmbiti: [] })).status).toBe(200);
         // Voci fuori catalogo: no (per PM e PMSenior il catalogo resta un suggerimento).
         const r1 = await come('carlo').put(url(risorsa.carlo), { ...ok.body, skillTecnici: [{ skillName: 'Cobol' }] });
         expect(r1.status).toBe(400);
         expect(r1.body.message).toMatch(/Cobol non è nel catalogo/);
-        expect((await come('carlo').put(url(risorsa.carlo), { ...ok.body, certificazioni: [{ certName: 'ITIL' }] })).status).toBe(400);
+        expect((await come('carlo').put(url(risorsa.carlo), { ...ok.body, certificazioni: [{ certName: 'ITIL', conseguitaIl: '2024-01-01' }] })).status).toBe(400);
         expect((await come('carlo').put(url(risorsa.carlo), { ...ok.body, certificazioni: [{ certName: 'PMP', scadenza: '10/05/2027' }] })).status).toBe(400);
         // Le proprie allocazioni no; le competenze degli altri no.
         const r2 = await come('carlo').put(url(risorsa.carlo), { ...ok.body, planned: [{ mese: '202701', progettoId: prog.A, percentualeAllocazione: 50 }] });

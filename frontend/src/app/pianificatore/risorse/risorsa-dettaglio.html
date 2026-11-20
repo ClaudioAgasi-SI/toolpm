@@ -69,17 +69,38 @@
       }
       <fieldset class="certificazioni">
         <legend>Certificazioni</legend>
+        <p class="vuoto">I campi con * sono obbligatori.</p>
         <datalist id="catalogo-certificazioni">
           @for (c of catalogoCertificazioni(); track c.certName) {
             <option [value]="c.certName">{{ c.certType ?? '' }}</option>
           }
         </datalist>
         @for (c of r.certificazioni; track $index; let i = $index) {
-          <div class="riga-certificazione">
-            <input [name]="'cert-nome-' + i" placeholder="certificazione" list="catalogo-certificazioni" [(ngModel)]="c.certName" />
-            <label>conseguita il <input type="date" [name]="'cert-dal-' + i" [(ngModel)]="c.conseguitaIl" /></label>
-            <label>scade il <input type="date" [name]="'cert-al-' + i" [(ngModel)]="c.scadenza" /></label>
-            <button type="button" class="rimuovi" (click)="rimuoviCertificazione(i)" aria-label="Rimuovi">×</button>
+          <div class="certificazione">
+            <label class="nome">Certificazione *
+              <input [name]="'cert-nome-' + i" placeholder="dal catalogo" list="catalogo-certificazioni" [(ngModel)]="c.certName" />
+            </label>
+            <label>Conseguita il *
+              <input type="date" [name]="'cert-dal-' + i" [(ngModel)]="c.conseguitaIl" />
+            </label>
+            <label>Scade il
+              <input type="date" [name]="'cert-al-' + i" [(ngModel)]="c.scadenza" />
+            </label>
+            <label>Ente certificatore
+              <input [name]="'cert-ente-' + i" placeholder="es. PMI" [(ngModel)]="c.ente" />
+            </label>
+            <label>Codice identificativo
+              <input [name]="'cert-codice-' + i" placeholder="es. PMP-123456" [(ngModel)]="c.codice" />
+            </label>
+            <label class="link">Link
+              <span class="con-azione">
+                <input [name]="'cert-link-' + i" placeholder="https://…" [(ngModel)]="c.link" />
+                @if (linkApribile(c.link)) {
+                  <a [href]="c.link" target="_blank" rel="noopener noreferrer">Apri</a>
+                }
+              </span>
+            </label>
+            <button type="button" class="rimuovi" (click)="rimuoviCertificazione(i)" aria-label="Rimuovi certificazione">×</button>
           </div>
         } @empty {
           <p class="vuoto">Nessuna certificazione.</p>

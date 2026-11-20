@@ -57,12 +57,17 @@ fieldset.skill {
 .vuoto { color: var(--testo-tenue); font-size: 0.9rem; }
 .rimuovi { padding: 2px 8px; }
 
-.riga-certificazione {
+.certificazione {
   display: grid;
-  grid-template-columns: minmax(12rem, 24rem) auto auto auto;
-  justify-content: start;
+  grid-template-columns: minmax(12rem, 2fr) auto auto minmax(9rem, 1fr) minmax(9rem, 1fr) minmax(12rem, 2fr) auto;
   gap: 0.4rem 0.75rem;
-  align-items: center;
-  margin-bottom: 0.4rem;
-  label { display: inline-flex; gap: 0.35rem; align-items: center; font-size: 0.85rem; color: #5a6478; white-space: nowrap; }
+  align-items: end;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--bordo);
+  margin-bottom: 0.5rem;
+  label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.8rem; color: #5a6478; min-width: 0; }
+  .con-azione { display: flex; gap: 0.4rem; align-items: center; a { font-size: 0.85rem; white-space: nowrap; } }
+  @media (max-width: 1100px) {
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  }
 }

@@ -8,7 +8,7 @@ import { etichettaStato, type Progetto, type VoceAnagrafica } from '../../comuni
 import { gestisceProgetto } from '../../comuni/permessi';
 import { ApiService, messaggioErrore } from '../api.service';
 import { aInputMese, daInputMese, meseCorrente } from '../mesi';
-import { Allocazione, Certificazione, Rate, Risorsa, Skill, TIPI_SKILL, TipoSkill } from '../models';
+import { Allocazione, Certificazione, CertificazioneRisorsa, Rate, Risorsa, Skill, TIPI_SKILL, TipoSkill } from '../models';
 
 function risorsaVuota(): Risorsa {
   return {
@@ -151,6 +151,11 @@ export class RisorsaDettaglio {
     this.risorsa()!.certificazioni.push({ certName: '' });
   }
 
+  /** Il link si apre solo se è un indirizzo web. */
+  protected linkApribile(link?: string) {
+    return !!link && /^https?:\/\/\S+$/i.test(link.trim());
+  }
+
   protected rimuoviCertificazione(i: number) {
     this.risorsa()!.certificazioni.splice(i, 1);
   }
@@ -184,9 +189,17 @@ export class RisorsaDettaglio {
     this.messaggio.set('');
     // Righe di skill vuote scartate; allocazioni ordinate per mese, senza i campi ricavati dal progetto.
     for (const t of TIPI_SKILL) r[t.campo] = r[t.campo].filter((s) => s.skillName.trim());
+    // Certificazioni senza nome scartate; campi vuoti tolti (il backend controlla date e lunghezze).
     r.certificazioni = r.certificazioni
-      .filter((c) => c.certName.trim())
-      .map((c) => ({ certName: c.certName.trim(), ...(c.conseguitaIl ? { conseguitaIl: c.conseguitaIl } : {}), ...(c.scadenza ? { scadenza: c.scadenza } : {}) }));
+      .filter((c) => c.certName?.trim())
+      .map((c) => {
+        const pulita: CertificazioneRisorsa = { certName: c.certName.trim() };
+        for (const campo of ['conseguitaIl', 'scadenza', 'ente', 'codice', 'link'] as const) {
+          const v = c[campo]?.trim();
+          if (v) pulita[campo] = v;
+        }
+        return pulita;
+      });
     r.planned.sort((x, y) => x.mese.localeCompare(y.mese));
     const planned = r.planned.map((a) => {
       const { progetto: _p, cliente: _c, progettoTitolo: _t, clienteRagioneSociale: _r, nuova: _n, ...resto } = a as Allocazione & { nuova?: boolean };
