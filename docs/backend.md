@@ -52,6 +52,8 @@ backend/
 │   │   ├── anagrafiche.ts              clienti, centri-costo, ruoli: servizio e controller generici
 │   │   ├── risorse/                    anagrafica delle risorse
 │   │   └── progetti/                   progetti (stato, approvatori, percentuale) e attività
+│   ├── consuntivazione/             sezione "Consuntivazione" (fase 2) → prefisso /api/consuntivazione
+│   │   └── consuntivazione.module.ts  modulo della sezione (le API arrivano con i blocchi C1, C2, C3, C6)
 │   ├── permessi/                    permessi su profili e ruoli (fase 1, blocco B3)
 │   │   ├── regole.ts                   regole pure: permessi globali, progetto, attività, risorse
 │   │   ├── permessi.service.ts         PermessiService: le regole per i servizi, verifica() → 401/403
@@ -136,7 +138,7 @@ Modulo `src/auth/`. Il nome utente è l'email; le password sono cifrate con **sc
 Modulo globale `src/permessi/`, con le regole decise nell'analisi. Le regole sono funzioni pure in `regole.ts`: ricevono chi agisce e i dati che servono e rispondono sì o no, senza leggere il database.
 
 - **Due livelli.** L'abilitazione generale dell'utente (TL, PM, PMSenior o nessuna) e il profilo sul singolo progetto (approvatore TL o PM, in `progetto.approvatori`), indipendenti tra loro: un utente abilitato TL può essere PM su un progetto. Se è assegnato in entrambi i modi, vale PM. I diritti da approvatore valgono solo con un'abilitazione: se l'amministratore la toglie, la persona non gestisce più i suoi progetti.
-- **Permessi globali** (non dipendono da un progetto): `gestireClienti` e `gestireCentriDiCosto` → PMSenior; `creareProgetto` → TL, PM, PMSenior; `gestireRisorse` (anagrafica, ruolo professionale, orario) e `gestireCaratteristicheTutteLeRisorse` → PM, PMSenior; `gestireParametri` → ruolo `controller`; `gestireRuoli` (ruoli professionali) e `gestireUtenti` → ruolo `admin`. Sui controller si dichiarano con `@Permesso('gestireClienti')`; `@Permesso()` senza argomenti richiede solo l'accesso, come ogni endpoint non pubblico. `POST /api/auth/login` e `GET /api/auth/me` li restituiscono nel campo `permessi`, per il menu del frontend.
+- **Permessi globali** (non dipendono da un progetto): `gestireClienti` e `gestireCentriDiCosto` → PMSenior; `creareProgetto` → TL, PM, PMSenior; `gestireRisorse` (anagrafica, ruolo professionale, orario) e `gestireCaratteristicheTutteLeRisorse` → PM, PMSenior; `gestireParametri`, `gestireTipologieCosto` e `gestireTariffe` → ruolo `controller`; `consuntivare` → chi è collegato a una risorsa (fase 2; l'amministratore senza risorsa no); `gestireRuoli` (ruoli professionali) e `gestireUtenti` → ruolo `admin`. Sui controller si dichiarano con `@Permesso('gestireClienti')`; `@Permesso()` senza argomenti richiede solo l'accesso, come ogni endpoint non pubblico. `POST /api/auth/login` e `GET /api/auth/me` li restituiscono nel campo `permessi`, per il menu del frontend.
 - **Permessi su progetto, attività e risorsa**, controllati dai servizi con `PermessiService` (`verifica(utente, consentito, 'azione')` risponde 401 senza accesso e 403 con "Non hai il permesso di …"):
 
 | Regola | Chi può |
@@ -330,6 +332,7 @@ I **test di integrazione** (`test/*.integrazione.spec.ts`) avviano l'applicazion
 | `comuni.integrazione.spec.ts` | Modulo Comuni: anagrafiche, risorse, progetti (stati, approvatori, stime in euro), attività, avanzamenti, validatori |
 | `pianificatore.integrazione.spec.ts` | Pianificatore: allocazioni su `progettoId`, permessi sulle caratteristiche (anche il TL che alloca sui suoi progetti), migrazione 006 |
 | `migrazione-dati.integrazione.spec.ts` | Migrazione B7 sui dati di esempio: esporta, errori per riga, prova, importazione, verifica, ripetibilità |
+| `consuntivazione.integrazione.spec.ts` | Consuntivazione (fase 2): migrazione 007 (tipologie iniziali con ORDINARIA predefinita, ripetibilità, validatori di tipologie, tariffe e consuntivi, indici unici) |
 | `profili.integrazione.spec.ts` | Criteri di completamento della fase 1: 401 su tutte le API elencate da Swagger, 15 operazioni per ognuno dei 7 profili, tracciamento dell'utente giusto |
 
 ## Docker

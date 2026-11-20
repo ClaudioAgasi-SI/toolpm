@@ -7,7 +7,7 @@ Il prodotto è diviso in **sezioni**; ognuna ha le proprie pagine (sotto `/<sezi
 |---|---|---|---|
 | Pianificatore risorse allocate — allocazione delle persone sui progetti nel tempo, in base a skill, importanza strategica e probabilità di allocazione | `/pianificatore` | `/api/pianificatore/...` | disponibile |
 | Anagrafiche — dati comuni a tutte le sezioni: progetti con attività e approvatori, risorse, clienti, centri di costo, ruoli, utenti | `/comuni` | `/api/comuni/...`, `/api/utenti` | disponibile (fase 1) |
-| Consuntivazione costi di progetto | — | — | in analisi ([analisi-consuntivazione.md](docs/analisi-consuntivazione.md)), fasi 2–4 |
+| Consuntivazione costi di progetto — ore lavorate, tipologie di costo, tariffe, costo del personale per progetto | `/consuntivazione` | `/api/consuntivazione/...` | fase 2 in corso ([piano-fase2.md](docs/piano-fase2.md)); analisi in [analisi-consuntivazione.md](docs/analisi-consuntivazione.md) |
 
 Si entra con email e password; ogni utente vede e modifica solo ciò che il suo profilo (TL, PM, PMSenior) e i suoi ruoli (risorsa, controller, admin) consentono.
 

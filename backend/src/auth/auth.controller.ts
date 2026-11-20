@@ -24,6 +24,9 @@ const ESEMPIO_PROFILO = {
     gestireRuoli: true,
     gestireParametri: false,
     gestireUtenti: true,
+    gestireTipologieCosto: false,
+    gestireTariffe: false,
+    consuntivare: true,
   },
 };
 

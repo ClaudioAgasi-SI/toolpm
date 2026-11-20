@@ -159,17 +159,19 @@ describe('modifica delle caratteristiche dal Pianificatore (decisioni del 19/11/
 describe('permessi globali', () => {
   it('per ogni profilo', () => {
     const riga = (s: Soggetto) => Object.entries(permessiGlobali(s)).filter(([, v]) => v).map(([k]) => k);
-    expect(riga(RISORSA)).toEqual([]);
-    expect(riga(TL)).toEqual(['creareProgetto']);
-    expect(riga(PM)).toEqual(['creareProgetto', 'gestireRisorse', 'gestireCaratteristicheTutteLeRisorse']);
+    expect(riga(RISORSA)).toEqual(['consuntivare']);
+    expect(riga(TL)).toEqual(['creareProgetto', 'consuntivare']);
+    expect(riga(PM)).toEqual(['creareProgetto', 'gestireRisorse', 'gestireCaratteristicheTutteLeRisorse', 'consuntivare']);
     expect(riga(PMSENIOR)).toEqual([
       'gestireClienti',
       'gestireCentriDiCosto',
       'creareProgetto',
       'gestireRisorse',
       'gestireCaratteristicheTutteLeRisorse',
+      'consuntivare',
     ]);
-    expect(riga(CONTROLLER)).toEqual(['gestireParametri']);
+    expect(riga(CONTROLLER)).toEqual(['gestireParametri', 'gestireTipologieCosto', 'gestireTariffe', 'consuntivare']);
+    // L'amministratore senza risorsa collegata non consuntiva.
     expect(riga(ADMIN)).toEqual(['gestireRuoli', 'gestireUtenti']);
   });
 });

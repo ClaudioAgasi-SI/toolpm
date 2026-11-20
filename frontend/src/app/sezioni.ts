@@ -22,4 +22,10 @@ export const SEZIONI: Sezione[] = [
     descrizione:
       'Dati comuni a tutte le sezioni: progetti con attività e approvatori, risorse, clienti, centri di costo, ruoli e utenti.',
   },
+  {
+    percorso: 'consuntivazione',
+    nome: 'Consuntivazione',
+    descrizione:
+      'Ore lavorate giorno per giorno su progetti e attività, tipologie di costo e tariffe, costo del personale per progetto.',
+  },
 ];

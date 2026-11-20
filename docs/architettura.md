@@ -29,6 +29,7 @@ Il frontend chiama sempre l'indirizzo **relativo** `/api/...`: nessun URL del ba
 |---|---|---|---|
 | Pianificatore risorse | `app/pianificatore/` → `/toolpm/pianificatore` | `src/pianificatore/` → `/api/pianificatore` | griglia, skill e allocazioni; legge risorse e progetti dal modulo Comuni |
 | Anagrafiche (Comuni) | `app/comuni/` → `/toolpm/comuni` | `src/comuni/` → `/api/comuni`, `src/auth/` → `/api/utenti` | dati condivisi da tutte le sezioni |
+| Consuntivazione | `app/consuntivazione/` → `/toolpm/consuntivazione` | `src/consuntivazione/` → `/api/consuntivazione` | fase 2 in corso ([piano-fase2.md](piano-fase2.md)): tipologie di costo, tariffe, consuntivi |
 | Trasversali | `app/core/`, `app/accesso/` | `src/auth/`, `src/permessi/`, `src/infrastruttura/` | accesso, permessi, tracciamento, parametri, migrazioni |
 
 ## Flusso tipico: accesso

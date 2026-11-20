@@ -10,7 +10,7 @@ La fase 2 apre la sezione **Consuntivazione**: il controller censisce tipologie 
 
 | Blocco | Stato | Note |
 | --- | --- | --- |
-| C0 — Preparazione | Da fare | |
+| C0 — Preparazione | Fatto (codice) | Modulo `consuntivazione/` su `/api/consuntivazione`, sezione nel menu con pagina iniziale per profilo, permessi `gestireTipologieCosto`, `gestireTariffe` (controller) e `consuntivare` (chi ha una risorsa), migrazione `007-consuntivazione` (4 collection con validatori e indici, 4 tipologie con ORDINARIA predefinita). Test: 113 backend (67 unitari + 46 di integrazione), 12 frontend. Da fare sul PC: backup e `npm run migra`. |
 | C1 — Tipologie di costo | Da fare | |
 | C2 — Tariffe | Da fare | |
 | C3 — Consuntivo (backend) | Da fare | |

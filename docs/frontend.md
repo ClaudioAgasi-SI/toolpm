@@ -40,6 +40,9 @@ frontend/src/
     │   ├── progetti/                  elenco e scheda del progetto
     │   ├── risorse/                   elenco e scheda anagrafica delle risorse
     │   └── utenti/                    gestione utenti (solo amministratore)
+    ├── consuntivazione/               sezione "Consuntivazione" (fase 2)
+    │   ├── consuntivazione.routes.ts, consuntivazione-layout.ts
+    │   └── consuntivazione-inizio.ts  pagina iniziale: funzioni previste per il profilo (le pagine arrivano con C1, C2, C5, C6)
     └── pianificatore/                 sezione "Pianificatore risorse allocate"
         ├── pianificatore.routes.ts    rotte della sezione (sotto /pianificatore)
         ├── pianificatore-layout.ts    sotto-menu della sezione + <router-outlet>
@@ -66,6 +69,7 @@ Tutte le rotte, tranne `/accesso`, sono dietro la guardia `accessoRichiesto`: se
 | `/comuni/risorse`, `/comuni/risorse/:id` (`nuova`) | `RisorseAnagrafica`, `RisorsaAnagraficaDettaglio` | dati anagrafici delle risorse |
 | `/comuni/clienti`, `/comuni/centri-costo`, `/comuni/ruoli` | `AnagraficaSemplice` | anagrafiche semplici (configurazione in `data.definizione`) |
 | `/comuni/utenti` | `Utenti` | gestione utenti, solo ruolo `admin` (`ruoloRichiesto('admin')`) |
+| `/consuntivazione` | `ConsuntivazioneLayout`, `ConsuntivazioneInizio` | sezione Consuntivazione (fase 2): per ora la pagina iniziale |
 | `/pianificatore` | `PianificatoreLayout` | sezione Pianificatore; reindirizza a `/pianificatore/pianificazione` |
 | `/pianificatore/pianificazione` | `Pianificazione` | griglia risorse × mesi |
 | `/pianificatore/risorse` | `RisorseElenco` | elenco con ricerca |

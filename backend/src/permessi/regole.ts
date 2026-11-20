@@ -56,6 +56,10 @@ export const PERMESSI_GLOBALI = [
   'gestireRuoli',
   'gestireParametri',
   'gestireUtenti',
+  // Consuntivazione (fase 2)
+  'gestireTipologieCosto',
+  'gestireTariffe',
+  'consuntivare',
 ] as const;
 export type PermessoGlobale = (typeof PERMESSI_GLOBALI)[number];
 
@@ -89,7 +93,12 @@ export function permessoGlobale(s: Soggetto, permesso: PermessoGlobale): boolean
     case 'gestireCaratteristicheTutteLeRisorse':
       return ePMoPMSenior(s);
     case 'gestireParametri':
+    case 'gestireTipologieCosto':
+    case 'gestireTariffe':
       return s.ruoli.includes('controller');
+    case 'consuntivare':
+      // Consuntiva solo chi è collegato a una risorsa, e solo per sé stesso (decisione 7 della fase 2).
+      return Boolean(s.risorsaId);
     case 'gestireRuoli':
     case 'gestireUtenti':
       return s.ruoli.includes('admin');

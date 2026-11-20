@@ -29,6 +29,7 @@ async function bootstrap() {
     .addTag('skills', 'Pianificatore: catalogo delle skill')
     .addTag('certificazioni', 'Pianificatore: catalogo delle certificazioni')
     .addTag('rate', 'Pianificatore: scale di valutazione')
+    .addTag('consuntivazione', 'Consuntivazione: tipologie di costo, tariffe, consuntivi delle ore')
     .addTag('health', 'Stato del backend e di MongoDB')
     // Accesso: cookie toolpm_token impostato da POST /api/auth/login, oppure token in "Authorization: Bearer".
     .addCookieAuth('toolpm_token')

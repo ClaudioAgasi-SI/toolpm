@@ -205,6 +205,29 @@ Indici: `{ progettoId: 1, codice: 1 }` unico, `{ risorseAssegnateIds: 1 }`.
 
 Storico delle percentuali di completamento: un documento per ogni cambio, scritto nella stessa transazione dell'aggiornamento. Campi: `progettoId`, `attivitaId` (assente per il progetto), `valorePrecedente`, `valoreNuovo`, `il` (data), `da` (id dell'utente). Indice `{ progettoId: 1, il: -1 }`.
 
+## Collection `tipologie_costo`
+
+Tipologie di costo della Consuntivazione (fase 2), gestite dal controller. Non si cancellano: si disattivano. Creata dalla migrazione `007-consuntivazione` con quattro voci iniziali.
+
+| Campo | Tipo | Obbl. | Note |
+|---|---|---|---|
+| `codice` | string | sì | Unico, non modificabile (`ORDINARIA`, `STRAORDINARIA`, `STRAORD_NOTTURNA`, `STRAORD_FESTIVA`) |
+| `descrizione` | string | sì | |
+| `ordine` | intero | sì | Ordine di visualizzazione |
+| `categoria` | string | sì | `ordinaria` o `straordinaria` (le ore `ordinaria` si confrontano con l'orario contrattuale) |
+| `attiva` | boolean | sì | |
+| `predefinita` | boolean | sì | Tipologia proposta sulle righe nuove; una sola (indice unico parziale `una_sola_predefinita`), all'inizio ORDINARIA |
+
+Indici: `{ codice: 1 }` unico, `{ predefinita: 1 }` unico dove `predefinita: true`.
+
+## Collection `tariffe_standard` e `tariffe_personalizzate`
+
+Costo orario per tipologia in un periodo: per ruolo (`ruoloId`) nelle standard, per risorsa (`risorsaId`) nelle personalizzate, che prevalgono. Campi: `tipologiaId`, `validoDal`, `validoAl` (null = senza fine), `centesimiOra` (intero, centesimi di euro all'ora), più il tracciamento. I periodi della stessa coppia non si sovrappongono (controllo nel backend, blocco C2). Indici `{ ruoloId: 1, tipologiaId: 1, validoDal: -1 }` e `{ risorsaId: 1, tipologiaId: 1, validoDal: -1 }`.
+
+## Collection `consuntivi`
+
+Un documento per risorsa e giornata (indice unico `{ risorsaId: 1, data: 1 }`), con `mese` (`AAAAMM`), `versione` (cresce a ogni salvataggio, contro le sovrascritture) e le righe incorporate. Ogni riga: `_id`, `progettoId`, `attivitaId` (null = sul progetto), `centroCostoId` (copiato dal progetto), `tipologiaId` e `tipologiaCodice`, `minuti` (da 15 a 1440, multipli di 15), `nota`, `stato` (`bozza`, `inviata`, `approvataTL`, `approvata`, `respinta`, `chiusa`), la tariffa fotografata (`fonteTariffa` `personalizzata`/`standard`/null, `tariffaId`, `tariffaCentesimiOra`, `costoCentesimi`: null = "da valorizzare"), `approvazioneTL` e `approvazionePM` (`{ da, il }`, dalla fase 3), `modificatoIl`, `modificatoDa`. Indici anche su `righe.progettoId + righe.stato + data`, `righe.attivitaId + data`, `righe.centroCostoId + data`, `righe.tipologiaId`, `mese`, `modificatoIl`.
+
 ## Collection `utenti`
 
 Utenti che accedono a ToolPM (fase 1, blocco B2). Indice unico su `email` (migrazione `003-indici-utenti`).
@@ -246,6 +269,7 @@ Registro delle migrazioni eseguite da `npm run migra`: `_id` è il nome dello sc
 | `004-comuni` | Crea `clienti`, `centri_costo`, `ruoli`, `progetti`, `attivita`, `avanzamenti` con i validatori `$jsonSchema` (o li aggiorna se esistono) e i loro indici; indice unico parziale su `risorse.email` |
 | `005-alias-pianificatore` | Indice su `progetti.aliasPianificatore` |
 | `006-allocazioni-progettoid` | Toglie i testi `cliente` e `progetto` dalle allocazioni che hanno `progettoId` (conservando `clienteTesto` e `progettoTesto`); non tocca quelle non collegate |
+| `007-consuntivazione` | Crea `tipologie_costo`, `tariffe_standard`, `tariffe_personalizzate`, `consuntivi` con i validatori `$jsonSchema` e i loro indici; aggiunge le quattro tipologie iniziali (ORDINARIA predefinita) senza toccare quelle già presenti |
 
 L'importazione della migrazione dei dati del Pianificatore (blocco B7, `npm run migrazione-dati -- importa`) si registra nella stessa collection con `_id` `B7-importa` e il riepilogo dell'ultima esecuzione.
 
@@ -259,7 +283,7 @@ L'importazione della migrazione dei dati del Pianificatore (blocco B7, `npm run 
 
 ## Indici
 
-Gli indici delle collection comuni li crea la migrazione `004-comuni` (vedi le singole collection). Definiti nello schema di `risorse`:
+Gli indici delle collection comuni li crea la migrazione `004-comuni`, quelli della Consuntivazione la `007-consuntivazione` (vedi le singole collection). Definiti nello schema di `risorse`:
 
 | Indice | Uso |
 |---|---|
