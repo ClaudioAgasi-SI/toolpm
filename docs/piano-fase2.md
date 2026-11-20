@@ -2,7 +2,7 @@
 
 20/11/2026 · Claudio Agasi
 
-> Piano di lavoro della fase 2 (confermato il 20/11/2026, nessun codice ancora scritto). Versione di lavoro con commenti: [documento su Claude](https://claude.ai/artifact/C1SidhKdbZLTC9ZL6Lpvzp). Le decisioni da cui parte sono in [analisi-consuntivazione.md](analisi-consuntivazione.md); il modo di lavorare è quello della [fase 1](piano-fase1.md).
+> Piano di lavoro della fase 2 (confermato il 20/11/2026 e completato lo stesso giorno: blocchi C0–C7 fatti). Versione di lavoro con commenti: [documento su Claude](https://claude.ai/artifact/C1SidhKdbZLTC9ZL6Lpvzp). Le decisioni da cui parte sono in [analisi-consuntivazione.md](analisi-consuntivazione.md); il modo di lavorare è quello della [fase 1](piano-fase1.md).
 
 La fase 2 apre la sezione **Consuntivazione**: il controller censisce tipologie di costo e tariffe, ogni risorsa inserisce le proprie ore giorno per giorno e il sistema ne calcola e memorizza il costo. Le righe restano in **bozza**: invio, approvazione su due livelli e chiusura dei periodi sono la fase 3; report ed EVM la fase 4.
 
@@ -18,7 +18,7 @@ La fase 2 apre la sezione **Consuntivazione**: il controller censisce tipologie 
 | C4b — Competenze personali | Fatto | Decisione 11: regola dei permessi (`propria`), controllo del catalogo per le voci nuove, formato delle certificazioni { certName, conseguitaIl (obbligatoria), scadenza, ente, codice, link }, sezione Certificazioni nella scheda della risorsa (con "Apri" sui link web), voce "Le mie competenze" nel Pianificatore. Test: 166 backend, 12 frontend; prova nel browser superata. Da fare sul PC: aggiornare e provare con un utente senza profilo di approvatore. |
 | C5 — Il mio consuntivo (frontend) | Fatto | Pagina `/toolpm/consuntivazione/settimana` (vista settimana e giorno): griglia con totali per riga e giorno, ore come 8, 7,5 o 7:30 a passi di 15 minuti con errore in rosso, tipologia predefinita sulle righe nuove e modificabile per riga, attività assegnate in testa (★) e avviso sulle altre, righe proposte, copia della settimana o del giorno precedente senza salvare, nota per cella, giorni futuri in sola lettura, salvataggio delle sole giornate cambiate con avvisi del server e gestione del conflitto (Ricarica), avviso sulle modifiche non salvate, avanzamento delle attività assegnate; nessun importo. `voci` riporta anche la percentuale delle attività. Test: 166 backend, 16 frontend (ore.spec.ts); prova nel browser superata (settimana, giorno, copia, conflitto, percentuale). Da fare sul PC: aggiornare e consuntivare qualche giornata. |
 | C6 — Righe da valorizzare e ricalcolo | Fatto | API `da-valorizzare` (motivo: ruolo mancante, tariffa mancante, tariffa ora disponibile) e `ricalcolo` (anteprima prima/dopo, applicazione in transazione condizionata sulla versione, righe chiuse escluse, tracciamento del controller sulle righe). Pagina `/toolpm/consuntivazione/da-valorizzare` con gruppi per risorsa, ruolo, tipologia e motivo, collegamenti a ruolo e tariffe, ricalcolo per periodo e risorsa. Test: 169 backend, 16 frontend; prova nel browser superata. Da fare sul PC: aggiornare e provare con l'utente controller. |
-| C7 — Test e documentazione | In corso | Fatta la pagina "Consuntivi delle risorse" per il controller e il testo dell'anteprima vuota del ricalcolo. Da fare: guida, prove complete nel browser, rilettura della documentazione, criteri di completamento. |
+| C7 — Test e documentazione | Fatto | Pagina "Consuntivi delle risorse" per il controller, testo dell'anteprima vuota del ricalcolo, prova completa nel browser (`e2e/consuntivazione.py`, database di prova preparato da `backend/scripts/e2e-prepara.mjs`), guida `docs/consuntivazione.md`, documentazione riletta, criteri di completamento verificati. Test: 169 backend, 16 frontend, prova nel browser superata. |
 
 ## Obiettivo e perimetro
 
@@ -126,21 +126,21 @@ Ogni blocco si chiude con codice, test, documentazione in `docs/` aggiornata e p
 - Pagina in sola lettura `/toolpm/consuntivazione/consuntivi-risorse` per il controller: ore, tariffa e costo delle righe di una risorsa per settimana (aggiunta il 20/11/2026 dopo la prova di C6 sul PC); nell'anteprima del ricalcolo "Nessuna riga cambierebbe" quando non cambia nulla.
 - Test unitari della risoluzione: personalizzata parziale, cambio di ruolo a metà mese, cambio di tariffa, tariffa mancante, nuova tipologia, arrotondamenti al centesimo.
 - Test di integrazione: regole della giornata, attività e progetto coerenti, progetto Chiuso, "solo su attività", date di ingresso e uscita, conflitto di versione, riservatezza delle risposte, permessi per profilo.
-- Prova nel browser (Playwright) del percorso controller (tipologie, tariffe) e risorsa (settimana, copia, salvataggio).
+- Prova nel browser (Playwright) del percorso controller (tipologie, tariffe) e risorsa (settimana, copia, salvataggio): `e2e/consuntivazione.py`, istruzioni in `e2e/README.md`. Una settimana tipica si compila con scelta della voce, Aggiungi, cinque celle e Salva.
 - Aggiornamento di `architettura.md`, `backend.md`, `frontend.md`, `database.md`, README e Swagger; nuova guida `docs/consuntivazione.md` per controller e risorse.
 
 ## Criteri di completamento
 
-- [ ] Il controller crea, modifica e disattiva tipologie di costo; nessun altro profilo può farlo.
-- [ ] Le tariffe standard e personalizzate non si sovrappongono; `tariffe-applicabili` restituisce per ogni tipologia la tariffa giusta e la provenienza, anche con cambio di ruolo a metà mese.
-- [ ] Ogni riga salvata ha minuti, tariffa, provenienza e costo fotografati, oppure risulta "da valorizzare"; l'esempio dell'analisi (10 ore, 334 €) dà lo stesso risultato in un test.
-- [ ] Le regole della giornata sono rispettate dal backend (15 minuti, 24 h, progetto Chiuso, attività chiusa, tipologia disattivata, date della risorsa, "solo su attività").
-- [ ] La risorsa non riceve mai tariffe né importi in nessuna risposta.
-- [ ] Due salvataggi concorrenti della stessa giornata: il secondo riceve 409, nessun dato perso.
-- [ ] Il centro di costo di un progetto con consuntivi non si può più cambiare.
-- [ ] Una settimana tipica si inserisce e si salva in meno di due minuti nella pagina della risorsa.
-- [ ] Il ricalcolo mostra l'anteprima e, confermato, aggiorna solo le righe interessate.
-- [ ] Documentazione in `docs/` e Swagger aggiornati; `docker compose up` sul PC con la migrazione 007 eseguita.
+- [x] Il controller crea, modifica e disattiva tipologie di costo; nessun altro profilo può farlo.
+- [x] Le tariffe standard e personalizzate non si sovrappongono; `tariffe-applicabili` restituisce per ogni tipologia la tariffa giusta e la provenienza, anche con cambio di ruolo a metà mese.
+- [x] Ogni riga salvata ha minuti, tariffa, provenienza e costo fotografati, oppure risulta "da valorizzare"; l'esempio dell'analisi (10 ore, 334 €) dà lo stesso risultato in un test.
+- [x] Le regole della giornata sono rispettate dal backend (15 minuti, 24 h, progetto Chiuso, attività chiusa, tipologia disattivata, date della risorsa, "solo su attività").
+- [x] La risorsa non riceve mai tariffe né importi in nessuna risposta.
+- [x] Due salvataggi concorrenti della stessa giornata: il secondo riceve 409, nessun dato perso.
+- [x] Il centro di costo di un progetto con consuntivi non si può più cambiare.
+- [x] Una settimana tipica si inserisce e si salva in meno di due minuti nella pagina della risorsa.
+- [x] Il ricalcolo mostra l'anteprima e, confermato, aggiorna solo le righe interessate.
+- [x] Documentazione in `docs/` e Swagger aggiornati; `docker compose up` sul PC con la migrazione 007 eseguita.
 
 ## Decisioni confermate
 

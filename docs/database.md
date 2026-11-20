@@ -3,7 +3,7 @@
 - **Database**: `toolpm` (stessa istanza MongoDB del vecchio database `pianificazione`)
 - **Connessione**: variabile `MONGODB_URI` del backend (default in Docker: `mongodb://host.docker.internal:27017/toolpm?directConnection=true`; default fuori da Docker: `mongodb://localhost:27017/toolpm`)
 - **Replica set**: dalla fase 1 MongoDB gira come replica set a un nodo (`rs0`), necessario per le transazioni. Procedura e verifica in [mongodb-replica-set.md](mongodb-replica-set.md); `npm run verifica-mongodb` nel backend controlla connessione, replica set e transazioni.
-- **Collection**: del Pianificatore `skills`, `rate`, `certificazioni`; comuni a tutte le sezioni (fase 1, blocco B4) `risorse`, `clienti`, `centri_costo`, `ruoli`, `progetti`, `attivita`, `avanzamenti`; tecniche `utenti`, `parametri`, `migrazioni`
+- **Collection**: del Pianificatore `skills`, `rate`, `certificazioni`; comuni a tutte le sezioni (fase 1, blocco B4) `risorse`, `clienti`, `centri_costo`, `ruoli`, `progetti`, `attivita`, `avanzamenti`; della Consuntivazione (fase 2, migrazione `007-consuntivazione`) `tipologie_costo`, `tariffe_standard`, `tariffe_personalizzate`, `consuntivi`; tecniche `utenti`, `parametri`, `migrazioni`
 - **Accesso**: solo tramite il backend (Mongoose). Gli schemi sono in `backend/src/comuni/schemi/` (risorse e dati comuni), `backend/src/pianificatore/anagrafiche/anagrafiche.schema.ts`, `backend/src/auth/utente.schema.ts` e `backend/src/infrastruttura/parametro.schema.ts`.
 - **Validatori**: le collection del modulo Comuni (tranne `risorse`) hanno un validatore `$jsonSchema` creato dalla migrazione `004-comuni`: anche chi scrive direttamente nel database, senza passare dal backend, non può salvare documenti con campi obbligatori mancanti o di tipo sbagliato.
 

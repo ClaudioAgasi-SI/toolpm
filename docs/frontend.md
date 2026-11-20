@@ -13,7 +13,7 @@ Cartella: `frontend/`
 | HTTP | `HttpClient` (`provideHttpClient`) |
 | Stili | SCSS; variabili CSS globali in `src/styles.scss` |
 | Build | `@angular/build` (application builder) |
-| Test | Vitest (`ng test`) |
+| Test | Vitest (`ng test`); prove nel browser con Playwright in [`e2e/`](../e2e/README.md) |
 
 ## Struttura
 
