@@ -3,6 +3,7 @@
  * C0: migrazione 007 (validatori, indici, tipologie iniziali con ORDINARIA predefinita).
  * C1: API delle tipologie di costo (permessi, codice, predefinita sempre una e attiva).
  * C2: API delle tariffe (permessi, sovrapposizioni, risoluzione con cambio di ruolo, cancellazione).
+ * C3: consuntivi giornalieri (regole della giornata, costo fotografato, versione, riservatezza, proposte).
  *
  * Si esegue solo se è impostata MONGODB_URI_TEST, es.:
  *   MONGODB_URI_TEST="mongodb://localhost:27017/?directConnection=true" npm test
@@ -387,6 +388,258 @@ describe.skipIf(!URI_BASE)('Consuntivazione con MongoDB vero', () => {
       expect((await come('carlo').delete(`${URL_S}/${junior2027._id}`)).status).toBe(204);
       expect((await come('carlo').get(`${URL_S}?ruolo=${junior}`)).body).toHaveLength(0);
       await db.collection('consuntivi').deleteMany({ mese: '202702' });
+    });
+  });
+
+  describe('consuntivi (C3)', () => {
+    const URL_C = '/api/consuntivazione/consuntivi';
+    const oid = (s: string) => new mongoose.Types.ObjectId(s);
+    const tip: Record<string, string> = {};
+    const prog: Record<string, string> = {};
+    const att: Record<string, string> = {};
+    let cdc: string;
+    // Giorni passati (non si consuntiva nel futuro), dopo il passaggio di rita a senior (16/01/2027): uso il 2025?
+    // rita è junior dal 2025-01-01 e senior dal 2027-01-16; le tariffe standard senior valgono dal 2027.
+    // Per avere date passate e tariffe in vigore uso giorni del 2026 con tariffe standard del ruolo junior aggiunte qui.
+    const LUN = '2026-03-02';
+    const MAR = '2026-03-03';
+    const MER = '2026-03-04';
+
+    beforeAll(async () => {
+      for (const t of (await come('rita').get('/api/consuntivazione/tipologie-costo')).body) tip[t.codice] = t._id;
+      cdc = String((await db.collection('centri_costo').insertOne({ codice: 'CDC1', descrizione: 'Sviluppo', attivo: true })).insertedId);
+      const progetto = async (codice: string, extra: object = {}) =>
+        String(
+          (
+            await db.collection('progetti').insertOne({
+              codice,
+              titolo: `Progetto ${codice}`,
+              centroCostoId: oid(cdc),
+              stato: 'inCorso',
+              approvatori: [],
+              percentualeCompletamento: 0,
+              soloSuAttivita: false,
+              ...extra,
+            })
+          ).insertedId,
+        );
+      prog.A = await progetto('PA');
+      prog.B = await progetto('PB', { stato: 'inValutazione' });
+      prog.C = await progetto('PC', { stato: 'chiuso' });
+      prog.S = await progetto('PS', { soloSuAttivita: true });
+      const attivita = async (progettoId: string, codice: string, stato = 'attiva') =>
+        String(
+          (
+            await db.collection('attivita').insertOne({
+              progettoId: oid(progettoId),
+              codice,
+              descrizione: `Attività ${codice}`,
+              stato,
+              percentualeCompletamento: 0,
+              risorseAssegnateIds: [],
+            })
+          ).insertedId,
+        );
+      att.SVI = await attivita(prog.A, 'SVI');
+      att.OLD = await attivita(prog.A, 'OLD', 'chiusa');
+      att.COL = await attivita(prog.B, 'COL');
+      att.SS = await attivita(prog.S, 'SS1');
+      // Tariffe del ruolo junior di rita nel 2026: ordinaria 25, straordinaria 30. La personalizzata ordinaria di
+      // rita vale dal 2027, quindi nel 2026 vale la standard.
+      const junior = (await db.collection('ruoli').findOne({ codice: 'SVJ' }))!._id;
+      await db.collection('tariffe_standard').insertMany([
+        { ruoloId: junior, tipologiaId: oid(tip.ORDINARIA), validoDal: new Date('2026-01-01'), validoAl: new Date('2026-12-31'), centesimiOra: 2500 },
+        { ruoloId: junior, tipologiaId: oid(tip.STRAORDINARIA), validoDal: new Date('2026-01-01'), validoAl: new Date('2026-12-31'), centesimiOra: 3000 },
+      ]);
+      // paola non ha un ruolo; la sua uscita è il 31/03/2026.
+      await db.collection('risorse').updateOne({ _id: oid(risorsa.paola) }, { $set: { dataUscita: new Date('2026-03-31'), oreContrattualiGiorno: 4 } });
+    });
+
+    const leggi = async (chi: string, da: string, a: string, extra = '') => (await come(chi).get(`${URL_C}?da=${da}&a=${a}${extra}`));
+
+    it('salva una giornata: progetto dall\'attività, tipologia predefinita, costo fotografato visibile solo al controller', async () => {
+      const r = await come('rita').put(`${URL_C}/${LUN}`, {
+        versione: 0,
+        righe: [
+          { attivitaId: att.SVI, minuti: 360, nota: 'API' },
+          { progettoId: prog.A, tipologiaId: tip.STRAORDINARIA, minuti: 120 },
+          { attivitaId: att.COL, minuti: 120 },
+        ],
+      });
+      expect(r.status).toBe(200);
+      const [g] = r.body.giornate;
+      expect(g).toMatchObject({ data: LUN, versione: 1, totaleMinuti: 600 });
+      expect(g.righe[0]).toMatchObject({ progettoId: prog.A, attivitaId: att.SVI, tipologiaCodice: 'ORDINARIA', stato: 'bozza', nota: 'API' });
+      expect(g.righe[0].progetto).toMatchObject({ codice: 'PA' });
+      expect(g.righe[0].attivita).toMatchObject({ codice: 'SVI' });
+      // Riservatezza: nessuna tariffa né importo alla risorsa.
+      for (const riga of g.righe) {
+        expect(riga).not.toHaveProperty('costoCentesimi');
+        expect(riga).not.toHaveProperty('tariffaCentesimiOra');
+        expect(riga).not.toHaveProperty('fonteTariffa');
+      }
+      expect(JSON.stringify((await leggi('rita', LUN, LUN)).body)).not.toMatch(/costo|tariffa/i);
+      // Nel database: costo fotografato, centro di costo copiato.
+      const doc = await db.collection('consuntivi').findOne({ risorsaId: oid(risorsa.rita), data: new Date(LUN) });
+      expect(doc!.righe.map((x: { costoCentesimi: number }) => x.costoCentesimi)).toEqual([15000, 6000, 5000]);
+      expect(doc!.righe.every((x: { centroCostoId: unknown }) => String(x.centroCostoId) === cdc)).toBe(true);
+      expect(doc!.mese).toBe('202603');
+      // Il controller vede i costi delle righe di rita.
+      const c = await leggi('carlo', LUN, LUN, `&risorsa=${risorsa.rita}`);
+      expect(c.status).toBe(200);
+      expect(c.body[0].righe.map((x: { costoCentesimi: number; fonteTariffa: string }) => [x.costoCentesimi, x.fonteTariffa])).toEqual([
+        [15000, 'standard'],
+        [6000, 'standard'],
+        [5000, 'standard'],
+      ]);
+      // Gli altri no.
+      expect((await leggi('paola', LUN, LUN, `&risorsa=${risorsa.rita}`)).status).toBe(403);
+    });
+
+    it('versione: chi salva con una versione vecchia riceve 409 e non perde nulla', async () => {
+      const prima = (await leggi('rita', LUN, LUN)).body[0];
+      const righe = prima.righe.map((x: { _id: string; attivitaId: string | null; progettoId: string; tipologiaId: string; minuti: number }) => ({
+        _id: x._id,
+        attivitaId: x.attivitaId,
+        progettoId: x.progettoId,
+        tipologiaId: x.tipologiaId,
+        minuti: x.minuti,
+      }));
+      righe[0].minuti = 420;
+      expect((await come('rita').put(`${URL_C}/${LUN}`, { versione: 1, righe })).status).toBe(200);
+      righe[0].minuti = 300;
+      const r = await come('rita').put(`${URL_C}/${LUN}`, { versione: 1, righe });
+      expect(r.status).toBe(409);
+      expect(r.body.message).toMatch(/ricarica/);
+      const dopo = (await leggi('rita', LUN, LUN)).body[0];
+      expect(dopo.versione).toBe(2);
+      expect(dopo.righe[0].minuti).toBe(420);
+      // Giornata nuova con versione diversa da 0: 409.
+      expect((await come('rita').put(`${URL_C}/${MAR}`, { versione: 3, righe: [{ progettoId: prog.A, minuti: 60 }] })).status).toBe(409);
+    });
+
+    it('costo: ricalcolato solo se cambiano tipologia o minuti; righe invariate intatte', async () => {
+      const doc0 = await db.collection('consuntivi').findOne({ risorsaId: oid(risorsa.rita), data: new Date(LUN) });
+      // Prima riga: 420 minuti × 25 €/h = 175 €.
+      expect(doc0!.righe[0].costoCentesimi).toBe(17500);
+      expect(doc0!.righe[1].modificatoIl).toEqual(doc0!.righe[1].modificatoIl);
+      const g = (await leggi('rita', LUN, LUN)).body[0];
+      const righe = g.righe.map((x: { _id: string; progettoId: string; attivitaId: string | null; tipologiaId: string; minuti: number; nota: string | null }) => ({
+        _id: x._id,
+        progettoId: x.progettoId,
+        attivitaId: x.attivitaId,
+        tipologiaId: x.tipologiaId,
+        minuti: x.minuti,
+        nota: x.nota,
+      }));
+      righe[0].nota = 'API e test';
+      expect((await come('rita').put(`${URL_C}/${LUN}`, { versione: g.versione, righe })).status).toBe(200);
+      const doc1 = await db.collection('consuntivi').findOne({ risorsaId: oid(risorsa.rita), data: new Date(LUN) });
+      expect(doc1!.righe[0].nota).toBe('API e test');
+      expect(doc1!.righe[0].costoCentesimi).toBe(17500);
+      // La seconda riga non è cambiata: stesso istante di modifica di prima.
+      expect(doc1!.righe[1].modificatoIl).toEqual(doc0!.righe[1].modificatoIl);
+      expect(String(doc1!.righe[1]._id)).toBe(String(doc0!.righe[1]._id));
+    });
+
+    it('regole: progetto chiuso, attività chiusa, solo su attività, tipologia disattivata, attività di un altro progetto', async () => {
+      const prova = async (riga: object) => come('rita').put(`${URL_C}/${MER}`, { versione: 0, righe: [riga] });
+      expect((await prova({ progettoId: prog.C, minuti: 60 })).body.message).toMatch(/PC è chiuso/);
+      expect((await prova({ attivitaId: att.OLD, minuti: 60 })).body.message).toMatch(/OLD è chiusa/);
+      expect((await prova({ progettoId: prog.S, minuti: 60 })).body.message).toMatch(/solo sulle attività/);
+      expect((await prova({ attivitaId: att.SVI, progettoId: prog.B, minuti: 60 })).body.message).toMatch(/non appartiene/);
+      const notturna = tip.STRAORD_NOTTURNA;
+      await db.collection('tipologie_costo').updateOne({ _id: oid(notturna) }, { $set: { attiva: false } });
+      const r = await come('rita').put(`${URL_C}/2026-03-05`, { versione: 0, righe: [{ progettoId: prog.A, tipologiaId: notturna, minuti: 60 }] });
+      expect(r.status).toBe(400);
+      expect(r.body.message).toMatch(/^2026-03-05: riga 1: la tipologia STRAORD_NOTTURNA è disattivata/);
+      await db.collection('tipologie_costo').updateOne({ _id: oid(notturna) }, { $set: { attiva: true } });
+      expect((await prova({ minuti: 60 })).body.message).toMatch(/progetto o l'attività/);
+      expect((await prova({ attivitaId: att.SS, minuti: 60 })).status).toBe(200);
+    });
+
+    it('regole: minuti, 24 ore, righe doppie, futuro, date della risorsa', async () => {
+      const prova = (chi: string, giorno: string, righe: object[]) => come(chi).put(`${URL_C}/${giorno}`, { versione: 0, righe });
+      expect((await prova('rita', '2026-03-06', [{ progettoId: prog.A, minuti: 50 }])).status).toBe(400);
+      expect((await prova('rita', '2026-03-06', [{ progettoId: prog.A, minuti: 900 }, { progettoId: prog.B, minuti: 600 }])).body.message).toMatch(/oltre 24 ore/);
+      expect((await prova('rita', '2026-03-06', [{ progettoId: prog.A, minuti: 60 }, { progettoId: prog.A, minuti: 60 }])).body.message).toMatch(/uniscile/);
+      expect((await prova('rita', '2099-01-01', [{ progettoId: prog.A, minuti: 60 }])).body.message).toMatch(/futuri/);
+      expect((await prova('paola', '2026-04-01', [{ progettoId: prog.A, minuti: 60 }])).body.message).toMatch(/uscita/);
+      expect((await prova('rita', '2026-3-6', [{ progettoId: prog.A, minuti: 60 }])).status).toBe(400);
+    });
+
+    it('avviso sulle ore ordinarie oltre l\'orario contrattuale; senza tariffa la riga è da valorizzare', async () => {
+      // paola: orario 4 ore, nessun ruolo → nessuna tariffa.
+      const r = await come('paola').put(`${URL_C}/2026-03-02`, { versione: 0, righe: [{ progettoId: prog.A, minuti: 300 }] });
+      expect(r.status).toBe(200);
+      expect(r.body.avvisi).toEqual([{ data: '2026-03-02', messaggio: "ore ordinarie (5:00) oltre l'orario contrattuale di 4:00" }]);
+      const doc = await db.collection('consuntivi').findOne({ risorsaId: oid(risorsa.paola) });
+      expect(doc!.righe[0]).toMatchObject({ fonteTariffa: null, tariffaCentesimiOra: null, costoCentesimi: null });
+    });
+
+    it('più giornate in una transazione: un errore annulla tutto', async () => {
+      const r = await come('rita').put(URL_C, {
+        giornate: [
+          { data: '2026-03-09', versione: 0, righe: [{ progettoId: prog.A, minuti: 480 }] },
+          { data: '2026-03-10', versione: 0, righe: [{ progettoId: prog.C, minuti: 480 }] },
+        ],
+      });
+      expect(r.status).toBe(400);
+      expect(r.body.message).toMatch(/^2026-03-10/);
+      expect((await leggi('rita', '2026-03-09', '2026-03-10')).body).toEqual([]);
+      const ok = await come('rita').put(URL_C, {
+        giornate: [
+          { data: '2026-03-09', versione: 0, righe: [{ progettoId: prog.A, minuti: 480 }] },
+          { data: '2026-03-10', versione: 0, righe: [{ attivitaId: att.SVI, minuti: 240 }, { progettoId: prog.B, minuti: 240 }] },
+        ],
+      });
+      expect(ok.status).toBe(200);
+      expect(ok.body.giornate.map((g: { data: string; totaleMinuti: number }) => [g.data, g.totaleMinuti])).toEqual([
+        ['2026-03-09', 480],
+        ['2026-03-10', 480],
+      ]);
+      // Una giornata svuotata resta con zero righe.
+      const g = ok.body.giornate[0];
+      expect((await come('rita').put(`${URL_C}/2026-03-09`, { versione: g.versione, righe: [] })).body.giornate[0]).toMatchObject({ totaleMinuti: 0, righe: [] });
+    });
+
+    it('righe non più in bozza (fase 3) non si modificano né si tolgono', async () => {
+      await db.collection('consuntivi').updateOne({ risorsaId: oid(risorsa.rita), data: new Date('2026-03-10') }, { $set: { 'righe.0.stato': 'inviata' } });
+      const g = (await leggi('rita', '2026-03-10', '2026-03-10')).body[0];
+      const [inviata, bozza] = g.righe;
+      const base = (x: typeof inviata) => ({ _id: x._id, progettoId: x.progettoId, attivitaId: x.attivitaId, tipologiaId: x.tipologiaId, minuti: x.minuti });
+      expect((await come('rita').put(`${URL_C}/2026-03-10`, { versione: g.versione, righe: [base(bozza)] })).status).toBe(409);
+      expect((await come('rita').put(`${URL_C}/2026-03-10`, { versione: g.versione, righe: [{ ...base(inviata), minuti: 60 }, base(bozza)] })).status).toBe(409);
+      const ok = await come('rita').put(`${URL_C}/2026-03-10`, { versione: g.versione, righe: [base(inviata), { ...base(bozza), minuti: 300 }] });
+      expect(ok.status).toBe(200);
+    });
+
+    it('voci e proposte: progetti non chiusi, attività attive, allocazioni e settimana precedente', async () => {
+      const voci = (await come('rita').get(`${URL_C}/voci`)).body;
+      expect(voci.map((p: { codice: string }) => p.codice)).toEqual(['PA', 'PB', 'PS']);
+      expect(voci[0].attivita.map((a: { codice: string }) => a.codice)).toEqual(['SVI']);
+      expect((await come('carlo').get(`${URL_C}/voci`)).status).toBe(200);
+
+      await db.collection('risorse').updateOne(
+        { _id: oid(risorsa.rita) },
+        { $set: { planned: [{ mese: '202603', progettoId: oid(prog.B), percentualeAllocazione: 50 }, { mese: '202603', progettoId: oid(prog.C), percentualeAllocazione: 50 }] } },
+      );
+      const p = (await come('rita').get(`${URL_C}/proposte?settimana=2026-03-11`)).body;
+      expect(p.settimana).toBe('2026-03-09');
+      // Settimana precedente (2-6 marzo): PA/SVI ord., PA straord., PB/COL ord., PS/SS1 ord.; poi PB dal Pianificatore. PC è chiuso.
+      const chiavi = p.righe.map((r: { progetto: { codice: string }; attivita: { codice: string } | null; tipologiaCodice: string; origine: string }) =>
+        `${r.progetto.codice}/${r.attivita?.codice ?? '-'}/${r.tipologiaCodice}/${r.origine}`,
+      );
+      expect(chiavi).toEqual(
+        expect.arrayContaining(['PA/SVI/ORDINARIA/settimanaPrecedente', 'PA/-/STRAORDINARIA/settimanaPrecedente', 'PB/COL/ORDINARIA/settimanaPrecedente', 'PB/-/ORDINARIA/pianificatore']),
+      );
+      expect(chiavi.some((k: string) => k.startsWith('PC/'))).toBe(false);
+    });
+
+    it('chi non ha una risorsa non consuntiva; senza accesso 401', async () => {
+      expect((await api().get(`${URL_C}?da=${LUN}&a=${LUN}`)).status).toBe(401);
+      expect((await api().put(`${URL_C}/${LUN}`).send({ versione: 0, righe: [] })).status).toBe(401);
+      expect((await leggi('rita', '2026-01-01', '2026-06-30')).status).toBe(400);
     });
   });
 });

@@ -118,6 +118,9 @@ Documentazione interattiva Swagger, con la possibilità di provare le chiamate: 
 | GET / POST / PUT | `/api/consuntivazione/tipologie-costo`, `/api/consuntivazione/tipologie-costo/:id` | Tipologie di costo (lettura per tutti, modifica: controller); una sola predefinita |
 | GET / POST / PUT / DELETE | `/api/consuntivazione/tariffe-standard`, `/api/consuntivazione/risorse/:id/tariffe-personalizzate` | Tariffe standard per ruolo e personalizzate per risorsa, con validità (solo controller) |
 | GET | `/api/consuntivazione/risorse/:id/tariffe-applicabili?data=` | Tariffa applicabile alla data per ogni tipologia, con la provenienza (solo controller) |
+| GET | `/api/consuntivazione/consuntivi?da=&a=` | Giornate di consuntivo del periodo (le proprie; il controller anche di altri con `&risorsa=`, con i costi) |
+| PUT | `/api/consuntivazione/consuntivi/:data`, `/api/consuntivazione/consuntivi` | Salva una giornata o più giornate insieme (tutte o nessuna), con la versione letta |
+| GET | `/api/consuntivazione/consuntivi/voci`, `/consuntivi/proposte?settimana=` | Progetti e attività consuntivabili; righe proposte dal Pianificatore e dalla settimana precedente |
 | GET / PUT | `/api/parametri`, `/api/parametri/:chiave` | Parametri di sistema (modifica: controller) |
 | GET / PUT | `/api/pianificatore/risorse`, `/api/pianificatore/risorse/:id` | Skill, certificazioni e allocazioni delle risorse (POST e DELETE mantenuti per un rilascio) |
 | GET | `/api/pianificatore/pianificazione?da=AAAAMM&a=AAAAMM&tipoSkill=tecnico&skill=j2ee&skill=devOps` | Griglia risorse × mesi (default: 12 mesi dal mese corrente), con filtro facoltativo per una o più skill (in OR) |

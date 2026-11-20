@@ -55,7 +55,8 @@ backend/
 │   ├── consuntivazione/             sezione "Consuntivazione" (fase 2) → prefisso /api/consuntivazione
 │   │   ├── consuntivazione.module.ts  modulo della sezione
 │   │   ├── tipologie/                 tipologie di costo (blocco C1): schema, servizio, controller
-│   │   └── tariffe/                   tariffe (blocco C2): risoluzione.ts (regole pure), schemi, servizio, controller
+│   │   ├── tariffe/                   tariffe (blocco C2): risoluzione.ts (regole pure), schemi, servizio, controller
+│   │   └── consuntivi/                consuntivi giornalieri (blocco C3): regole-giornata.ts (regole pure), schema, servizio, controller
 │   ├── permessi/                    permessi su profili e ruoli (fase 1, blocco B3)
 │   │   ├── regole.ts                   regole pure: permessi globali, progetto, attività, risorse
 │   │   ├── permessi.service.ts         PermessiService: le regole per i servizi, verifica() → 401/403
@@ -213,6 +214,29 @@ Tutte con il permesso `gestireTariffe` (controller), in lettura e scrittura. Imp
 
 Regole: periodi della stessa coppia (ruolo + tipologia, risorsa + tipologia) mai sovrapposti, estremi compresi (409, controllo in transazione); `validoAl` non prima di `validoDal` (400). Una correzione di importo si fa chiudendo il periodo e aprendone un altro. La risoluzione sta in `tariffe/risoluzione.ts` (funzioni pure, `risoluzione.spec.ts`): ruolo alla data dall'ultima voce di `storicoRuoli` con decorrenza non successiva; prima la personalizzata, poi la standard di quel ruolo, altrimenti nessuna ("da valorizzare"); costo = `round(minuti × centesimiOra / 60)`. `TariffeService.risolutore(risorsaId, da, a)` carica in tre query tutto ciò che serve a un intervallo di date e restituisce la funzione di risoluzione che userà il consuntivo (blocco C3).
 
+### Consuntivi — `/api/consuntivazione/consuntivi` (blocco C3)
+
+| Metodo | Percorso | Permesso | Note |
+|---|---|---|---|
+| GET | `/consuntivi?da=&a=&risorsa=` | accesso | Al massimo 62 giorni. Senza `risorsa`: le proprie giornate; con `risorsa` di un altro: solo il controller (`gestireTariffe`). Per ogni giornata `data`, `versione`, `totaleMinuti`, righe con codici e titoli di progetto e attività |
+| GET | `/consuntivi/voci` | `consuntivare` | Progetti non chiusi (con `soloSuAttivita`) e le loro attività attive |
+| GET | `/consuntivi/proposte?settimana=` | `consuntivare` | Righe proposte per la settimana: progetti allocati nel Pianificatore nei mesi della settimana (tipologia predefinita) e righe della settimana precedente; solo voci ancora consuntivabili |
+| PUT | `/consuntivi/:data` | `consuntivare` | `{ versione, righe }`: le righe della giornata (sostituiscono le precedenti in bozza) |
+| PUT | `/consuntivi` | `consuntivare` | `{ giornate: [{ data, versione, righe }] }`: tutte in una transazione, o nessuna |
+
+Ogni riga in ingresso: `_id` (per le righe esistenti), `attivitaId` oppure `progettoId`, `tipologiaId` (se manca, la predefinita), `minuti`, `nota`. Regole (`ConsuntiviService` e le funzioni pure di `regole-giornata.ts`):
+
+- si consuntiva solo per sé (utente collegato a una risorsa), mai nel futuro (data di oggi in Italia), dentro le date di ingresso e uscita della risorsa;
+- minuti a passi di 15, almeno 15, totale della giornata al massimo 24 ore; una sola riga per progetto o attività e tipologia;
+- con l'attività il progetto si ricava (un progetto diverso è un errore); niente righe nuove o cambiate su progetti chiusi, attività chiuse, tipologie disattivate, né direttamente su un progetto "solo su attività";
+- per ogni riga nuova o cambiata: centro di costo copiato dal progetto, tariffa risolta con `TariffeService.risolutore()` e costo fotografato (`fonteTariffa`, `tariffaId`, `tariffaCentesimiOra`, `costoCentesimi`; null = da valorizzare), `modificatoIl` e `modificatoDa` della riga; le righe invariate restano come sono, e il costo si ricalcola solo se cambiano tipologia o minuti;
+- le righe non in bozza o respinte (dalla fase 3) non si cambiano né si tolgono (409);
+- salvataggio condizionato sulla `versione` letta (0 per una giornata nuova): se è cambiata, 409 "ricarica la pagina";
+- la risposta porta gli `avvisi` (ore ordinarie oltre l'orario contrattuale, o oltre il parametro `oreGiorno` se manca); gli errori iniziano con la data della giornata;
+- riservatezza: tariffe, importi, fonte e centro di costo compaiono solo nelle risposte al controller.
+
+La copia del giorno o della settimana precedente si fa nella pagina (blocco C5): le righe copiate si vedono e si correggono prima di salvarle.
+
 ## Moduli
 
 ### RisorseModule — `/api/pianificatore/risorse`
@@ -365,7 +389,7 @@ I **test di integrazione** (`test/*.integrazione.spec.ts`) avviano l'applicazion
 | `comuni.integrazione.spec.ts` | Modulo Comuni: anagrafiche, risorse, progetti (stati, approvatori, stime in euro), attività, avanzamenti, validatori |
 | `pianificatore.integrazione.spec.ts` | Pianificatore: allocazioni su `progettoId`, permessi sulle caratteristiche (anche il TL che alloca sui suoi progetti), migrazione 006 |
 | `migrazione-dati.integrazione.spec.ts` | Migrazione B7 sui dati di esempio: esporta, errori per riga, prova, importazione, verifica, ripetibilità |
-| `consuntivazione.integrazione.spec.ts` | Consuntivazione (fase 2): migrazione 007 (tipologie iniziali con ORDINARIA predefinita, ripetibilità, validatori di tipologie, tariffe e consuntivi, indici unici); API delle tipologie di costo (permessi, codice, una sola predefinita sempre attiva); API delle tariffe (permessi, sovrapposizioni, modifica, risoluzione con cambio di ruolo a metà mese, cancellazione bloccata se usata) |
+| `consuntivazione.integrazione.spec.ts` | Consuntivazione (fase 2): migrazione 007 (tipologie iniziali con ORDINARIA predefinita, ripetibilità, validatori di tipologie, tariffe e consuntivi, indici unici); API delle tipologie di costo (permessi, codice, una sola predefinita sempre attiva); API delle tariffe (permessi, sovrapposizioni, modifica, risoluzione con cambio di ruolo a metà mese, cancellazione bloccata se usata); consuntivi (costo fotografato e riservatezza, versione e 409, ricalcolo solo se cambiano tipologia o minuti, regole su progetti, attività, tipologie, minuti, futuro e date della risorsa, avvisi, transazione su più giornate, righe non in bozza, voci e proposte) |
 | `profili.integrazione.spec.ts` | Criteri di completamento della fase 1: 401 su tutte le API elencate da Swagger, 15 operazioni per ognuno dei 7 profili, tracciamento dell'utente giusto |
 
 ## Docker
