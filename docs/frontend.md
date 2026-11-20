@@ -45,6 +45,8 @@ frontend/src/
     │   ├── consuntivazione-api.service.ts  chiamate a /api/consuntivazione
     │   ├── modelli.ts                 tipi: tipologie di costo, tariffe; euroOra(), tariffaValida()
     │   ├── consuntivazione-inizio.ts  pagina iniziale: funzioni del profilo, con link a quelle già disponibili
+    │   ├── mio-consuntivo.ts/.html/.scss  "Il mio consuntivo": griglia righe × giorni (vista settimana o giorno), salvataggio delle giornate cambiate, copia, proposte, avanzamento delle mie attività
+    │   ├── ore.ts                     funzioni pure: lettura delle ore (8, 7,5, 7:30), date della settimana, oggi in Italia (ore.spec.ts)
     │   ├── tipologie-costo.ts         tipologie di costo (controller)
     │   ├── tariffe.ts                 tariffe standard (matrice ruolo × tipologia alla data) e personalizzate (con tariffe applicabili)
     │   └── elenco-tariffe.ts          elenco dei periodi di un ruolo o di una risorsa, con inserimento e modifica in riga
@@ -75,6 +77,7 @@ Tutte le rotte, tranne `/accesso`, sono dietro la guardia `accessoRichiesto`: se
 | `/comuni/clienti`, `/comuni/centri-costo`, `/comuni/ruoli` | `AnagraficaSemplice` | anagrafiche semplici (configurazione in `data.definizione`) |
 | `/comuni/utenti` | `Utenti` | gestione utenti, solo ruolo `admin` (`ruoloRichiesto('admin')`) |
 | `/consuntivazione` | `ConsuntivazioneLayout`, `ConsuntivazioneInizio` | sezione Consuntivazione (fase 2): pagina iniziale con le funzioni del profilo |
+| `/consuntivazione/settimana` | `MioConsuntivo` | Il mio consuntivo: `?vista=settimana|giorno&data=AAAA-MM-GG`; solo chi ha una risorsa (`consuntivare`). Righe = progetto o attività + tipologia (predefinita sulle nuove, modificabile), colonne = giorni; giorni futuri e righe non in bozza in sola lettura; salva insieme le sole giornate cambiate (PUT multiplo con versione; 409 → "Ricarica"); copia della settimana o del giorno precedente nei giorni vuoti, senza salvare; righe proposte (dal Pianificatore e dalla settimana prima) aggiunte da sole quando il periodo è vuoto; avvisi del salvataggio; nota per cella; percentuale delle attività assegnate. Nessun importo |
 | `/consuntivazione/tariffe` | `Tariffe`, `ElencoTariffe` | tariffe standard e personalizzate; `?vista=personalizzate&risorsa=<id>`; solo controller (`gestireTariffe`) |
 | `/consuntivazione/tipologie` | `TipologieCosto` | tipologie di costo con modifica in riga e scelta della predefinita; solo controller (`permessoRichiesto('gestireTipologieCosto')`) |
 | `/pianificatore` | `PianificatoreLayout` | sezione Pianificatore; reindirizza a `/pianificatore/pianificazione` |

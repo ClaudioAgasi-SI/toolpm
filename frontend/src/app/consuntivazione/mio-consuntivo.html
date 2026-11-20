@@ -1,0 +1,195 @@
+<header class="testata">
+  <h1>Il mio consuntivo</h1>
+  <div class="azioni">
+    <div class="interruttore" role="group" aria-label="Vista">
+      <button type="button" [class.attivo]="vista() === 'giorno'" (click)="vai({ vista: 'giorno' })">Giorno</button>
+      <button type="button" [class.attivo]="vista() === 'settimana'" (click)="vai({ vista: 'settimana' })">Settimana</button>
+    </div>
+    <button type="button" (click)="sposta(-1)" [attr.aria-label]="vista() === 'settimana' ? 'Settimana precedente' : 'Giorno precedente'">‹</button>
+    <strong class="periodo">{{ titolo() }}</strong>
+    <button type="button" (click)="sposta(1)" [attr.aria-label]="vista() === 'settimana' ? 'Settimana successiva' : 'Giorno successivo'">›</button>
+    <button type="button" (click)="vai({ data: oggi })">Oggi</button>
+  </div>
+</header>
+
+@if (errore()) {
+  <p class="errore">
+    {{ errore() }}
+    @if (conflitto()) {
+      <button type="button" (click)="carica()">Ricarica</button>
+    }
+  </p>
+}
+@if (messaggio()) {
+  <p class="ok">{{ messaggio() }}</p>
+}
+@for (a of avvisi(); track $index) {
+  <p class="avviso">{{ etichettaGiorno(a.data) }}: {{ a.messaggio }}</p>
+}
+
+@if (caricamento()) {
+  <p class="tenue">Caricamento…</p>
+} @else {
+  <div class="comandi">
+    <button type="button" (click)="copiaPrecedente()">Copia {{ vista() === 'settimana' ? 'la settimana precedente' : 'il giorno precedente' }}</button>
+    @if (proposteDaAggiungere().length) {
+      <button type="button" (click)="aggiungiProposte()">Aggiungi le righe proposte ({{ proposteDaAggiungere().length }})</button>
+    }
+    <span class="spazio"></span>
+    @if (giorniCambiati().length) {
+      <span class="tenue">Da salvare: {{ giorniCambiati().length === 1 ? '1 giornata' : giorniCambiati().length + ' giornate' }}</span>
+    }
+    <button type="button" class="primario" [disabled]="!giorniCambiati().length || salvataggio()" (click)="salva()">
+      {{ salvataggio() ? 'Salvataggio…' : 'Salva' }}
+    </button>
+  </div>
+
+  <div class="scorrimento">
+    <table class="griglia" [class.giorno]="vista() === 'giorno'">
+      <thead>
+        <tr>
+          <th class="voce">Progetto / attività</th>
+          <th class="tipologia">Tipologia</th>
+          @for (g of giorni(); track g) {
+            <th class="ore" [class.festivo]="fineSettimana(g)" [class.futuro]="g > oggi" [class.oggi]="g === oggi">{{ etichettaGiorno(g) }}</th>
+          }
+          @if (vista() === 'settimana') {
+            <th class="ore">Totale</th>
+          }
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of righe(); track r.chiave) {
+          <tr [class.proposta]="r.proposta && !totaleRiga(r)">
+            <td class="voce">
+              <strong>{{ r.etichetta }}</strong>
+              @if (r.nonAssegnata) {
+                <span class="segno" title="Non risulti tra le risorse assegnate a questa attività">non assegnata</span>
+              }
+              @if (r.proposta && !totaleRiga(r)) {
+                <span class="segno tenue">{{ r.proposta === 'pianificatore' ? 'dal Pianificatore' : 'dalla settimana prima' }}</span>
+              }
+              <div class="tenue dettaglio">{{ r.dettaglio }}</div>
+            </td>
+            <td class="tipologia">
+              <select [ngModel]="r.tipologiaId" (ngModelChange)="cambiaTipologia(r, $event)" [disabled]="bloccata(r)" [attr.aria-label]="'Tipologia di ' + r.etichetta">
+                @if (!tipologie().some((t) => t._id === r.tipologiaId)) {
+                  <option [value]="r.tipologiaId">{{ nomeTipologia(r.tipologiaId) }}</option>
+                }
+                @for (t of tipologie(); track t._id) {
+                  <option [value]="t._id">{{ t.descrizione }}</option>
+                }
+              </select>
+            </td>
+            @for (g of giorni(); track g) {
+              @let c = cella(r, g);
+              <td class="ore" [class.festivo]="fineSettimana(g)" [class.selezionata]="selezionata()?.riga === r && selezionata()?.giorno === g">
+                <input
+                  [disabled]="!modificabile(r, g)"
+                  [class.sbagliata]="erroreCella(r, g)"
+                  [title]="erroreCella(r, g) || (g > oggi ? 'Giorno futuro' : c.stato && !modificabile(r, g) ? 'Riga ' + c.stato : '')"
+                  inputmode="decimal"
+                  placeholder="–"
+                  [(ngModel)]="c.testo"
+                  (ngModelChange)="cambiata()"
+                  (focus)="seleziona(r, g)"
+                  (blur)="normalizza(c)"
+                  [attr.aria-label]="r.etichetta + ', ' + etichettaGiorno(g)"
+                />
+                @if (c.nota) {
+                  <span class="con-nota" title="{{ c.nota }}">•</span>
+                }
+              </td>
+            }
+            @if (vista() === 'settimana') {
+              <td class="ore totale">{{ totaleOre(totaleRiga(r)) }}</td>
+            }
+            <td>
+              <button type="button" class="rimuovi" (click)="togliRiga(r)" [attr.aria-label]="'Togli ' + r.etichetta" title="Togli la riga (le ore si cancellano al salvataggio)">×</button>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td [attr.colspan]="giorni().length + 4" class="tenue">Nessuna riga: aggiungine una qui sotto.</td></tr>
+        }
+      </tbody>
+      <tfoot>
+        <tr>
+          <th colspan="2">Totale del giorno</th>
+          @for (g of giorni(); track g) {
+            <th class="ore" [class.troppo]="totaliGiorno()[g] > 1440">{{ totaleOre(totaliGiorno()[g]) }}</th>
+          }
+          @if (vista() === 'settimana') {
+            <th class="ore">{{ totaleOre(totale()) }}</th>
+          }
+          <th></th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  @if (selezionata(); as s) {
+    @let c = cella(s.riga, s.giorno);
+    <label class="nota-cella">
+      Nota — {{ s.riga.etichetta }}, {{ etichettaGiorno(s.giorno) }}
+      <input [disabled]="!modificabile(s.riga, s.giorno)" maxlength="500" placeholder="facoltativa" [(ngModel)]="c.nota" (ngModelChange)="cambiata()" />
+    </label>
+  }
+
+  <form class="nuova-riga" (ngSubmit)="aggiungiRiga()">
+    <label>
+      Aggiungi una riga
+      <select name="voce" [(ngModel)]="nuova.voce">
+        <option value="">— progetto o attività —</option>
+        @for (g of vociScelta(); track g.progetto._id) {
+          <optgroup [label]="g.progetto.codice + ' — ' + g.progetto.titolo">
+            @for (o of g.opzioni; track o.valore) {
+              <option [value]="o.valore">{{ o.testo }}</option>
+            }
+          </optgroup>
+        }
+      </select>
+    </label>
+    <label>
+      Tipologia
+      <select name="tipologia" [(ngModel)]="nuova.tipologiaId">
+        @for (t of tipologie(); track t._id) {
+          <option [value]="t._id">{{ t.descrizione }}{{ t.predefinita ? ' (predefinita)' : '' }}</option>
+        }
+      </select>
+    </label>
+    <button type="submit" [disabled]="!nuova.voce">Aggiungi</button>
+    @if (avvisoNuova(); as a) {
+      <p class="avviso">{{ a }}</p>
+    }
+    @if (!voci().length) {
+      <p class="tenue">Non risulti su nessun progetto in questo periodo: chiedi al TL o al PM di assegnarti a un'attività o di allocarti nel Pianificatore.</p>
+    }
+  </form>
+  <p class="tenue suggerimento">
+    Scrivi le ore come 8, 7,5 oppure 7:30 (passi di 15 minuti). I giorni futuri non si compilano. Puoi salvare un giorno alla volta o tutta la settimana.
+  </p>
+
+  @if (attivitaAssegnate().length) {
+    <section class="mie-attivita">
+      <h2>Avanzamento delle mie attività</h2>
+      <table class="elenco">
+        <thead><tr><th>Attività</th><th style="width: 9rem">Completamento</th><th style="width: 12rem"></th></tr></thead>
+        <tbody>
+          @for (x of attivitaAssegnate(); track x.attivita._id) {
+            <tr>
+              <td><strong>{{ x.progetto.codice }} › {{ x.attivita.codice }}</strong> {{ x.attivita.descrizione }}</td>
+              <td>
+                <input type="number" min="0" max="100" step="1" [ngModel]="percentuale(x.attivita)" (ngModelChange)="impostaPercentuale(x.attivita, $event)" [attr.aria-label]="'Percentuale di ' + x.attivita.codice" /> %
+              </td>
+              <td class="azioni">
+                <button type="button" [disabled]="percentuale(x.attivita) === x.attivita.percentualeCompletamento" (click)="salvaPercentuale(x.progetto, x.attivita)">Salva</button>
+                <span class="tenue">{{ esitoPercentuale()[x.attivita._id] }}</span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+  }
+}

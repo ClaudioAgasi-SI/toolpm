@@ -60,3 +60,72 @@ export const tariffaValida = (t: Tariffa, data: string) =>
 /** Centesimi all'ora → "39,00 €/h". */
 export const euroOra = (c: number | null | undefined) =>
   c === null || c === undefined ? '—' : `${(c / 100).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €/h`;
+
+// ---- Il mio consuntivo (blocco C5) ----
+
+/** Attività tra le voci consuntivabili. */
+export interface VoceAttivita {
+  _id: string;
+  codice: string;
+  descrizione: string;
+  percentualeCompletamento: number;
+  /** La risorsa è tra le assegnate: in testa; sulle altre si consuntiva con un avviso. */
+  assegnata: boolean;
+}
+
+/** Progetto su cui la risorsa lavora nel periodo, con le attività attive. */
+export interface VoceProgetto {
+  _id: string;
+  codice: string;
+  titolo: string;
+  stato: string;
+  soloSuAttivita: boolean;
+  conAttivitaAssegnate: boolean;
+  attivita: VoceAttivita[];
+}
+
+/** Riga salvata, come la vede la risorsa (senza tariffe né importi). */
+export interface RigaGiornata {
+  _id: string;
+  progettoId: string;
+  progetto: { codice: string; titolo: string } | null;
+  attivitaId: string | null;
+  attivita: { codice: string; descrizione: string } | null;
+  tipologiaId: string;
+  tipologiaCodice: string;
+  minuti: number;
+  nota: string | null;
+  stato: string;
+}
+
+export interface Giornata {
+  data: string;
+  versione: number;
+  totaleMinuti: number;
+  righe: RigaGiornata[];
+}
+
+export interface Proposta {
+  progettoId: string;
+  progetto: { codice: string; titolo: string; soloSuAttivita: boolean };
+  attivitaId: string | null;
+  attivita: { codice: string; descrizione: string; assegnata: boolean } | null;
+  tipologiaId: string;
+  tipologiaCodice: string;
+  origine: 'pianificatore' | 'settimanaPrecedente';
+}
+
+/** Riga da salvare in una giornata. */
+export interface RigaDaSalvare {
+  _id?: string;
+  progettoId: string;
+  attivitaId: string | null;
+  tipologiaId: string;
+  minuti: number;
+  nota: string | null;
+}
+
+export interface EsitoSalvataggio {
+  giornate: Giornata[];
+  avvisi: { data: string; messaggio: string }[];
+}

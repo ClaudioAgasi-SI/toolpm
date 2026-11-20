@@ -61,7 +61,7 @@ export class ConsuntivazioneInizio {
   protected readonly voci = computed<Voce[]>(() => {
     const voci: Voce[] = [];
     if (this.sessione.puo('consuntivare')) {
-      voci.push({ titolo: 'Il mio consuntivo', descrizione: 'Ore lavorate per giorno o per settimana, su progetti e attività.' });
+      voci.push({ titolo: 'Il mio consuntivo', descrizione: 'Ore lavorate per giorno o per settimana, su progetti e attività.', percorso: 'settimana' });
     }
     if (this.sessione.puo('gestireTipologieCosto')) {
       voci.push({ titolo: 'Tipologie di costo', descrizione: 'Ordinaria, straordinaria, notturna, festiva e le altre; quella proposta di default.', percorso: 'tipologie' });

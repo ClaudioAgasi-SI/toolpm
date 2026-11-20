@@ -99,7 +99,7 @@ export class ConsuntiviService {
       .lean()
       .exec();
     const attivita = await this.attivita
-      .find({ progettoId: { $in: progetti.map((p) => p._id) }, stato: 'attiva' }, { progettoId: 1, codice: 1, descrizione: 1, risorseAssegnateIds: 1 })
+      .find({ progettoId: { $in: progetti.map((p) => p._id) }, stato: 'attiva' }, { progettoId: 1, codice: 1, descrizione: 1, risorseAssegnateIds: 1, percentualeCompletamento: 1 })
       .sort({ codice: 1 })
       .lean()
       .exec();
@@ -110,6 +110,7 @@ export class ConsuntiviService {
           _id: String(x._id),
           codice: x.codice,
           descrizione: x.descrizione,
+          percentualeCompletamento: x.percentualeCompletamento ?? 0,
           assegnata: Boolean(mia && (x.risorseAssegnateIds ?? []).some((id) => String(id) === mia)),
         }))
         .sort((a, b) => Number(b.assegnata) - Number(a.assegnata));

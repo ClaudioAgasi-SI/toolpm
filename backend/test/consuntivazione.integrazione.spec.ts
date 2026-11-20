@@ -654,7 +654,7 @@ describe.skipIf(!URI_BASE)('Consuntivazione con MongoDB vero', () => {
       await db.collection('attivita').updateOne({ _id: oid(att.COL) }, { $set: { risorseAssegnateIds: [oid(risorsa.rita)] } });
       const voci = (await come('rita').get(`${URL_C}/voci?da=2026-03-09&a=2026-03-15`)).body;
       expect(voci[0]).toMatchObject({ codice: 'PB', conAttivitaAssegnate: true });
-      expect(voci[0].attivita[0]).toMatchObject({ codice: 'COL', assegnata: true });
+      expect(voci[0].attivita[0]).toMatchObject({ codice: 'COL', assegnata: true, percentualeCompletamento: 0 });
       expect(voci.find((p: { codice: string }) => p.codice === 'PA').attivita[0]).toMatchObject({ codice: 'SVI', assegnata: false });
       // Per paola COL non è assegnata.
       expect((await come('paola').get(`${URL_C}/voci?da=2026-03-09`)).body.map((p: { codice: string }) => p.codice)).toEqual(['PA']);

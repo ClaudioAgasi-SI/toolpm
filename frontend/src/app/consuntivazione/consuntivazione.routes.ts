@@ -19,6 +19,12 @@ export const CONSUNTIVAZIONE_ROUTES: Routes = [
         loadComponent: () => import('./consuntivazione-inizio').then((m) => m.ConsuntivazioneInizio),
       },
       {
+        path: 'settimana',
+        title: 'Il mio consuntivo · ToolPM',
+        canActivate: [permessoRichiesto('consuntivare')],
+        loadComponent: () => import('./mio-consuntivo').then((m) => m.MioConsuntivo),
+      },
+      {
         path: 'tipologie',
         title: 'Tipologie di costo · ToolPM',
         canActivate: [permessoRichiesto('gestireTipologieCosto')],

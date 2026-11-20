@@ -9,6 +9,9 @@ import { SessioneService } from '../core/sessione.service';
   template: `
     <nav class="sottomenu" aria-label="Consuntivazione">
       <a class="titolo-sezione" routerLink="." [routerLinkActiveOptions]="{ exact: true }" routerLinkActive="attivo">Consuntivazione</a>
+      @if (sessione.puo('consuntivare')) {
+        <a routerLink="settimana" routerLinkActive="attivo">Il mio consuntivo</a>
+      }
       @if (sessione.puo('gestireTipologieCosto')) {
         <a routerLink="tipologie" routerLinkActive="attivo">Tipologie di costo</a>
       }

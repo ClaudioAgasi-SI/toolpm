@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import type { DatiTariffa, TariffeApplicabili, Tariffa, TipologiaCosto } from './modelli';
+import type { DatiTariffa, EsitoSalvataggio, Giornata, Proposta, RigaDaSalvare, TariffeApplicabili, Tariffa, TipologiaCosto, VoceProgetto } from './modelli';
 
 /** Accesso alle API della sezione Consuntivazione (/api/consuntivazione). */
 @Injectable({ providedIn: 'root' })
@@ -48,5 +48,19 @@ export class ConsuntivazioneApiService {
   }
   tariffeApplicabili(risorsaId: string, data: string) {
     return this.http.get<TariffeApplicabili>(`${this.base}/risorse/${risorsaId}/tariffe-applicabili`, { params: new HttpParams().set('data', data) });
+  }
+
+  // Il mio consuntivo (blocco C5)
+  consuntivi(da: string, a: string) {
+    return this.http.get<Giornata[]>(`${this.base}/consuntivi`, { params: new HttpParams().set('da', da).set('a', a) });
+  }
+  voci(da: string, a: string) {
+    return this.http.get<VoceProgetto[]>(`${this.base}/consuntivi/voci`, { params: new HttpParams().set('da', da).set('a', a) });
+  }
+  proposte(settimana: string) {
+    return this.http.get<{ settimana: string; righe: Proposta[] }>(`${this.base}/consuntivi/proposte`, { params: new HttpParams().set('settimana', settimana) });
+  }
+  salvaGiornate(giornate: { data: string; versione: number; righe: RigaDaSalvare[] }[]) {
+    return this.http.put<EsitoSalvataggio>(`${this.base}/consuntivi`, { giornate });
   }
 }
