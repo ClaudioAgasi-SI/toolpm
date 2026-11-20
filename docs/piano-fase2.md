@@ -76,7 +76,7 @@ Ogni blocco si chiude con codice, test, documentazione in `docs/` aggiornata e p
 
 ### C1 — Tipologie di costo
 
-- API `GET/POST/PUT /api/consuntivazione/tipologie-costo`: codice (unico, non modificabile), descrizione, ordine, categoria (`ordinaria` o `straordinaria`), attiva. Nessuna cancellazione: si disattiva.
+- API `GET/POST/PUT /api/consuntivazione/tipologie-costo`: codice (unico, non modificabile), descrizione, ordine, categoria (`ordinaria` o `straordinaria`), attiva, predefinita (una sola tipologia attiva è la predefinita: all'inizio ORDINARIA). Nessuna cancellazione: si disattiva; la predefinita non si disattiva finché non se ne sceglie un'altra.
 - Lettura per tutti gli utenti con accesso (servono alla griglia), scrittura solo controller.
 - Pagina `/toolpm/consuntivazione/tipologie` (riuso del componente delle anagrafiche semplici, con i campi in più).
 
@@ -109,7 +109,7 @@ Ogni blocco si chiude con codice, test, documentazione in `docs/` aggiornata e p
 - Pagina `/toolpm/consuntivazione/settimana`: a scelta della risorsa vista del singolo giorno oppure vista settimanale (griglia righe progetto o attività + tipologia × giorni da lunedì a domenica), totali per riga e per giorno, ore in formato `h:mm` o decimale con passi di 15 minuti, nota per cella.
 - Scelta della riga da elenco (progetti non chiusi, con le loro attività attive), righe proposte dal Pianificatore, copia della settimana precedente, navigazione tra giorni e settimane, salvataggio delle sole giornate modificate (anche una sola) in un colpo; nessun obbligo di compilare la settimana intera.
 - Avvisi visibili: ore ordinarie oltre l'orario contrattuale, giorno oltre 24 h, progetto "solo su attività", ricarica dopo un conflitto di versione.
-- Nessun importo mostrato alla risorsa. Per la stessa risorsa, aggiornamento della percentuale delle attività a cui è assegnata (API già pronta dalla fase 1).
+- Ogni riga nuova parte con la tipologia predefinita (ordinaria), che la risorsa può cambiare. Nessun importo mostrato alla risorsa. Per la stessa risorsa, aggiornamento della percentuale delle attività a cui è assegnata (API già pronta dalla fase 1).
 
 ### C6 — Righe da valorizzare e ricalcolo
 
@@ -139,7 +139,7 @@ Ogni blocco si chiude con codice, test, documentazione in `docs/` aggiornata e p
 
 ## Decisioni confermate
 
-Confermate il 20/11/2026, insieme alle contromisure dei rischi della tabella; il punto 8 è una precisazione dell'utente. Colmano punti che l'analisi lascia aperti o che cambiano l'ordine delle fasi.
+Confermate il 20/11/2026, insieme alle contromisure dei rischi della tabella; i punti 8 e 9 sono precisazioni dell'utente. Colmano punti che l'analisi lascia aperti o che cambiano l'ordine delle fasi.
 
 1. **Ricalcolo (RF-18) in fase 2.** Il piano di rilascio dell'analisi non lo assegna a una fase precisa; lo porto in fase 2 perché senza ricalcolo le righe salvate prima che il controller inserisca una tariffa resterebbero "da valorizzare" per sempre.
 2. **Storico delle modifiche (`audit_log`) in fase 3**, come nell'analisi: in fase 2 su tariffe e tipologie resta il tracciamento dell'ultimo salvataggio; le tariffe non si sovrascrivono di fatto, perché una correzione si fa chiudendo un periodo e aprendone un altro.
@@ -149,6 +149,7 @@ Confermate il 20/11/2026, insieme alle contromisure dei rischi della tabella; il
 6. **Salvataggio di più giornate in un'unica transazione** (`PUT /api/consuntivazione/consuntivi`), in aggiunta al salvataggio della singola giornata previsto dall'analisi.
 7. **Chi consuntiva:** solo gli utenti collegati a una risorsa e solo per sé stessi. Un amministratore senza risorsa non vede la pagina; nessuno inserisce ore per conto di altri.
 8. **Nessun obbligo di ritmo.** La risorsa può consuntivare un giorno alla volta oppure per settimana, come preferisce: la pagina offre la vista del giorno e quella della settimana, e salva solo le giornate modificate. Nessun controllo pretende la settimana completa.
+9. **Tipologia ordinaria proposta di default.** Ogni riga nuova parte con la tipologia predefinita, ordinaria, e la risorsa può cambiarla (straordinaria, notturna, festiva e le altre). Serve a compilare più in fretta e con meno errori. La predefinita è un'impostazione della tipologia, modificabile dal controller; se la richiesta arriva senza tipologia, anche il backend usa la predefinita.
 
 | Rischio | Effetto | Contromisura |
 | --- | --- | --- |
