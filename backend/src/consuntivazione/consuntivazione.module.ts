@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { TariffeController } from './tariffe/tariffe.controller.js';
+import { TariffeService } from './tariffe/tariffe.service.js';
+import { TariffaPersonalizzata, TariffaPersonalizzataSchema, TariffaStandard, TariffaStandardSchema } from './tariffe/tariffa.schema.js';
 import { TipologieController } from './tipologie/tipologie.controller.js';
 import { TipologieService } from './tipologie/tipologie.service.js';
 import { TipologiaCosto, TipologiaCostoSchema } from './tipologie/tipologia-costo.schema.js';
@@ -14,9 +17,15 @@ import { TipologiaCosto, TipologiaCostoSchema } from './tipologie/tipologia-cost
  * tariffe_personalizzate, consuntivi.
  */
 @Module({
-  imports: [MongooseModule.forFeature([{ name: TipologiaCosto.name, schema: TipologiaCostoSchema }])],
-  controllers: [TipologieController],
-  providers: [TipologieService],
-  exports: [TipologieService],
+  imports: [
+    MongooseModule.forFeature([
+      { name: TipologiaCosto.name, schema: TipologiaCostoSchema },
+      { name: TariffaStandard.name, schema: TariffaStandardSchema },
+      { name: TariffaPersonalizzata.name, schema: TariffaPersonalizzataSchema },
+    ]),
+  ],
+  controllers: [TipologieController, TariffeController],
+  providers: [TipologieService, TariffeService],
+  exports: [TipologieService, TariffeService],
 })
 export class ConsuntivazioneModule {}

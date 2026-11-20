@@ -54,7 +54,8 @@ backend/
 │   │   └── progetti/                   progetti (stato, approvatori, percentuale) e attività
 │   ├── consuntivazione/             sezione "Consuntivazione" (fase 2) → prefisso /api/consuntivazione
 │   │   ├── consuntivazione.module.ts  modulo della sezione
-│   │   └── tipologie/                 tipologie di costo (blocco C1): schema, servizio, controller
+│   │   ├── tipologie/                 tipologie di costo (blocco C1): schema, servizio, controller
+│   │   └── tariffe/                   tariffe (blocco C2): risoluzione.ts (regole pure), schemi, servizio, controller
 │   ├── permessi/                    permessi su profili e ruoli (fase 1, blocco B3)
 │   │   ├── regole.ts                   regole pure: permessi globali, progetto, attività, risorse
 │   │   ├── permessi.service.ts         PermessiService: le regole per i servizi, verifica() → 401/403
@@ -195,6 +196,22 @@ Sezione `src/consuntivazione/`, registrata con `RouterModule` su `/api/consuntiv
 | PUT | `/tipologie-costo/:id` | `gestireTipologieCosto` | Modifica parziale; il codice non cambia (409) |
 
 Regole (`TipologieService`): nessuna cancellazione, si disattiva; c'è sempre **una sola tipologia predefinita**, ed è attiva. Per cambiarla si manda `predefinita: true` sulla nuova: la precedente perde il segno nella stessa transazione. Togliere il segno alla predefinita o disattivarla dà 400 ("scegli prima un'altra predefinita"); l'indice unico parziale `una_sola_predefinita` lo garantisce anche nel database. `TipologieService.predefinita()` serve al consuntivo (blocco C3) per le righe senza tipologia.
+
+### Tariffe — blocco C2
+
+Tutte con il permesso `gestireTariffe` (controller), in lettura e scrittura. Importi in `centesimiOra` (intero, 0–1.000.000); date `AAAA-MM-GG`, `validoAl` null = senza fine.
+
+| Metodo | Percorso | Note |
+|---|---|---|
+| GET | `/tariffe-standard?ruolo=&tipologia=` | Ordinate per ruolo, tipologia e periodo più recente |
+| POST | `/tariffe-standard` | `ruoloId`, `tipologiaId` (devono esistere), `validoDal`, `validoAl`, `centesimiOra` |
+| PUT | `/tariffe-standard/:id` | Solo `validoDal`, `validoAl`, `centesimiOra`; ruolo e tipologia non cambiano (409) |
+| DELETE | `/tariffe-standard/:id` | Per gli errori di inserimento: 409 se la tariffa è già usata in un consuntivo (`righe.tariffaId`) |
+| GET / POST | `/risorse/:risorsaId/tariffe-personalizzate` | Come le standard, per la risorsa (404 se non esiste) |
+| PUT / DELETE | `/risorse/:risorsaId/tariffe-personalizzate/:id` | La tariffa deve appartenere a quella risorsa (altrimenti 404) |
+| GET | `/risorse/:risorsaId/tariffe-applicabili?data=` | Per ogni tipologia: `fonte` (`personalizzata`, `standard` o null), `tariffaId`, `centesimiOra`; più il ruolo della risorsa alla data. Senza data: oggi |
+
+Regole: periodi della stessa coppia (ruolo + tipologia, risorsa + tipologia) mai sovrapposti, estremi compresi (409, controllo in transazione); `validoAl` non prima di `validoDal` (400). Una correzione di importo si fa chiudendo il periodo e aprendone un altro. La risoluzione sta in `tariffe/risoluzione.ts` (funzioni pure, `risoluzione.spec.ts`): ruolo alla data dall'ultima voce di `storicoRuoli` con decorrenza non successiva; prima la personalizzata, poi la standard di quel ruolo, altrimenti nessuna ("da valorizzare"); costo = `round(minuti × centesimiOra / 60)`. `TariffeService.risolutore(risorsaId, da, a)` carica in tre query tutto ciò che serve a un intervallo di date e restituisce la funzione di risoluzione che userà il consuntivo (blocco C3).
 
 ## Moduli
 
@@ -348,7 +365,7 @@ I **test di integrazione** (`test/*.integrazione.spec.ts`) avviano l'applicazion
 | `comuni.integrazione.spec.ts` | Modulo Comuni: anagrafiche, risorse, progetti (stati, approvatori, stime in euro), attività, avanzamenti, validatori |
 | `pianificatore.integrazione.spec.ts` | Pianificatore: allocazioni su `progettoId`, permessi sulle caratteristiche (anche il TL che alloca sui suoi progetti), migrazione 006 |
 | `migrazione-dati.integrazione.spec.ts` | Migrazione B7 sui dati di esempio: esporta, errori per riga, prova, importazione, verifica, ripetibilità |
-| `consuntivazione.integrazione.spec.ts` | Consuntivazione (fase 2): migrazione 007 (tipologie iniziali con ORDINARIA predefinita, ripetibilità, validatori di tipologie, tariffe e consuntivi, indici unici); API delle tipologie di costo (permessi, codice, una sola predefinita sempre attiva) |
+| `consuntivazione.integrazione.spec.ts` | Consuntivazione (fase 2): migrazione 007 (tipologie iniziali con ORDINARIA predefinita, ripetibilità, validatori di tipologie, tariffe e consuntivi, indici unici); API delle tipologie di costo (permessi, codice, una sola predefinita sempre attiva); API delle tariffe (permessi, sovrapposizioni, modifica, risoluzione con cambio di ruolo a metà mese, cancellazione bloccata se usata) |
 | `profili.integrazione.spec.ts` | Criteri di completamento della fase 1: 401 su tutte le API elencate da Swagger, 15 operazioni per ognuno dei 7 profili, tracciamento dell'utente giusto |
 
 ## Docker

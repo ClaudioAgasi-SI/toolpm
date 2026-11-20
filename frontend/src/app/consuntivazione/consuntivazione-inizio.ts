@@ -68,7 +68,7 @@ export class ConsuntivazioneInizio {
     }
     if (this.sessione.puo('gestireTariffe')) {
       voci.push(
-        { titolo: 'Tariffe', descrizione: 'Tariffe standard per ruolo e personalizzate per risorsa, con validità.' },
+        { titolo: 'Tariffe', descrizione: 'Tariffe standard per ruolo e personalizzate per risorsa, con validità.', percorso: 'tariffe' },
         { titolo: 'Righe da valorizzare', descrizione: 'Ore senza tariffa applicabile e ricalcolo dei costi.' },
       );
     }

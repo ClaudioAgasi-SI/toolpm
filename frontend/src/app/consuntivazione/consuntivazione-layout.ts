@@ -12,6 +12,9 @@ import { SessioneService } from '../core/sessione.service';
       @if (sessione.puo('gestireTipologieCosto')) {
         <a routerLink="tipologie" routerLinkActive="attivo">Tipologie di costo</a>
       }
+      @if (sessione.puo('gestireTariffe')) {
+        <a routerLink="tariffe" routerLinkActive="attivo">Tariffe</a>
+      }
     </nav>
     <router-outlet />
   `,

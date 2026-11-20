@@ -24,6 +24,12 @@ export const CONSUNTIVAZIONE_ROUTES: Routes = [
         canActivate: [permessoRichiesto('gestireTipologieCosto')],
         loadComponent: () => import('./tipologie-costo').then((m) => m.TipologieCosto),
       },
+      {
+        path: 'tariffe',
+        title: 'Tariffe · ToolPM',
+        canActivate: [permessoRichiesto('gestireTariffe')],
+        loadComponent: () => import('./tariffe').then((m) => m.Tariffe),
+      },
     ],
   },
 ];

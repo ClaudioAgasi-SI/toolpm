@@ -43,9 +43,11 @@ frontend/src/
     ├── consuntivazione/               sezione "Consuntivazione" (fase 2)
     │   ├── consuntivazione.routes.ts, consuntivazione-layout.ts
     │   ├── consuntivazione-api.service.ts  chiamate a /api/consuntivazione
-    │   ├── modelli.ts                 tipi: tipologie di costo
+    │   ├── modelli.ts                 tipi: tipologie di costo, tariffe; euroOra(), tariffaValida()
     │   ├── consuntivazione-inizio.ts  pagina iniziale: funzioni del profilo, con link a quelle già disponibili
-    │   └── tipologie-costo.ts         tipologie di costo (controller)
+    │   ├── tipologie-costo.ts         tipologie di costo (controller)
+    │   ├── tariffe.ts                 tariffe standard (matrice ruolo × tipologia alla data) e personalizzate (con tariffe applicabili)
+    │   └── elenco-tariffe.ts          elenco dei periodi di un ruolo o di una risorsa, con inserimento e modifica in riga
     └── pianificatore/                 sezione "Pianificatore risorse allocate"
         ├── pianificatore.routes.ts    rotte della sezione (sotto /pianificatore)
         ├── pianificatore-layout.ts    sotto-menu della sezione + <router-outlet>
@@ -73,6 +75,7 @@ Tutte le rotte, tranne `/accesso`, sono dietro la guardia `accessoRichiesto`: se
 | `/comuni/clienti`, `/comuni/centri-costo`, `/comuni/ruoli` | `AnagraficaSemplice` | anagrafiche semplici (configurazione in `data.definizione`) |
 | `/comuni/utenti` | `Utenti` | gestione utenti, solo ruolo `admin` (`ruoloRichiesto('admin')`) |
 | `/consuntivazione` | `ConsuntivazioneLayout`, `ConsuntivazioneInizio` | sezione Consuntivazione (fase 2): pagina iniziale con le funzioni del profilo |
+| `/consuntivazione/tariffe` | `Tariffe`, `ElencoTariffe` | tariffe standard e personalizzate; `?vista=personalizzate&risorsa=<id>`; solo controller (`gestireTariffe`) |
 | `/consuntivazione/tipologie` | `TipologieCosto` | tipologie di costo con modifica in riga e scelta della predefinita; solo controller (`permessoRichiesto('gestireTipologieCosto')`) |
 | `/pianificatore` | `PianificatoreLayout` | sezione Pianificatore; reindirizza a `/pianificatore/pianificazione` |
 | `/pianificatore/pianificazione` | `Pianificazione` | griglia risorse × mesi |

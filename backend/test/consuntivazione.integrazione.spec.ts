@@ -2,6 +2,7 @@
  * Test di integrazione della sezione Consuntivazione (fase 2) contro un MongoDB vero (replica set).
  * C0: migrazione 007 (validatori, indici, tipologie iniziali con ORDINARIA predefinita).
  * C1: API delle tipologie di costo (permessi, codice, predefinita sempre una e attiva).
+ * C2: API delle tariffe (permessi, sovrapposizioni, risoluzione con cambio di ruolo, cancellazione).
  *
  * Si esegue solo se è impostata MONGODB_URI_TEST, es.:
  *   MONGODB_URI_TEST="mongodb://localhost:27017/?directConnection=true" npm test
@@ -26,6 +27,7 @@ describe.skipIf(!URI_BASE)('Consuntivazione con MongoDB vero', () => {
   let client: mongoose.mongo.MongoClient;
   let db: mongoose.mongo.Db;
   const cookie: Record<string, string> = {};
+  const risorsa: Record<string, string> = {};
 
   const PERSONE = [
     { nome: 'paola', abilitazione: 'PM', ruoli: ['risorsa'] },
@@ -38,6 +40,7 @@ describe.skipIf(!URI_BASE)('Consuntivazione con MongoDB vero', () => {
     get: (url: string) => api().get(url).set('Cookie', cookie[chi]),
     post: (url: string, body?: object) => api().post(url).set('Cookie', cookie[chi]).send(body ?? {}),
     put: (url: string, body?: object) => api().put(url).set('Cookie', cookie[chi]).send(body ?? {}),
+    delete: (url: string) => api().delete(url).set('Cookie', cookie[chi]),
   });
 
   beforeAll(async () => {
@@ -56,6 +59,7 @@ describe.skipIf(!URI_BASE)('Consuntivazione con MongoDB vero', () => {
     const hash = await cifraPassword('password-di-prova');
     for (const p of PERSONE) {
       const risorsaId = (await db.collection('risorse').insertOne({ cognome: p.nome, nome: p.nome, email: `${p.nome}@prova.it` })).insertedId;
+      risorsa[p.nome] = String(risorsaId);
       await db.collection('utenti').insertOne({
         email: `${p.nome}@prova.it`,
         passwordHash: hash,
@@ -246,6 +250,143 @@ describe.skipIf(!URI_BASE)('Consuntivazione con MongoDB vero', () => {
       expect(attive).not.toContain('PROVA');
       expect((await come('rita').get(URL_T)).body.map((t: { codice: string }) => t.codice)).toContain('STRAORD_NOTTURNA');
       expect((await come('carlo').put(`${URL_T}/${notturna._id}`, { attiva: true })).status).toBe(200);
+    });
+  });
+
+  describe('tariffe (C2)', () => {
+    const URL_S = '/api/consuntivazione/tariffe-standard';
+    const URL_P = (r: string) => `/api/consuntivazione/risorse/${r}/tariffe-personalizzate`;
+    const URL_A = (r: string) => `/api/consuntivazione/risorse/${r}/tariffe-applicabili`;
+    const tip: Record<string, string> = {};
+    let junior: string;
+    let senior: string;
+
+    beforeAll(async () => {
+      for (const t of (await come('rita').get('/api/consuntivazione/tipologie-costo')).body) tip[t.codice] = t._id;
+      const ruoli = db.collection('ruoli');
+      junior = String((await ruoli.insertOne({ codice: 'SVJ', descrizione: 'Sviluppatore junior', attivo: true })).insertedId);
+      senior = String((await ruoli.insertOne({ codice: 'SVS', descrizione: 'Sviluppatore senior', attivo: true })).insertedId);
+      // rita: junior fino al 15 gennaio 2027, senior dal 16 (cambio di ruolo a metà mese).
+      await db.collection('risorse').updateOne(
+        { _id: new mongoose.Types.ObjectId(risorsa.rita) },
+        {
+          $set: {
+            storicoRuoli: [
+              { ruoloId: new mongoose.Types.ObjectId(junior), dal: new Date('2025-01-01') },
+              { ruoloId: new mongoose.Types.ObjectId(senior), dal: new Date('2027-01-16') },
+            ],
+          },
+        },
+      );
+    });
+
+    it('solo il controller legge e scrive le tariffe', async () => {
+      expect((await api().get(URL_S)).status).toBe(401);
+      expect((await come('rita').get(URL_S)).status).toBe(403);
+      expect((await come('paola').get(URL_S)).status).toBe(403);
+      expect((await come('paola').get(URL_P(risorsa.rita))).status).toBe(403);
+      expect((await come('rita').get(URL_A(risorsa.rita))).status).toBe(403);
+      expect((await come('carlo').get(URL_S)).status).toBe(200);
+    });
+
+    it('tariffe standard: dati controllati, periodi senza sovrapposizioni', async () => {
+      const base = { ruoloId: senior, tipologiaId: tip.ORDINARIA, validoDal: '2027-01-01', centesimiOra: 3000 };
+      const r = await come('carlo').post(URL_S, base);
+      expect(r.status).toBe(201);
+      expect(r.body).toMatchObject({ centesimiOra: 3000, validoAl: null });
+      for (const [tipologia, euro] of [['STRAORDINARIA', 39], ['STRAORD_NOTTURNA', 45], ['STRAORD_FESTIVA', 51]] as const) {
+        expect((await come('carlo').post(URL_S, { ...base, tipologiaId: tip[tipologia], centesimiOra: euro * 100 })).status).toBe(201);
+      }
+      expect((await come('carlo').post(URL_S, { ...base, validoDal: '2027-06-01' })).status).toBe(409);
+      expect((await come('carlo').post(URL_S, { ...base, validoDal: '2026-01-01', validoAl: '2027-01-01' })).status).toBe(409);
+      expect((await come('carlo').post(URL_S, { ...base, validoDal: '2026-01-01', validoAl: '2026-12-31' })).status).toBe(201);
+      expect((await come('carlo').post(URL_S, { ...base, centesimiOra: 30.5, validoDal: '2020-01-01', validoAl: '2020-12-31' })).status).toBe(400);
+      expect((await come('carlo').post(URL_S, { ...base, centesimiOra: -1, validoDal: '2020-01-01', validoAl: '2020-12-31' })).status).toBe(400);
+      expect((await come('carlo').post(URL_S, { ...base, validoDal: '2020-02-01', validoAl: '2020-01-01' })).status).toBe(400);
+      expect((await come('carlo').post(URL_S, { ...base, ruoloId: risorsa.rita, validoDal: '2020-01-01' })).status).toBe(400);
+      expect((await come('carlo').post(URL_S, { ...base, tipologiaId: junior, validoDal: '2020-01-01' })).status).toBe(400);
+      expect((await come('carlo').post(URL_S, { ...base, validoDal: '01/01/2020' })).status).toBe(400);
+      // Junior: solo ordinaria.
+      expect((await come('carlo').post(URL_S, { ...base, ruoloId: junior, centesimiOra: 2500 })).status).toBe(201);
+      const senior2027 = (await come('carlo').get(`${URL_S}?ruolo=${senior}&tipologia=${tip.ORDINARIA}`)).body;
+      expect(senior2027.map((t: { validoDal: string }) => t.validoDal.slice(0, 10))).toEqual(['2027-01-01', '2026-01-01']);
+    });
+
+    it('modifica: chiudere un periodo e aprirne un altro; ruolo e tipologia non cambiano', async () => {
+      const [ordinaria] = (await come('carlo').get(`${URL_S}?ruolo=${senior}&tipologia=${tip.ORDINARIA}`)).body;
+      expect((await come('carlo').put(`${URL_S}/${ordinaria._id}`, { tipologiaId: tip.STRAORDINARIA })).status).toBe(409);
+      expect((await come('carlo').put(`${URL_S}/${ordinaria._id}`, { validoDal: '2026-12-01' })).status).toBe(409);
+      expect((await come('carlo').put(`${URL_S}/${ordinaria._id}`, { validoAl: '2027-06-30' })).status).toBe(200);
+      const nuova = await come('carlo').post(URL_S, { ruoloId: senior, tipologiaId: tip.ORDINARIA, validoDal: '2027-07-01', centesimiOra: 3100 });
+      expect(nuova.status).toBe(201);
+      // Riaprire senza fine il vecchio periodo ora si sovrappone.
+      expect((await come('carlo').put(`${URL_S}/${ordinaria._id}`, { validoAl: null })).status).toBe(409);
+    });
+
+    it('personalizzate: solo per risorse esistenti, stesse regole sui periodi', async () => {
+      expect((await come('carlo').get(URL_P(senior))).status).toBe(404);
+      const r = await come('carlo').post(URL_P(risorsa.rita), { tipologiaId: tip.ORDINARIA, validoDal: '2027-01-01', centesimiOra: 3200 });
+      expect(r.status).toBe(201);
+      expect(r.body.risorsaId).toBe(risorsa.rita);
+      expect((await come('carlo').post(URL_P(risorsa.rita), { tipologiaId: tip.ORDINARIA, validoDal: '2027-05-01', centesimiOra: 3300 })).status).toBe(409);
+      expect((await come('carlo').get(URL_P(risorsa.rita))).body).toHaveLength(1);
+      expect((await come('carlo').get(URL_P(risorsa.paola))).body).toHaveLength(0);
+      // Una tariffa di rita non si raggiunge passando da un'altra risorsa.
+      expect((await come('carlo').put(`${URL_P(risorsa.paola)}/${r.body._id}`, { centesimiOra: 1 })).status).toBe(404);
+    });
+
+    it('applicabili: personalizzata, standard del ruolo alla data, nessuna', async () => {
+      const prima = (await come('carlo').get(`${URL_A(risorsa.rita)}?data=2027-01-15`)).body;
+      expect(prima.ruolo).toMatchObject({ codice: 'SVJ' });
+      const p = (codice: string, corpoRisposta: { tariffe: { tipologiaCodice: string }[] }) => corpoRisposta.tariffe.find((t) => t.tipologiaCodice === codice);
+      expect(p('ORDINARIA', prima)).toMatchObject({ fonte: 'personalizzata', centesimiOra: 3200 });
+      expect(p('STRAORDINARIA', prima)).toMatchObject({ fonte: null, centesimiOra: null });
+
+      const dopo = (await come('carlo').get(`${URL_A(risorsa.rita)}?data=2027-01-16`)).body;
+      expect(dopo.ruolo).toMatchObject({ codice: 'SVS' });
+      expect(p('ORDINARIA', dopo)).toMatchObject({ fonte: 'personalizzata', centesimiOra: 3200 });
+      expect(p('STRAORDINARIA', dopo)).toMatchObject({ fonte: 'standard', centesimiOra: 3900 });
+      expect(p('STRAORD_FESTIVA', dopo)).toMatchObject({ fonte: 'standard', centesimiOra: 5100 });
+      expect(p('REPERIBILITA', dopo)).toMatchObject({ fonte: null });
+
+      // paola non ha ruolo: nessuna tariffa standard.
+      const paola = (await come('carlo').get(`${URL_A(risorsa.paola)}?data=2027-03-01`)).body;
+      expect(paola.ruolo).toBeNull();
+      expect(paola.tariffe.every((t: { fonte: string | null }) => t.fonte === null)).toBe(true);
+      expect((await come('carlo').get(`${URL_A(risorsa.rita)}?data=2027-13-01`)).status).toBe(400);
+      expect((await come('carlo').get(URL_A(risorsa.rita))).status).toBe(200);
+    });
+
+    it('cancellazione: solo se la tariffa non è usata nei consuntivi', async () => {
+      const [personalizzata] = (await come('carlo').get(URL_P(risorsa.rita))).body;
+      await db.collection('consuntivi').insertOne({
+        risorsaId: new mongoose.Types.ObjectId(risorsa.rita),
+        data: new Date('2027-02-01'),
+        mese: '202702',
+        versione: 0,
+        righe: [
+          {
+            _id: new mongoose.Types.ObjectId(),
+            progettoId: new mongoose.Types.ObjectId(),
+            attivitaId: null,
+            centroCostoId: new mongoose.Types.ObjectId(),
+            tipologiaId: new mongoose.Types.ObjectId(tip.ORDINARIA),
+            tipologiaCodice: 'ORDINARIA',
+            minuti: 60,
+            stato: 'bozza',
+            fonteTariffa: 'personalizzata',
+            tariffaId: new mongoose.Types.ObjectId(personalizzata._id),
+            tariffaCentesimiOra: 3200,
+            costoCentesimi: 3200,
+          },
+        ],
+      });
+      expect((await come('carlo').delete(`${URL_P(risorsa.rita)}/${personalizzata._id}`)).status).toBe(409);
+      const [junior2027] = (await come('carlo').get(`${URL_S}?ruolo=${junior}`)).body;
+      expect((await come('paola').delete(`${URL_S}/${junior2027._id}`)).status).toBe(403);
+      expect((await come('carlo').delete(`${URL_S}/${junior2027._id}`)).status).toBe(204);
+      expect((await come('carlo').get(`${URL_S}?ruolo=${junior}`)).body).toHaveLength(0);
+      await db.collection('consuntivi').deleteMany({ mese: '202702' });
     });
   });
 });
