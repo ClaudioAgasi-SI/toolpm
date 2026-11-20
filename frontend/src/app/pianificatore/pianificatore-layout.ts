@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { SessioneService } from '../core/sessione.service';
 
 /** Cornice della sezione Pianificatore: sotto-menu e area delle pagine. */
 @Component({
@@ -11,6 +12,9 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
       <a routerLink="pianificazione" routerLinkActive="attivo">Pianificazione</a>
       <a routerLink="risorse" routerLinkActive="attivo">Risorse</a>
       <a routerLink="anagrafiche" routerLinkActive="attivo">Anagrafiche</a>
+      @if (miaRisorsa(); as id) {
+        <a [routerLink]="['risorse', id]" routerLinkActive="attivo">Le mie competenze</a>
+      }
     </nav>
     <router-outlet />
   `,
@@ -30,4 +34,8 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
     .titolo-sezione { font-weight: 600; color: #1f2a44; margin-right: 0.75rem; }
   `,
 })
-export class PianificatoreLayout {}
+export class PianificatoreLayout {
+  private readonly sessione = inject(SessioneService);
+  /** Risorsa dell'utente collegato: ognuno cura le proprie skill e certificazioni. */
+  protected readonly miaRisorsa = computed(() => this.sessione.utente()?.risorsaId ?? null);
+}

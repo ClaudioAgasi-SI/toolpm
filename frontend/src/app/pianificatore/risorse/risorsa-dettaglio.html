@@ -21,7 +21,9 @@
     @if (!tutto()) {
       <p class="nota">
         @if (eTL()) {
-          Puoi allocare la risorsa sui tuoi progetti e modificare quelle allocazioni; le skill solo se la risorsa lavora su un tuo progetto.
+          Puoi allocare la risorsa sui tuoi progetti e modificare quelle allocazioni; le skill solo se la risorsa lavora su un tuo progetto{{ propria() ? ' (le tue sempre)' : '' }}.
+        } @else if (propria()) {
+          Queste sono le tue competenze: aggiorna skill, livelli e certificazioni scegliendo dal catalogo, poi salva. La pianificazione la curano PM, PMSenior e i TL dei progetti.
         } @else {
           Sola lettura: skill e pianificazione le modificano PM, PMSenior e i TL dei progetti della risorsa.
         }
@@ -65,6 +67,25 @@
           <button type="button" (click)="aggiungiSkill(t.campo)">+ Aggiungi</button>
         </fieldset>
       }
+      <fieldset class="certificazioni">
+        <legend>Certificazioni</legend>
+        <datalist id="catalogo-certificazioni">
+          @for (c of catalogoCertificazioni(); track c.certName) {
+            <option [value]="c.certName">{{ c.certType ?? '' }}</option>
+          }
+        </datalist>
+        @for (c of r.certificazioni; track $index; let i = $index) {
+          <div class="riga-certificazione">
+            <input [name]="'cert-nome-' + i" placeholder="certificazione" list="catalogo-certificazioni" [(ngModel)]="c.certName" />
+            <label>conseguita il <input type="date" [name]="'cert-dal-' + i" [(ngModel)]="c.conseguitaIl" /></label>
+            <label>scade il <input type="date" [name]="'cert-al-' + i" [(ngModel)]="c.scadenza" /></label>
+            <button type="button" class="rimuovi" (click)="rimuoviCertificazione(i)" aria-label="Rimuovi">×</button>
+          </div>
+        } @empty {
+          <p class="vuoto">Nessuna certificazione.</p>
+        }
+        <button type="button" (click)="aggiungiCertificazione()">+ Aggiungi</button>
+      </fieldset>
     </fieldset>
 
     <section>
@@ -109,7 +130,7 @@
           </tbody>
         </table>
       </div>
-      @if (puoSalvare()) {
+      @if (puoAllocare()) {
         <button type="button" (click)="aggiungiAllocazione()">+ Aggiungi allocazione</button>
       }
     </section>

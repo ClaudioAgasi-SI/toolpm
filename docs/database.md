@@ -15,7 +15,7 @@ rate ───┼─ ─ ─ ─ ─ ─ ─ ─► risorse
 certificazioni ┘            ├── skillTecnici[]     { skillName, rate }
                             ├── skillFunzionali[]  { skillName, rate }
                             ├── skillAmbiti[]      { skillName, rate }
-                            ├── certificazioni[]   (struttura libera)
+                            ├── certificazioni[]   { certName, conseguitaIl?, scadenza? }
                             └── planned[]          { mese, progettoId ─► progetti, ..., percentualeAllocazione }
 ```
 
@@ -59,7 +59,7 @@ Un documento per persona, con skill e pianificazione incorporate. Dal blocco B4 
 | `skillTecnici` | array di `SkillValutata` | no (default `[]`) | Skill di tipo `tecnico` |
 | `skillFunzionali` | array di `SkillValutata` | no (default `[]`) | Skill di tipo `funzionale` |
 | `skillAmbiti` | array di `SkillValutata` | no (default `[]`) | Skill di tipo `ambito` |
-| `certificazioni` | array di oggetti | no (default `[]`) | Struttura libera, oggi non usata |
+| `certificazioni` | array di oggetti | no (default `[]`) | `{ certName, conseguitaIl?, scadenza? }` (date `AAAA-MM-GG`); nome dal catalogo `certificazioni` quando la risorsa le inserisce da sé (dal 20/11/2026; prima struttura libera, mai usata) |
 | `planned` | array di `Allocazione` | no (default `[]`) | Pianificazione mese per mese |
 | `email` | string | per le nuove | Minuscolo, unica (indice unico parziale: le risorse senza email sono ammesse fino alla migrazione B7); è il nome utente per l'accesso |
 | `cellulare` | string | no | |

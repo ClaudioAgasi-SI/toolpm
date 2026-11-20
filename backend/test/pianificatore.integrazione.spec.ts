@@ -146,12 +146,14 @@ describe.skipIf(!URI_BASE)('Pianificatore adattato con MongoDB vero', () => {
     expect(String(errore.body.message)).toMatch(/progetto "NON-ESISTE" inesistente/);
   });
 
-  it('caratteristiche: TL solo sulle risorse dei suoi progetti; cognome e nome solo PM e PMSenior', async () => {
+  it('caratteristiche: TL solo sulle risorse dei suoi progetti, ognuno le proprie; cognome e nome solo PM e PMSenior', async () => {
     const skill = (r: Record<string, unknown>) => (r.skillTecnici = [{ skillName: 'Angular', rate: 'buono' }]);
     expect((await come('tullio').put(`/api/pianificatore/risorse/${String(id.rita)}`, await risorsaDaModificare(String(id.rita), skill))).status).toBe(200);
     // Sara non è allocata su progetti di Tullio.
     expect((await come('tullio').put(`/api/pianificatore/risorse/${String(id.sara)}`, await risorsaDaModificare(String(id.sara), skill))).status).toBe(403);
-    expect((await come('rita').put(`/api/pianificatore/risorse/${String(id.rita)}`, await risorsaDaModificare(String(id.rita), skill))).status).toBe(403);
+    // Le proprie skill sì (decisione del 20/11/2026), quelle degli altri no.
+    expect((await come('rita').put(`/api/pianificatore/risorse/${String(id.rita)}`, await risorsaDaModificare(String(id.rita), skill))).status).toBe(200);
+    expect((await come('rita').put(`/api/pianificatore/risorse/${String(id.sara)}`, await risorsaDaModificare(String(id.sara), skill))).status).toBe(403);
     expect((await come('sara').put(`/api/pianificatore/risorse/${String(id.mario)}`, await risorsaDaModificare(String(id.mario), skill))).status).toBe(200);
     const rinomina = await risorsaDaModificare(String(id.rita), (r) => (r.cognome = 'Rossi'));
     expect((await come('tullio').put(`/api/pianificatore/risorse/${String(id.rita)}`, rinomina)).body.message).toMatch(/cambiare cognome e nome/);

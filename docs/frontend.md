@@ -81,7 +81,7 @@ Tutte le rotte, tranne `/accesso`, sono dietro la guardia `accessoRichiesto`: se
 | `/pianificatore/pianificazione` | `Pianificazione` | griglia risorse × mesi |
 | `/pianificatore/risorse` | `RisorseElenco` | elenco con ricerca |
 | `/pianificatore/risorse/nuova` | — | reindirizza a `/comuni/risorse/nuova` (le risorse nuove si creano nell'anagrafica, con l'email) |
-| `/pianificatore/risorse/:id` | `RisorsaDettaglio` | skill e allocazioni |
+| `/pianificatore/risorse/:id` | `RisorsaDettaglio` | skill, certificazioni e allocazioni; la propria scheda si apre da "Le mie competenze" nel sottomenu del Pianificatore (skill e certificazioni modificabili da tutti sulla propria risorsa, allocazioni no) |
 | `/pianificatore/anagrafiche` | `Anagrafiche` | skill, certificazioni, scale di valutazione |
 | `/pianificazione`, `/risorse[/:id]`, `/anagrafiche` | — | vecchi indirizzi: reindirizzano sotto `/pianificatore` |
 | `**` | — | reindirizza alla home |

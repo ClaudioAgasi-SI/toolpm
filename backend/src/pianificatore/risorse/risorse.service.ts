@@ -85,16 +85,47 @@ export class RisorseService {
     if ($set.cognome !== undefined || $set.nome !== undefined) {
       this.permessi.verifica(utente, this.permessi.puoGestireRisorse(utente), 'cambiare cognome e nome');
     }
+    $set.certificazioni = validaCertificazioni($set.certificazioni);
+    const propria = utente.risorsaId === String(attuale._id);
     const negato = this.permessi.motivoNegatoModificaRisorsa(
       utente,
       await this.allocazioni.progettiDelSoggetto(utente.risorsaId),
       attuale,
       $set as CaratteristicheRisorsa,
       await this.allocazioni.progettiConsuntivati(attuale._id),
+      propria,
     );
     this.permessi.verifica(utente, negato === null, negato ?? '');
+    // Chi cura le proprie competenze senza essere PM o PMSenior sceglie le voci nuove dal catalogo.
+    if (propria && !this.permessi.permessoGlobale(utente, 'gestireCaratteristicheTutteLeRisorse')) {
+      await this.controllaCatalogo(attuale, $set as CaratteristicheRisorsa);
+    }
     await this.model.updateOne({ _id: attuale._id }, { $set }, { runValidators: true }).exec();
     return this.findOne(id);
+  }
+
+  /** Le skill e le certificazioni aggiunte devono esistere nel catalogo (quelle già presenti restano). */
+  private async controllaCatalogo(prima: CaratteristicheRisorsa, dopo: CaratteristicheRisorsa) {
+    const db = this.model.db;
+    const nome = (x: unknown, campo: 'skillName' | 'certName') => {
+      const v = (x as Record<string, unknown> | null)?.[campo];
+      return typeof v === 'string' ? v.trim() : '';
+    };
+    for (const [campo, tipo] of [['skillTecnici', 'tecnico'], ['skillAmbiti', 'ambito'], ['skillFunzionali', 'funzionale']] as const) {
+      const gia = new Set((prima[campo] ?? []).map((x) => nome(x, 'skillName')));
+      const nuove = (dopo[campo] ?? []).map((x) => nome(x, 'skillName')).filter((n) => n && !gia.has(n));
+      if (nuove.length === 0) continue;
+      const note = new Set((await db.collection('skills').find({ skillType: tipo, skillName: { $in: nuove } }).toArray()).map((x) => x.skillName as string));
+      const fuori = nuove.filter((n) => !note.has(n));
+      if (fuori.length) throw new BadRequestException(`${campo}: ${fuori.join(', ')} non è nel catalogo delle skill (lo aggiornano PM e PMSenior)`);
+    }
+    const giaCert = new Set((prima.certificazioni ?? []).map((x) => nome(x, 'certName')));
+    const nuoveCert = (dopo.certificazioni ?? []).map((x) => nome(x, 'certName')).filter((n) => n && !giaCert.has(n));
+    if (nuoveCert.length) {
+      const note = new Set((await db.collection('certificazioni').find({ certName: { $in: nuoveCert } }).toArray()).map((x) => x.certName as string));
+      const fuori = nuoveCert.filter((n) => !note.has(n));
+      if (fuori.length) throw new BadRequestException(`certificazioni: ${fuori.join(', ')} non è nel catalogo delle certificazioni (lo aggiornano PM e PMSenior)`);
+    }
   }
 
   /**
@@ -117,4 +148,28 @@ export class RisorseService {
     if (!doc) throw new NotFoundException(`Risorsa ${id} non trovata`);
     return { deleted: true };
   }
+}
+
+/**
+ * Certificazioni della risorsa: { certName, conseguitaIl?, scadenza? } (date AAAA-MM-GG).
+ * Il campo nasce a struttura libera ed è sempre stato vuoto: da qui in avanti ha questa forma.
+ */
+function validaCertificazioni(valore: unknown): Record<string, unknown>[] {
+  if (!Array.isArray(valore)) throw new BadRequestException('certificazioni: elenco obbligatorio');
+  const data = /^\d{4}-\d{2}-\d{2}$/;
+  return valore.map((c, i) => {
+    const v = (c ?? {}) as Record<string, unknown>;
+    const nome = typeof v.certName === 'string' ? v.certName.trim() : '';
+    if (!nome) throw new BadRequestException(`certificazioni ${i + 1}: nome obbligatorio`);
+    const pulita: Record<string, unknown> = { certName: nome };
+    for (const campo of ['conseguitaIl', 'scadenza'] as const) {
+      if (v[campo] === undefined || v[campo] === null || v[campo] === '') continue;
+      if (typeof v[campo] !== 'string' || !data.test(v[campo] as string)) throw new BadRequestException(`certificazioni ${i + 1}: ${campo} nel formato AAAA-MM-GG`);
+      pulita[campo] = v[campo];
+    }
+    if (pulita.conseguitaIl && pulita.scadenza && (pulita.scadenza as string) < (pulita.conseguitaIl as string)) {
+      throw new BadRequestException(`certificazioni ${i + 1}: la scadenza precede il conseguimento`);
+    }
+    return pulita;
+  });
 }

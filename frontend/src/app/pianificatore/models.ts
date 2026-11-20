@@ -33,7 +33,7 @@ export interface Risorsa {
   skillTecnici: SkillValutata[];
   skillAmbiti: SkillValutata[];
   skillFunzionali: SkillValutata[];
-  certificazioni: Record<string, unknown>[];
+  certificazioni: CertificazioneRisorsa[];
   planned: Allocazione[];
   /** In lettura: progetti su cui la risorsa ha ore consuntivate (permessi del TL sulle skill). */
   progettiConsuntivati?: string[];
@@ -43,6 +43,13 @@ export interface Skill {
   _id?: string;
   skillName: string;
   skillType: string;
+}
+
+/** Certificazione posseduta da una risorsa: nome dal catalogo, date AAAA-MM-GG facoltative. */
+export interface CertificazioneRisorsa {
+  certName: string;
+  conseguitaIl?: string;
+  scadenza?: string;
 }
 
 export interface Certificazione {

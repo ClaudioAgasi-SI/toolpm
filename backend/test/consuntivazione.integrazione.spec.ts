@@ -752,6 +752,35 @@ describe.skipIf(!URI_BASE)('Consuntivazione con MongoDB vero', () => {
         expect((await come('paola').put(`/api/comuni/progetti/${pe}`, { centroCostoId: nuovo })).status).toBe(200);
       });
 
+      it('ognuno cura le proprie skill e certificazioni, dal catalogo; non le proprie allocazioni', async () => {
+        await db.collection('skills').insertMany([{ skillName: 'NestJS', skillType: 'tecnico' }, { skillName: 'Banche', skillType: 'ambito' }]);
+        await db.collection('certificazioni').insertOne({ certName: 'PMP', certType: 'project management' });
+        const url = (r: string) => `/api/pianificatore/risorse/${r}`;
+        const io = (await come('carlo').get(url(risorsa.carlo))).body;
+        const ok = await come('carlo').put(url(risorsa.carlo), {
+          ...io,
+          skillTecnici: [{ skillName: 'NestJS', rate: 'buono' }],
+          skillAmbiti: [{ skillName: 'Banche' }],
+          certificazioni: [{ certName: 'PMP', conseguitaIl: '2024-05-10', scadenza: '2027-05-10' }],
+        });
+        expect(ok.status).toBe(200);
+        expect(ok.body.certificazioni).toEqual([{ certName: 'PMP', conseguitaIl: '2024-05-10', scadenza: '2027-05-10' }]);
+        // Livello cambiato e cancellazione: sì.
+        expect((await come('carlo').put(url(risorsa.carlo), { ...ok.body, skillTecnici: [{ skillName: 'NestJS', rate: 'ottimo' }], skillAmbiti: [] })).status).toBe(200);
+        // Voci fuori catalogo: no (per PM e PMSenior il catalogo resta un suggerimento).
+        const r1 = await come('carlo').put(url(risorsa.carlo), { ...ok.body, skillTecnici: [{ skillName: 'Cobol' }] });
+        expect(r1.status).toBe(400);
+        expect(r1.body.message).toMatch(/Cobol non è nel catalogo/);
+        expect((await come('carlo').put(url(risorsa.carlo), { ...ok.body, certificazioni: [{ certName: 'ITIL' }] })).status).toBe(400);
+        expect((await come('carlo').put(url(risorsa.carlo), { ...ok.body, certificazioni: [{ certName: 'PMP', scadenza: '10/05/2027' }] })).status).toBe(400);
+        // Le proprie allocazioni no; le competenze degli altri no.
+        const r2 = await come('carlo').put(url(risorsa.carlo), { ...ok.body, planned: [{ mese: '202701', progettoId: prog.A, percentualeAllocazione: 50 }] });
+        expect(r2.status).toBe(403);
+        expect(r2.body.message).toMatch(/tue allocazioni/);
+        const altra = (await come('carlo').get(url(risorsa.paola))).body;
+        expect((await come('carlo').put(url(risorsa.paola), { ...altra, skillTecnici: [{ skillName: 'NestJS' }] })).status).toBe(403);
+      });
+
       it('il TL modifica le skill delle risorse con ore sui suoi progetti, anche se non allocate', async () => {
         const url = (r: string) => `/api/pianificatore/risorse/${r}`;
         const r = (await come('tito').get(url(risorsa.rita))).body;

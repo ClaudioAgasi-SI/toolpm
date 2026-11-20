@@ -154,6 +154,20 @@ describe('modifica delle caratteristiche dal Pianificatore (decisioni del 19/11/
     expect(motivoNegatoModificaRisorsa(TL, miei, prima, { ...prima, planned: [] }, ['p1'])).toMatch(/non sei approvatore/);
   });
 
+  it('chiunque cura le proprie skill e certificazioni, non le proprie allocazioni (20/11/2026)', () => {
+    const nuove = { ...prima, skillTecnici: [{ skillName: 'Go' }], certificazioni: [{ certName: 'PMP' }] };
+    for (const s of [RISORSA, CONTROLLER]) {
+      expect(motivoNegatoModificaRisorsa(s, [], prima, nuove, [], true)).toBeNull();
+      expect(motivoNegatoModificaRisorsa(s, [], prima, nuove)).not.toBeNull();
+      expect(motivoNegatoModificaRisorsa(s, [], prima, { ...nuove, planned: [] }, [], true)).toMatch(/tue allocazioni/);
+      // Stesse allocazioni in un altro ordine: nessuna modifica.
+      expect(motivoNegatoModificaRisorsa(s, [], prima, { ...nuove, planned: [...prima.planned].reverse() }, [], true)).toBeNull();
+    }
+    // Il TL su sé stesso: skill sì anche senza progetti in comune; allocazioni altrui no.
+    expect(motivoNegatoModificaRisorsa(TL, miei, prima, nuove, [], true)).toBeNull();
+    expect(motivoNegatoModificaRisorsa(TL, miei, prima, { ...nuove, planned: [] }, [], true)).toMatch(/non sei approvatore/);
+  });
+
   it('PM e PMSenior tutto; risorse semplici e controller niente', () => {
     const tutto = { skillTecnici: [], planned: [] };
     expect(motivoNegatoModificaRisorsa(PM_ESTERNO, [], prima, tutto)).toBeNull();

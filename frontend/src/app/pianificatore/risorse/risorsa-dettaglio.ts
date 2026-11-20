@@ -8,7 +8,7 @@ import { etichettaStato, type Progetto, type VoceAnagrafica } from '../../comuni
 import { gestisceProgetto } from '../../comuni/permessi';
 import { ApiService, messaggioErrore } from '../api.service';
 import { aInputMese, daInputMese, meseCorrente } from '../mesi';
-import { Allocazione, Rate, Risorsa, Skill, TIPI_SKILL, TipoSkill } from '../models';
+import { Allocazione, Certificazione, Rate, Risorsa, Skill, TIPI_SKILL, TipoSkill } from '../models';
 
 function risorsaVuota(): Risorsa {
   return {
@@ -29,6 +29,7 @@ function risorsaVuota(): Risorsa {
  *
  * Permessi (il backend ricontrolla): PM e PMSenior tutto; il TL alloca qualsiasi risorsa sui propri progetti
  * e modifica solo quelle allocazioni, e le skill solo delle risorse che lavorano sui suoi progetti.
+ * Ognuno cura le proprie skill e certificazioni, scegliendo dal catalogo, ma non le proprie allocazioni.
  */
 @Component({
   selector: 'app-risorsa-dettaglio',
@@ -46,6 +47,7 @@ export class RisorsaDettaglio {
 
   protected readonly risorsa = signal<Risorsa | null>(null);
   protected readonly skills = signal<Skill[]>([]);
+  protected readonly catalogoCertificazioni = signal<Certificazione[]>([]);
   protected readonly scale = signal<Record<string, string[]>>({});
   protected readonly progetti = signal<Progetto[]>([]);
   private readonly clienti = signal<Map<string, VoceAnagrafica>>(new Map());
@@ -67,7 +69,8 @@ export class RisorsaDettaglio {
   );
   protected readonly puoSkill = computed(() => {
     this.versione();
-    if (this.tutto()) return true;
+    // PM e PMSenior su tutte; ognuno sulle proprie (decisione del 20/11/2026).
+    if (this.tutto() || this.propria()) return true;
     // Il TL cura le skill delle risorse che lavorano sui suoi progetti: allocate o con ore consuntivate.
     const r = this.risorsa();
     return (
@@ -76,19 +79,25 @@ export class RisorsaDettaglio {
         (r?.progettiConsuntivati ?? []).some((id) => this.mieiProgetti().has(id)))
     );
   });
-  protected readonly puoSalvare = computed(() => this.tutto() || this.eTL());
+  /** La scheda è quella dell'utente collegato. */
+  protected readonly propria = computed(() => !!this.sessione.utente()?.risorsaId && this.sessione.utente()?.risorsaId === this.id());
+  protected readonly puoSalvare = computed(() => this.tutto() || this.eTL() || this.propria());
+  /** Le allocazioni le aggiungono PM, PMSenior e TL (non chi cura solo le proprie competenze). */
+  protected readonly puoAllocare = computed(() => this.tutto() || this.eTL());
 
   ngOnInit() {
     forkJoin({
       risorsa: this.api.risorsa(this.id()),
       skills: this.api.skills(),
+      certificazioni: this.api.certificazioni(),
       rate: this.api.rate(),
       progetti: this.comuni.progetti(),
       clienti: this.comuni.voci('clienti'),
     }).subscribe({
-      next: ({ risorsa, skills, rate, progetti, clienti }) => {
+      next: ({ risorsa, skills, certificazioni, rate, progetti, clienti }) => {
         this.risorsa.set({ ...risorsaVuota(), ...risorsa });
         this.skills.set(skills);
+        this.catalogoCertificazioni.set(certificazioni);
         this.scale.set(Object.fromEntries(rate.map((r: Rate) => [r.rateType, r.rate])));
         this.progetti.set(progetti);
         this.clienti.set(new Map(clienti.map((c) => [c._id, c])));
@@ -138,6 +147,14 @@ export class RisorsaDettaglio {
     this.risorsa()![campo].splice(i, 1);
   }
 
+  protected aggiungiCertificazione() {
+    this.risorsa()!.certificazioni.push({ certName: '' });
+  }
+
+  protected rimuoviCertificazione(i: number) {
+    this.risorsa()!.certificazioni.splice(i, 1);
+  }
+
   protected aggiungiAllocazione() {
     const planned = this.risorsa()!.planned as (Allocazione & { nuova?: boolean })[];
     const ultima = [...planned].reverse().find((a) => this.rigaModificabile(a));
@@ -167,6 +184,9 @@ export class RisorsaDettaglio {
     this.messaggio.set('');
     // Righe di skill vuote scartate; allocazioni ordinate per mese, senza i campi ricavati dal progetto.
     for (const t of TIPI_SKILL) r[t.campo] = r[t.campo].filter((s) => s.skillName.trim());
+    r.certificazioni = r.certificazioni
+      .filter((c) => c.certName.trim())
+      .map((c) => ({ certName: c.certName.trim(), ...(c.conseguitaIl ? { conseguitaIl: c.conseguitaIl } : {}), ...(c.scadenza ? { scadenza: c.scadenza } : {}) }));
     r.planned.sort((x, y) => x.mese.localeCompare(y.mese));
     const planned = r.planned.map((a) => {
       const { progetto: _p, cliente: _c, progettoTitolo: _t, clienteRagioneSociale: _r, nuova: _n, ...resto } = a as Allocazione & { nuova?: boolean };

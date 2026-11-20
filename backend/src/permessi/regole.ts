@@ -212,6 +212,8 @@ function canonico(v: unknown): string {
  *
  * @param progettiDelSoggetto id dei progetti di cui il soggetto è approvatore (TL o PM)
  * @param progettiConsuntivati id dei progetti su cui la risorsa ha ore consuntivate (fase 2, blocco C4)
+ * @param propria la risorsa modificata è quella del soggetto: chiunque cura le proprie skill e certificazioni
+ *   (decisione del 20/11/2026), ma non le proprie allocazioni se non ne ha già il diritto
  */
 export function motivoNegatoModificaRisorsa(
   s: Soggetto,
@@ -219,9 +221,15 @@ export function motivoNegatoModificaRisorsa(
   prima: CaratteristicheRisorsa,
   dopo: CaratteristicheRisorsa,
   progettiConsuntivati: Iterable<string> = [],
+  propria = false,
 ): string | null {
   if (ePMoPMSenior(s)) return null;
-  if (s.abilitazione !== 'TL') return 'modificare le caratteristiche di questa risorsa';
+  if (s.abilitazione !== 'TL') {
+    if (!propria) return 'modificare le caratteristiche di questa risorsa';
+    const tutte = (c: CaratteristicheRisorsa) => canonico((c.planned ?? []).map(canonico).sort());
+    if (tutte(prima) !== tutte(dopo)) return 'modificare le tue allocazioni (le gestiscono PM, PMSenior e i TL dei progetti)';
+    return null;
+  }
   const miei = new Set(progettiDelSoggetto);
   const mia = (a: { progettoId?: unknown }) => a.progettoId != null && miei.has(comeTesto(a.progettoId)!);
   const altrui = (c: CaratteristicheRisorsa) => (c.planned ?? []).filter((a) => !mia(a)).map(canonico).sort();
@@ -230,7 +238,7 @@ export function motivoNegatoModificaRisorsa(
   }
   const altre = (c: CaratteristicheRisorsa) => canonico([c.skillTecnici, c.skillAmbiti, c.skillFunzionali, c.certificazioni].map((v) => v ?? []));
   const lavoraConMe =
-    (prima.planned ?? []).some(mia) || (dopo.planned ?? []).some(mia) || [...progettiConsuntivati].some((id) => miei.has(id));
+    propria || (prima.planned ?? []).some(mia) || (dopo.planned ?? []).some(mia) || [...progettiConsuntivati].some((id) => miei.has(id));
   if (altre(prima) !== altre(dopo) && !lavoraConMe) return 'modificare skill e certificazioni di una risorsa che non lavora sui tuoi progetti';
   return null;
 }
