@@ -17,6 +17,7 @@ import { SessioneService } from '../core/sessione.service';
       }
       @if (sessione.puo('gestireTariffe')) {
         <a routerLink="tariffe" routerLinkActive="attivo">Tariffe</a>
+        <a routerLink="da-valorizzare" routerLinkActive="attivo">Da valorizzare</a>
       }
     </nav>
     <router-outlet />

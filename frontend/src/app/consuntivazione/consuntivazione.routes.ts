@@ -25,6 +25,12 @@ export const CONSUNTIVAZIONE_ROUTES: Routes = [
         loadComponent: () => import('./mio-consuntivo').then((m) => m.MioConsuntivo),
       },
       {
+        path: 'da-valorizzare',
+        title: 'Righe da valorizzare · ToolPM',
+        canActivate: [permessoRichiesto('gestireTariffe')],
+        loadComponent: () => import('./da-valorizzare').then((m) => m.DaValorizzare),
+      },
+      {
         path: 'tipologie',
         title: 'Tipologie di costo · ToolPM',
         canActivate: [permessoRichiesto('gestireTipologieCosto')],

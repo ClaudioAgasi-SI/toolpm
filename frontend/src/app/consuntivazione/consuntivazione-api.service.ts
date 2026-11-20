@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import type { DatiTariffa, EsitoSalvataggio, Giornata, Proposta, RigaDaSalvare, TariffeApplicabili, Tariffa, TipologiaCosto, VoceProgetto } from './modelli';
+import type { AnteprimaRicalcolo, DatiTariffa, RigaDaValorizzare, TotaliRicalcolo, EsitoSalvataggio, Giornata, Proposta, RigaDaSalvare, TariffeApplicabili, Tariffa, TipologiaCosto, VoceProgetto } from './modelli';
 
 /** Accesso alle API della sezione Consuntivazione (/api/consuntivazione). */
 @Injectable({ providedIn: 'root' })
@@ -62,5 +62,18 @@ export class ConsuntivazioneApiService {
   }
   salvaGiornate(giornate: { data: string; versione: number; righe: RigaDaSalvare[] }[]) {
     return this.http.put<EsitoSalvataggio>(`${this.base}/consuntivi`, { giornate });
+  }
+
+  // Righe da valorizzare e ricalcolo (blocco C6): solo controller
+  daValorizzare(da: string, a: string) {
+    return this.http.get<{ da: string; a: string; righe: RigaDaValorizzare[] }>(`${this.base}/da-valorizzare`, {
+      params: new HttpParams().set('da', da).set('a', a),
+    });
+  }
+  anteprimaRicalcolo(da: string, a: string, risorsaId: string | null) {
+    return this.http.post<AnteprimaRicalcolo>(`${this.base}/ricalcolo`, { da, a, risorsaId, conferma: false });
+  }
+  applicaRicalcolo(da: string, a: string, risorsaId: string | null) {
+    return this.http.post<{ applicato: true; totali: TotaliRicalcolo }>(`${this.base}/ricalcolo`, { da, a, risorsaId, conferma: true });
   }
 }

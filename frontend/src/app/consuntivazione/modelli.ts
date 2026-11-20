@@ -129,3 +129,50 @@ export interface EsitoSalvataggio {
   giornate: Giornata[];
   avvisi: { data: string; messaggio: string }[];
 }
+
+// ---- Righe da valorizzare e ricalcolo (blocco C6) ----
+
+export type MotivoDaValorizzare = 'ruoloMancante' | 'tariffaMancante' | 'tariffaDisponibile';
+
+/** Riga di consuntivo come la vede il controller in queste pagine. */
+export interface RigaControllo {
+  risorsaId: string;
+  risorsa: string;
+  data: string;
+  rigaId: string;
+  progetto: string;
+  attivita: string | null;
+  tipologiaId: string;
+  tipologia: string;
+  minuti: number;
+  stato: string;
+}
+
+export interface RigaDaValorizzare extends RigaControllo {
+  ruolo: { _id: string; codice: string; descrizione: string } | null;
+  motivo: MotivoDaValorizzare;
+}
+
+export interface ValoriCosto {
+  fonte: FonteTariffa | null;
+  tariffaId: string | null;
+  centesimiOra: number | null;
+  costo: number | null;
+}
+
+export interface TotaliRicalcolo {
+  righe: number;
+  giornate: number;
+  primaCentesimi: number;
+  dopoCentesimi: number;
+  daValorizzarePrima: number;
+  daValorizzareDopo: number;
+}
+
+export interface AnteprimaRicalcolo {
+  da: string;
+  a: string;
+  totali: TotaliRicalcolo;
+  righe: (RigaControllo & { prima: ValoriCosto; dopo: ValoriCosto })[];
+  troncato: boolean;
+}

@@ -120,6 +120,7 @@ Documentazione interattiva Swagger, con la possibilità di provare le chiamate: 
 | GET | `/api/consuntivazione/risorse/:id/tariffe-applicabili?data=` | Tariffa applicabile alla data per ogni tipologia, con la provenienza (solo controller) |
 | GET | `/api/consuntivazione/consuntivi?da=&a=` | Giornate di consuntivo del periodo (le proprie; il controller anche di altri con `&risorsa=`, con i costi) |
 | PUT | `/api/consuntivazione/consuntivi/:data`, `/api/consuntivazione/consuntivi` | Salva una giornata o più giornate insieme (tutte o nessuna), con la versione letta |
+| GET / POST | `/api/consuntivazione/da-valorizzare?da=&a=`, `/api/consuntivazione/ricalcolo` | Righe senza costo con il motivo; ricalcolo dei costi con anteprima e conferma (solo controller) |
 | GET | `/api/consuntivazione/consuntivi/voci?da=&a=`, `/consuntivi/proposte?settimana=` | Progetti su cui si lavora e loro attività consuntivabili; righe proposte dal Pianificatore e dalla settimana precedente |
 | GET / PUT | `/api/parametri`, `/api/parametri/:chiave` | Parametri di sistema (modifica: controller) |
 | GET / PUT | `/api/pianificatore/risorse`, `/api/pianificatore/risorse/:id` | Skill, certificazioni e allocazioni delle risorse (POST e DELETE mantenuti per un rilascio) |

@@ -56,7 +56,8 @@ backend/
 │   │   ├── consuntivazione.module.ts  modulo della sezione
 │   │   ├── tipologie/                 tipologie di costo (blocco C1): schema, servizio, controller
 │   │   ├── tariffe/                   tariffe (blocco C2): risoluzione.ts (regole pure), schemi, servizio, controller
-│   │   └── consuntivi/                consuntivi giornalieri (blocco C3): regole-giornata.ts (regole pure), schema, servizio, controller
+│   │   ├── consuntivi/                consuntivi giornalieri (blocco C3): regole-giornata.ts (regole pure), schema, servizio, controller
+│   │   └── valorizzazione/            righe da valorizzare e ricalcolo dei costi (blocco C6)
 │   ├── permessi/                    permessi su profili e ruoli (fase 1, blocco B3)
 │   │   ├── regole.ts                   regole pure: permessi globali, progetto, attività, risorse
 │   │   ├── permessi.service.ts         PermessiService: le regole per i servizi, verifica() → 401/403
@@ -238,6 +239,15 @@ Ogni riga in ingresso: `_id` (per le righe esistenti), `attivitaId` oppure `prog
 
 La copia del giorno o della settimana precedente si fa nella pagina (blocco C5): le righe copiate si vedono e si correggono prima di salvarle.
 
+### Righe da valorizzare e ricalcolo (blocco C6)
+
+Permesso `gestireTariffe` (controller). Periodo al massimo di un anno.
+
+| Metodo | Percorso | Note |
+|---|---|---|
+| GET | `/da-valorizzare?da=&a=` | Righe senza costo (escluse quelle chiuse), con risorsa, data, voce, tipologia, minuti, stato, ruolo alla data e `motivo`: `ruoloMancante`, `tariffaMancante` oppure `tariffaDisponibile` (la tariffa ora c'è: basta ricalcolare) |
+| POST | `/ricalcolo` | `{ da, a, risorsaId?, conferma }`. Risolve di nuovo la tariffa di ogni riga del periodo (escluse le chiuse) e tiene solo quelle il cui valore cambia (fonte, tariffa, importo orario o costo). Con `conferma: false` restituisce l'anteprima (totali e fino a 1000 righe con prima e dopo); con `conferma: true` aggiorna le giornate in una transazione, ciascuna condizionata sulla versione (409 se nel frattempo è cambiata: rifare l'anteprima), con `modificatoIl`/`modificatoDa` del controller sulle righe toccate |
+
 ## Moduli
 
 ### RisorseModule — `/api/pianificatore/risorse`
@@ -390,7 +400,7 @@ I **test di integrazione** (`test/*.integrazione.spec.ts`) avviano l'applicazion
 | `comuni.integrazione.spec.ts` | Modulo Comuni: anagrafiche, risorse, progetti (stati, approvatori, stime in euro), attività, avanzamenti, validatori |
 | `pianificatore.integrazione.spec.ts` | Pianificatore: allocazioni su `progettoId`, permessi sulle caratteristiche (anche il TL che alloca sui suoi progetti), migrazione 006 |
 | `migrazione-dati.integrazione.spec.ts` | Migrazione B7 sui dati di esempio: esporta, errori per riga, prova, importazione, verifica, ripetibilità |
-| `consuntivazione.integrazione.spec.ts` | Consuntivazione (fase 2): migrazione 007 (tipologie iniziali con ORDINARIA predefinita, ripetibilità, validatori di tipologie, tariffe e consuntivi, indici unici); API delle tipologie di costo (permessi, codice, una sola predefinita sempre attiva); API delle tariffe (permessi, sovrapposizioni, modifica, risoluzione con cambio di ruolo a metà mese, cancellazione bloccata se usata); consuntivi (progetti su cui si lavora, costo fotografato e riservatezza, versione e 409, ricalcolo solo se cambiano tipologia o minuti, regole su progetti, attività, tipologie, minuti, futuro e date della risorsa, avvisi, transazione su più giornate, righe non in bozza, voci e proposte); vincoli del blocco C4 (centro di costo bloccato, TL e risorse con ore sui suoi progetti) |
+| `consuntivazione.integrazione.spec.ts` | Consuntivazione (fase 2): migrazione 007 (tipologie iniziali con ORDINARIA predefinita, ripetibilità, validatori di tipologie, tariffe e consuntivi, indici unici); API delle tipologie di costo (permessi, codice, una sola predefinita sempre attiva); API delle tariffe (permessi, sovrapposizioni, modifica, risoluzione con cambio di ruolo a metà mese, cancellazione bloccata se usata); consuntivi (progetti su cui si lavora, costo fotografato e riservatezza, versione e 409, ricalcolo solo se cambiano tipologia o minuti, regole su progetti, attività, tipologie, minuti, futuro e date della risorsa, avvisi, transazione su più giornate, righe non in bozza, voci e proposte); vincoli del blocco C4 (centro di costo bloccato, TL e risorse con ore sui suoi progetti); competenze personali e certificazioni; righe da valorizzare e ricalcolo (motivi, anteprima, applicazione, righe chiuse escluse) |
 | `profili.integrazione.spec.ts` | Criteri di completamento della fase 1: 401 su tutte le API elencate da Swagger, 15 operazioni per ognuno dei 7 profili, tracciamento dell'utente giusto |
 
 ## Docker

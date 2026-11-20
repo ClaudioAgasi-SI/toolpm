@@ -6,6 +6,8 @@ import { Consuntivo, ConsuntivoSchema } from './consuntivi/consuntivo.schema.js'
 import { TariffeController } from './tariffe/tariffe.controller.js';
 import { TariffeService } from './tariffe/tariffe.service.js';
 import { TariffaPersonalizzata, TariffaPersonalizzataSchema, TariffaStandard, TariffaStandardSchema } from './tariffe/tariffa.schema.js';
+import { ValorizzazioneController } from './valorizzazione/valorizzazione.controller.js';
+import { ValorizzazioneService } from './valorizzazione/valorizzazione.service.js';
 import { TipologieController } from './tipologie/tipologie.controller.js';
 import { TipologieService } from './tipologie/tipologie.service.js';
 import { TipologiaCosto, TipologiaCostoSchema } from './tipologie/tipologia-costo.schema.js';
@@ -28,8 +30,8 @@ import { TipologiaCosto, TipologiaCostoSchema } from './tipologie/tipologia-cost
       { name: Consuntivo.name, schema: ConsuntivoSchema },
     ]),
   ],
-  controllers: [TipologieController, TariffeController, ConsuntiviController],
-  providers: [TipologieService, TariffeService, ConsuntiviService],
+  controllers: [TipologieController, TariffeController, ConsuntiviController, ValorizzazioneController],
+  providers: [TipologieService, TariffeService, ConsuntiviService, ValorizzazioneService],
   exports: [TipologieService, TariffeService, ConsuntiviService],
 })
 export class ConsuntivazioneModule {}

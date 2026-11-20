@@ -5,6 +5,7 @@
  * C2: API delle tariffe (permessi, sovrapposizioni, risoluzione con cambio di ruolo, cancellazione).
  * C3: consuntivi giornalieri (regole della giornata, costo fotografato, versione, riservatezza, proposte).
  * C4: vincoli su Comuni e permessi (centro di costo bloccato, TL e risorse con ore sui suoi progetti).
+ * C6: righe da valorizzare e ricalcolo (motivi, anteprima, applicazione, righe chiuse escluse).
  *
  * Si esegue solo se è impostata MONGODB_URI_TEST, es.:
  *   MONGODB_URI_TEST="mongodb://localhost:27017/?directConnection=true" npm test
@@ -809,6 +810,66 @@ describe.skipIf(!URI_BASE)('Consuntivazione con MongoDB vero', () => {
         const c = (await come('tito').get(url(risorsa.carlo))).body;
         expect(c.progettiConsuntivati).toEqual([]);
         expect((await come('tito').put(url(risorsa.carlo), { ...c, skillTecnici: [{ skillName: 'NestJS' }] })).status).toBe(403);
+      });
+    });
+
+
+    describe('righe da valorizzare e ricalcolo (C6)', () => {
+      const MARZO = 'da=2026-03-01&a=2026-03-31';
+      const ricalcolo = (body: object) => come('carlo').post('/api/consuntivazione/ricalcolo', { da: '2026-03-01', a: '2026-03-31', ...body });
+
+      it('solo il controller', async () => {
+        expect((await come('rita').get(`/api/consuntivazione/da-valorizzare?${MARZO}`)).status).toBe(403);
+        expect((await come('paola').post('/api/consuntivazione/ricalcolo', { da: '2026-03-01', a: '2026-03-31' })).status).toBe(403);
+        expect((await come('carlo').get('/api/consuntivazione/da-valorizzare?da=2025-01-01&a=2026-12-31')).status).toBe(400);
+      });
+
+      it('elenca le righe senza costo con il motivo; il ricalcolo le valorizza quando arriva la tariffa', async () => {
+        const prima = (await come('carlo').get(`/api/consuntivazione/da-valorizzare?${MARZO}`)).body;
+        const di = (corpoRisposta: { righe: { risorsaId: string }[] }, chi: string) => corpoRisposta.righe.filter((r) => r.risorsaId === risorsa[chi]);
+        // paola non ha un ruolo.
+        expect(di(prima, 'paola')).toEqual([expect.objectContaining({ data: '2026-03-02', progetto: 'PA', motivo: 'ruoloMancante', ruolo: null, minuti: 300 })]);
+        // Ruolo a paola: ora la tariffa del ruolo junior c'è, basta ricalcolare.
+        const junior = (await db.collection('ruoli').findOne({ codice: 'SVJ' }))!._id;
+        await db.collection('risorse').updateOne({ _id: oid(risorsa.paola) }, { $set: { storicoRuoli: [{ ruoloId: junior, dal: new Date('2025-01-01') }] } });
+        const dopo = (await come('carlo').get(`/api/consuntivazione/da-valorizzare?${MARZO}`)).body;
+        expect(di(dopo, 'paola')[0]).toMatchObject({ motivo: 'tariffaDisponibile', ruolo: { codice: 'SVJ' } });
+
+        const anteprima = (await ricalcolo({ risorsaId: risorsa.paola })).body;
+        expect(anteprima.totali).toMatchObject({ righe: 1, giornate: 1, primaCentesimi: 0, dopoCentesimi: 12500, daValorizzarePrima: 1, daValorizzareDopo: 0 });
+        expect(anteprima.righe[0]).toMatchObject({ risorsa: 'paola paola', prima: { costo: null }, dopo: { fonte: 'standard', centesimiOra: 2500, costo: 12500 } });
+        // L'anteprima non cambia nulla.
+        expect(di((await come('carlo').get(`/api/consuntivazione/da-valorizzare?${MARZO}`)).body, 'paola')).toHaveLength(1);
+
+        const applicato = (await ricalcolo({ risorsaId: risorsa.paola, conferma: true })).body;
+        expect(applicato).toMatchObject({ applicato: true, totali: { righe: 1 } });
+        expect(di((await come('carlo').get(`/api/consuntivazione/da-valorizzare?${MARZO}`)).body, 'paola')).toHaveLength(0);
+        const doc = await db.collection('consuntivi').findOne({ risorsaId: oid(risorsa.paola), data: new Date('2026-03-02') });
+        expect(doc!.righe[0]).toMatchObject({ fonteTariffa: 'standard', tariffaCentesimiOra: 2500, costoCentesimi: 12500 });
+        expect(doc!.versione).toBe(2);
+        // Un secondo ricalcolo non trova nulla da cambiare.
+        expect((await ricalcolo({ risorsaId: risorsa.paola })).body.totali.righe).toBe(0);
+      });
+
+      it('una tariffa corretta si propaga col ricalcolo; le righe chiuse restano', async () => {
+        const junior = (await db.collection('ruoli').findOne({ codice: 'SVJ' }))!._id;
+        await db.collection('tariffe_standard').updateOne({ ruoloId: junior, tipologiaId: oid(tip.ORDINARIA) }, { $set: { centesimiOra: 2600 } });
+        // Una riga di rita in un periodo chiuso (fase 3) non si tocca.
+        await db.collection('consuntivi').updateOne({ risorsaId: oid(risorsa.rita), data: new Date('2026-03-09') }, { $set: { righe: [] } });
+        await db.collection('consuntivi').updateOne(
+          { risorsaId: oid(risorsa.rita), data: new Date('2026-03-03') },
+          { $set: { 'righe.$[].stato': 'chiusa' } },
+        );
+        const anteprima = (await ricalcolo({})).body;
+        expect(anteprima.righe.length).toBeGreaterThan(0);
+        expect(anteprima.righe.every((r: { dopo: { centesimiOra: number } }) => r.dopo.centesimiOra === 2600)).toBe(true);
+        expect(anteprima.righe.some((r: { data: string }) => r.data === '2026-03-03')).toBe(false);
+        expect(anteprima.totali.dopoCentesimi).toBeGreaterThan(anteprima.totali.primaCentesimi);
+        expect((await ricalcolo({ conferma: true })).body.applicato).toBe(true);
+        const lunedi = await db.collection('consuntivi').findOne({ risorsaId: oid(risorsa.rita), data: new Date('2026-03-02') });
+        const ordinaria = lunedi!.righe.find((r: { tipologiaCodice: string }) => r.tipologiaCodice === 'ORDINARIA');
+        expect(ordinaria).toMatchObject({ tariffaCentesimiOra: 2600, costoCentesimi: Math.round((ordinaria.minuti * 2600) / 60) });
+        expect(ordinaria.modificatoDa).not.toBe('sistema:test');
       });
     });
 
