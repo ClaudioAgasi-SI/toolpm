@@ -96,6 +96,10 @@ export interface RigaGiornata {
   minuti: number;
   nota: string | null;
   stato: string;
+  /** Solo nelle risposte al controller. */
+  fonteTariffa?: FonteTariffa | null;
+  tariffaCentesimiOra?: number | null;
+  costoCentesimi?: number | null;
 }
 
 export interface Giornata {

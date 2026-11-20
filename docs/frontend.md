@@ -46,6 +46,7 @@ frontend/src/
     │   ├── modelli.ts                 tipi: tipologie di costo, tariffe; euroOra(), tariffaValida()
     │   ├── consuntivazione-inizio.ts  pagina iniziale: funzioni del profilo, con link a quelle già disponibili
     │   ├── mio-consuntivo.ts/.html/.scss  "Il mio consuntivo": griglia righe × giorni (vista settimana o giorno), salvataggio delle giornate cambiate, copia, proposte, avanzamento delle mie attività
+    │   ├── consuntivi-risorse.ts      consuntivi di una risorsa per settimana, con tariffa e costo di ogni riga (controller, sola lettura)
     │   ├── da-valorizzare.ts          righe senza costo raggruppate per risorsa, ruolo, tipologia e motivo; ricalcolo con anteprima e conferma (controller)
     │   ├── ore.ts                     funzioni pure: lettura delle ore (8, 7,5, 7:30), date della settimana, oggi in Italia (ore.spec.ts)
     │   ├── tipologie-costo.ts         tipologie di costo (controller)
@@ -79,6 +80,7 @@ Tutte le rotte, tranne `/accesso`, sono dietro la guardia `accessoRichiesto`: se
 | `/comuni/utenti` | `Utenti` | gestione utenti, solo ruolo `admin` (`ruoloRichiesto('admin')`) |
 | `/consuntivazione` | `ConsuntivazioneLayout`, `ConsuntivazioneInizio` | sezione Consuntivazione (fase 2): pagina iniziale con le funzioni del profilo |
 | `/consuntivazione/settimana` | `MioConsuntivo` | Il mio consuntivo: `?vista=settimana|giorno&data=AAAA-MM-GG`; solo chi ha una risorsa (`consuntivare`). Righe = progetto o attività + tipologia (predefinita sulle nuove, modificabile), colonne = giorni; giorni futuri e righe non in bozza in sola lettura; salva insieme le sole giornate cambiate (PUT multiplo con versione; 409 → "Ricarica"); copia della settimana o del giorno precedente nei giorni vuoti, senza salvare; righe proposte (dal Pianificatore e dalla settimana prima) aggiunte da sole quando il periodo è vuoto; avvisi del salvataggio; nota per cella; percentuale delle attività assegnate. Nessun importo |
+| `/consuntivazione/consuntivi-risorse` | `ConsuntiviRisorse` | solo controller (`gestireTariffe`), sola lettura: `?risorsa=<id>&data=`; riepilogo voce + tipologia × giorni con ore, tariffe e costo, totali, dettaglio delle righe con stato, tariffa usata (personalizzata o standard), costo e nota |
 | `/consuntivazione/da-valorizzare` | `DaValorizzare` | solo controller (`gestireTariffe`): righe senza costo per gruppo con collegamento a dove si sistemano (ruolo in Anagrafiche, tariffe del ruolo o della risorsa), ricalcolo del periodo (tutte le risorse o una) con anteprima prima/dopo in euro e conferma |
 | `/consuntivazione/tariffe` | `Tariffe`, `ElencoTariffe` | tariffe standard e personalizzate; `?vista=personalizzate&risorsa=<id>`; solo controller (`gestireTariffe`) |
 | `/consuntivazione/tipologie` | `TipologieCosto` | tipologie di costo con modifica in riga e scelta della predefinita; solo controller (`permessoRichiesto('gestireTipologieCosto')`) |

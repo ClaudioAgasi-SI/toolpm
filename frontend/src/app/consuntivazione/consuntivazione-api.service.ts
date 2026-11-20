@@ -76,4 +76,9 @@ export class ConsuntivazioneApiService {
   applicaRicalcolo(da: string, a: string, risorsaId: string | null) {
     return this.http.post<{ applicato: true; totali: TotaliRicalcolo }>(`${this.base}/ricalcolo`, { da, a, risorsaId, conferma: true });
   }
+
+  /** Consuntivi di un'altra risorsa, con i costi (solo controller). */
+  consuntiviDi(risorsaId: string, da: string, a: string) {
+    return this.http.get<Giornata[]>(`${this.base}/consuntivi`, { params: new HttpParams().set('da', da).set('a', a).set('risorsa', risorsaId) });
+  }
 }

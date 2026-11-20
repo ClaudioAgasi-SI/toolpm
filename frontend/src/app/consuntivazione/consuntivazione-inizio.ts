@@ -69,6 +69,7 @@ export class ConsuntivazioneInizio {
     if (this.sessione.puo('gestireTariffe')) {
       voci.push(
         { titolo: 'Tariffe', descrizione: 'Tariffe standard per ruolo e personalizzate per risorsa, con validità.', percorso: 'tariffe' },
+        { titolo: 'Consuntivi delle risorse', descrizione: 'Ore consuntivate da ciascuna risorsa per settimana, con tariffa e costo.', percorso: 'consuntivi-risorse' },
         { titolo: 'Righe da valorizzare', descrizione: 'Ore senza tariffa applicabile e ricalcolo dei costi.', percorso: 'da-valorizzare' },
       );
     }

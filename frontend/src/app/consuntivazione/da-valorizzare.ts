@@ -110,6 +110,9 @@ const euro = (c: number | null | undefined) =>
         <button type="button" (click)="anteprima()">Anteprima</button>
       </div>
       @if (prova(); as p) {
+        @if (!p.totali.righe) {
+          <p class="riepilogo">Nessuna riga cambierebbe: nel periodo{{ risorsaRicalcolo ? ', per questa risorsa,' : '' }} i costi sono già calcolati con le tariffe in vigore.</p>
+        } @else {
         <p class="riepilogo">
           <strong>{{ quante(p.totali.righe, 'riga', 'righe') }}</strong> in <strong>{{ quante(p.totali.giornate, 'giornata', 'giornate') }}</strong>
           {{ p.totali.righe === 1 ? 'cambierebbe' : 'cambierebbero' }}:
@@ -117,6 +120,7 @@ const euro = (c: number | null | undefined) =>
           righe da valorizzare da {{ p.totali.daValorizzarePrima }} a {{ p.totali.daValorizzareDopo }}.
           @if (p.troncato) { <span class="tenue">(elencate le prime 1000)</span> }
         </p>
+        }
         @if (p.totali.righe) {
           <table class="elenco">
             <thead>
