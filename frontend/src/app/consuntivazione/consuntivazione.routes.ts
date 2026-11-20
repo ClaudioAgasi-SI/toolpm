@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { permessoRichiesto } from '../core/accesso';
 import { ConsuntivazioneLayout } from './consuntivazione-layout';
 
 /**
@@ -16,6 +17,12 @@ export const CONSUNTIVAZIONE_ROUTES: Routes = [
         pathMatch: 'full',
         title: 'Consuntivazione · ToolPM',
         loadComponent: () => import('./consuntivazione-inizio').then((m) => m.ConsuntivazioneInizio),
+      },
+      {
+        path: 'tipologie',
+        title: 'Tipologie di costo · ToolPM',
+        canActivate: [permessoRichiesto('gestireTipologieCosto')],
+        loadComponent: () => import('./tipologie-costo').then((m) => m.TipologieCosto),
       },
     ],
   },

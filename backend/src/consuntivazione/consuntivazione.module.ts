@@ -1,4 +1,8 @@
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { TipologieController } from './tipologie/tipologie.controller.js';
+import { TipologieService } from './tipologie/tipologie.service.js';
+import { TipologiaCosto, TipologiaCostoSchema } from './tipologie/tipologia-costo.schema.js';
 
 /**
  * Sezione "Consuntivazione costi di progetto" di ToolPM (fase 2).
@@ -10,6 +14,9 @@ import { Module } from '@nestjs/common';
  * tariffe_personalizzate, consuntivi.
  */
 @Module({
-  imports: [],
+  imports: [MongooseModule.forFeature([{ name: TipologiaCosto.name, schema: TipologiaCostoSchema }])],
+  controllers: [TipologieController],
+  providers: [TipologieService],
+  exports: [TipologieService],
 })
 export class ConsuntivazioneModule {}

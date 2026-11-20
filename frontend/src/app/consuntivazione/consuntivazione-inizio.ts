@@ -1,9 +1,12 @@
 import { Component, computed, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { SessioneService } from '../core/sessione.service';
 
 interface Voce {
   titolo: string;
   descrizione: string;
+  /** Pagina già disponibile; senza percorso la funzione è ancora in preparazione. */
+  percorso?: string;
 }
 
 /**
@@ -12,16 +15,23 @@ interface Voce {
  */
 @Component({
   selector: 'app-consuntivazione-inizio',
+  imports: [RouterLink],
   template: `
     <h1>Consuntivazione</h1>
-    <p class="sottotitolo">Le funzioni della sezione arrivano nei prossimi rilasci della fase 2.</p>
+    <p class="sottotitolo">Le funzioni della sezione arrivano un po' alla volta con i rilasci della fase 2.</p>
     @if (voci().length) {
       <ul class="voci">
         @for (v of voci(); track v.titolo) {
           <li>
-            <strong>{{ v.titolo }}</strong>
+            @if (v.percorso) {
+              <a [routerLink]="v.percorso"><strong>{{ v.titolo }}</strong></a>
+            } @else {
+              <strong>{{ v.titolo }}</strong>
+            }
             <span>{{ v.descrizione }}</span>
-            <em>In preparazione</em>
+            @if (!v.percorso) {
+              <em>In preparazione</em>
+            }
           </li>
         }
       </ul>
@@ -54,7 +64,7 @@ export class ConsuntivazioneInizio {
       voci.push({ titolo: 'Il mio consuntivo', descrizione: 'Ore lavorate per giorno o per settimana, su progetti e attività.' });
     }
     if (this.sessione.puo('gestireTipologieCosto')) {
-      voci.push({ titolo: 'Tipologie di costo', descrizione: 'Ordinaria, straordinaria, notturna, festiva e le altre; quella proposta di default.' });
+      voci.push({ titolo: 'Tipologie di costo', descrizione: 'Ordinaria, straordinaria, notturna, festiva e le altre; quella proposta di default.', percorso: 'tipologie' });
     }
     if (this.sessione.puo('gestireTariffe')) {
       voci.push(

@@ -10,8 +10,8 @@ La fase 2 apre la sezione **Consuntivazione**: il controller censisce tipologie 
 
 | Blocco | Stato | Note |
 | --- | --- | --- |
-| C0 — Preparazione | Fatto (codice) | Modulo `consuntivazione/` su `/api/consuntivazione`, sezione nel menu con pagina iniziale per profilo, permessi `gestireTipologieCosto`, `gestireTariffe` (controller) e `consuntivare` (chi ha una risorsa), migrazione `007-consuntivazione` (4 collection con validatori e indici, 4 tipologie con ORDINARIA predefinita). Test: 113 backend (67 unitari + 46 di integrazione), 12 frontend. Da fare sul PC: backup e `npm run migra`. |
-| C1 — Tipologie di costo | Da fare | |
+| C0 — Preparazione | Fatto | Commit b81d352. Modulo `consuntivazione/` su `/api/consuntivazione`, sezione nel menu con pagina iniziale per profilo, permessi `gestireTipologieCosto`, `gestireTariffe` (controller) e `consuntivare` (chi ha una risorsa), migrazione `007-consuntivazione` (4 collection con validatori e indici, 4 tipologie con ORDINARIA predefinita). Test: 113 backend (67 unitari + 46 di integrazione), 12 frontend. Migrazione eseguita sul PC il 20/11/2026. |
+| C1 — Tipologie di costo | Fatto (codice) | API `/api/consuntivazione/tipologie-costo` (lettura per tutti, modifica controller; codice fisso; una sola predefinita sempre attiva, cambio in transazione), pagina `/toolpm/consuntivazione/tipologie` con "Rendi predefinita". Test: 119 backend (67 + 52), 12 frontend; prova nel browser superata. Da fare sul PC: aggiornare e provare la pagina. |
 | C2 — Tariffe | Da fare | |
 | C3 — Consuntivo (backend) | Da fare | |
 | C4 — Vincoli su Comuni e permessi | Da fare | |

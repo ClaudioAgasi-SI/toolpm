@@ -53,7 +53,8 @@ backend/
 │   │   ├── risorse/                    anagrafica delle risorse
 │   │   └── progetti/                   progetti (stato, approvatori, percentuale) e attività
 │   ├── consuntivazione/             sezione "Consuntivazione" (fase 2) → prefisso /api/consuntivazione
-│   │   └── consuntivazione.module.ts  modulo della sezione (le API arrivano con i blocchi C1, C2, C3, C6)
+│   │   ├── consuntivazione.module.ts  modulo della sezione
+│   │   └── tipologie/                 tipologie di costo (blocco C1): schema, servizio, controller
 │   ├── permessi/                    permessi su profili e ruoli (fase 1, blocco B3)
 │   │   ├── regole.ts                   regole pure: permessi globali, progetto, attività, risorse
 │   │   ├── permessi.service.ts         PermessiService: le regole per i servizi, verifica() → 401/403
@@ -179,6 +180,21 @@ Modulo `src/comuni/`, registrato su `/api/comuni`: i dati condivisi da tutte le 
 | PUT | `/progetti/:id/attivita/:aid/completamento` | Risorse assegnate, TL e PM del progetto, PMSenior | `{ percentuale }`, registrata in `avanzamenti` |
 
 Convenzioni: le date si inviano come `AAAA-MM-GG`; nei PUT si aggiornano solo i campi presenti e `null` svuota un campo facoltativo; i riferimenti (cliente, centro di costo, ruolo, risorse) devono esistere, e cliente e centro di costo devono essere attivi quando si assegnano. Il cambio di stato e quello di percentuale sono condizionati al valore letto: se un altro utente l'ha cambiato nel frattempo la risposta è 409. Percentuale e storico si scrivono nella stessa transazione (serve il replica set).
+
+## Modulo Consuntivazione (fase 2)
+
+Sezione `src/consuntivazione/`, registrata con `RouterModule` su `/api/consuntivazione` (piano in [piano-fase2.md](piano-fase2.md)). Tutte le API richiedono l'accesso.
+
+### Tipologie di costo — `/api/consuntivazione/tipologie-costo` (blocco C1)
+
+| Metodo | Percorso | Permesso | Note |
+|---|---|---|---|
+| GET | `/tipologie-costo?attive=true` | accesso | In ordine di `ordine`, poi `codice`; `attive=true` solo le attive |
+| GET | `/tipologie-costo/:id` | accesso | 404 se non esiste |
+| POST | `/tipologie-costo` | `gestireTipologieCosto` | `codice` (unico, 409 se usato), `descrizione`, `categoria` (`ordinaria`/`straordinaria`), `ordine` (facoltativo: dopo l'ultima), `attiva`, `predefinita` |
+| PUT | `/tipologie-costo/:id` | `gestireTipologieCosto` | Modifica parziale; il codice non cambia (409) |
+
+Regole (`TipologieService`): nessuna cancellazione, si disattiva; c'è sempre **una sola tipologia predefinita**, ed è attiva. Per cambiarla si manda `predefinita: true` sulla nuova: la precedente perde il segno nella stessa transazione. Togliere il segno alla predefinita o disattivarla dà 400 ("scegli prima un'altra predefinita"); l'indice unico parziale `una_sola_predefinita` lo garantisce anche nel database. `TipologieService.predefinita()` serve al consuntivo (blocco C3) per le righe senza tipologia.
 
 ## Moduli
 
@@ -332,7 +348,7 @@ I **test di integrazione** (`test/*.integrazione.spec.ts`) avviano l'applicazion
 | `comuni.integrazione.spec.ts` | Modulo Comuni: anagrafiche, risorse, progetti (stati, approvatori, stime in euro), attività, avanzamenti, validatori |
 | `pianificatore.integrazione.spec.ts` | Pianificatore: allocazioni su `progettoId`, permessi sulle caratteristiche (anche il TL che alloca sui suoi progetti), migrazione 006 |
 | `migrazione-dati.integrazione.spec.ts` | Migrazione B7 sui dati di esempio: esporta, errori per riga, prova, importazione, verifica, ripetibilità |
-| `consuntivazione.integrazione.spec.ts` | Consuntivazione (fase 2): migrazione 007 (tipologie iniziali con ORDINARIA predefinita, ripetibilità, validatori di tipologie, tariffe e consuntivi, indici unici) |
+| `consuntivazione.integrazione.spec.ts` | Consuntivazione (fase 2): migrazione 007 (tipologie iniziali con ORDINARIA predefinita, ripetibilità, validatori di tipologie, tariffe e consuntivi, indici unici); API delle tipologie di costo (permessi, codice, una sola predefinita sempre attiva) |
 | `profili.integrazione.spec.ts` | Criteri di completamento della fase 1: 401 su tutte le API elencate da Swagger, 15 operazioni per ognuno dei 7 profili, tracciamento dell'utente giusto |
 
 ## Docker

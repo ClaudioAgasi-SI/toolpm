@@ -42,7 +42,10 @@ frontend/src/
     │   └── utenti/                    gestione utenti (solo amministratore)
     ├── consuntivazione/               sezione "Consuntivazione" (fase 2)
     │   ├── consuntivazione.routes.ts, consuntivazione-layout.ts
-    │   └── consuntivazione-inizio.ts  pagina iniziale: funzioni previste per il profilo (le pagine arrivano con C1, C2, C5, C6)
+    │   ├── consuntivazione-api.service.ts  chiamate a /api/consuntivazione
+    │   ├── modelli.ts                 tipi: tipologie di costo
+    │   ├── consuntivazione-inizio.ts  pagina iniziale: funzioni del profilo, con link a quelle già disponibili
+    │   └── tipologie-costo.ts         tipologie di costo (controller)
     └── pianificatore/                 sezione "Pianificatore risorse allocate"
         ├── pianificatore.routes.ts    rotte della sezione (sotto /pianificatore)
         ├── pianificatore-layout.ts    sotto-menu della sezione + <router-outlet>
@@ -69,7 +72,8 @@ Tutte le rotte, tranne `/accesso`, sono dietro la guardia `accessoRichiesto`: se
 | `/comuni/risorse`, `/comuni/risorse/:id` (`nuova`) | `RisorseAnagrafica`, `RisorsaAnagraficaDettaglio` | dati anagrafici delle risorse |
 | `/comuni/clienti`, `/comuni/centri-costo`, `/comuni/ruoli` | `AnagraficaSemplice` | anagrafiche semplici (configurazione in `data.definizione`) |
 | `/comuni/utenti` | `Utenti` | gestione utenti, solo ruolo `admin` (`ruoloRichiesto('admin')`) |
-| `/consuntivazione` | `ConsuntivazioneLayout`, `ConsuntivazioneInizio` | sezione Consuntivazione (fase 2): per ora la pagina iniziale |
+| `/consuntivazione` | `ConsuntivazioneLayout`, `ConsuntivazioneInizio` | sezione Consuntivazione (fase 2): pagina iniziale con le funzioni del profilo |
+| `/consuntivazione/tipologie` | `TipologieCosto` | tipologie di costo con modifica in riga e scelta della predefinita; solo controller (`permessoRichiesto('gestireTipologieCosto')`) |
 | `/pianificatore` | `PianificatoreLayout` | sezione Pianificatore; reindirizza a `/pianificatore/pianificazione` |
 | `/pianificatore/pianificazione` | `Pianificazione` | griglia risorse × mesi |
 | `/pianificatore/risorse` | `RisorseElenco` | elenco con ricerca |
