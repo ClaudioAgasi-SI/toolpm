@@ -29,9 +29,12 @@ export class ConsuntiviController {
 
   @Get('voci')
   @Permesso('consuntivare')
-  @ApiOperation({ summary: 'Progetti non chiusi con le loro attività attive: le voci su cui si può consuntivare' })
-  voci() {
-    return this.service.voci();
+  @ApiOperation({
+    summary: 'Progetti non chiusi con le loro attività attive: le voci su cui si può consuntivare',
+    description: 'Le attività a cui la risorsa è assegnata hanno assegnata: true e stanno in testa; si consuntiva anche sulle altre, con un avviso.',
+  })
+  voci(@UtenteRichiesta() utente: UtenteAutenticato | undefined) {
+    return this.service.voci(utente);
   }
 
   @Get('proposte')

@@ -82,28 +82,45 @@ export class ConsuntiviService {
     return this.presenta(giornate, this.vedeCosti(utente));
   }
 
-  /** Progetti non chiusi con le loro attività attive: le voci su cui si può consuntivare. */
-  async voci() {
+  /**
+   * Progetti non chiusi con le loro attività attive: le voci su cui si può consuntivare.
+   * Con la risorsa, segna le attività a cui è assegnata e le mette in testa (anche i progetti che ne hanno):
+   * si può consuntivare anche sulle altre, con un avviso (decisione 10 del piano della fase 2).
+   */
+  async voci(utente?: UtenteAutenticato) {
+    const mia = utente?.risorsaId ?? null;
     const progetti = await this.progetti
       .find({ stato: { $ne: 'chiuso' } }, { codice: 1, titolo: 1, stato: 1, soloSuAttivita: 1 })
       .sort({ codice: 1 })
       .lean()
       .exec();
     const attivita = await this.attivita
-      .find({ progettoId: { $in: progetti.map((p) => p._id) }, stato: 'attiva' }, { progettoId: 1, codice: 1, descrizione: 1 })
+      .find({ progettoId: { $in: progetti.map((p) => p._id) }, stato: 'attiva' }, { progettoId: 1, codice: 1, descrizione: 1, risorseAssegnateIds: 1 })
       .sort({ codice: 1 })
       .lean()
       .exec();
-    return progetti.map((p) => ({
-      _id: String(p._id),
-      codice: p.codice,
-      titolo: p.titolo,
-      stato: p.stato,
-      soloSuAttivita: Boolean(p.soloSuAttivita),
-      attivita: attivita
+    const voci = progetti.map((p) => {
+      const sue = attivita
         .filter((x) => String(x.progettoId) === String(p._id))
-        .map((x) => ({ _id: String(x._id), codice: x.codice, descrizione: x.descrizione })),
-    }));
+        .map((x) => ({
+          _id: String(x._id),
+          codice: x.codice,
+          descrizione: x.descrizione,
+          assegnata: Boolean(mia && (x.risorseAssegnateIds ?? []).some((id) => String(id) === mia)),
+        }))
+        .sort((a, b) => Number(b.assegnata) - Number(a.assegnata));
+      return {
+        _id: String(p._id),
+        codice: p.codice,
+        titolo: p.titolo,
+        stato: p.stato,
+        soloSuAttivita: Boolean(p.soloSuAttivita),
+        conAttivitaAssegnate: sue.some((a) => a.assegnata),
+        attivita: sue,
+      };
+    });
+    // Ordinamento stabile: prima i progetti con attività assegnate, poi gli altri, per codice.
+    return voci.sort((a, b) => Number(b.conAttivitaAssegnate) - Number(a.conAttivitaAssegnate));
   }
 
   /**
@@ -130,7 +147,7 @@ export class ConsuntiviService {
       }
     }
     // Solo voci ancora consuntivabili, senza doppioni (vince la prima: la settimana precedente).
-    const voci = await this.voci();
+    const voci = await this.voci(utente);
     const perId = new Map(voci.map((p) => [p._id, p]));
     const tipologieAttive = new Map((await this.tipologie.find({ attiva: true }, { codice: 1, descrizione: 1 }).lean().exec()).map((t) => [String(t._id), t]));
     const visti = new Set<string>();
@@ -149,7 +166,7 @@ export class ConsuntiviService {
         progettoId: c.progettoId,
         progetto: { codice: p.codice, titolo: p.titolo, soloSuAttivita: p.soloSuAttivita },
         attivitaId: c.attivitaId,
-        attivita: att ? { codice: att.codice, descrizione: att.descrizione } : null,
+        attivita: att ? { codice: att.codice, descrizione: att.descrizione, assegnata: att.assegnata } : null,
         tipologiaId: c.tipologiaId,
         tipologiaCodice: t.codice,
         origine: c.origine,
@@ -199,7 +216,7 @@ export class ConsuntiviService {
     const scritture = giornate.map((g) => {
       const vecchia = esistenti.get(g.testo);
       if ((vecchia?.versione ?? 0) !== g.versione) throw this.conflitto(g.testo);
-      const righe = this.costruisciRighe(g, vecchia, contesto, utente!.id, adesso);
+      const righe = this.costruisciRighe(g, vecchia, contesto, utente!.id, adesso, risorsaId, avvisi);
       const ordinari = totaleMinuti(righe.filter((r) => contesto.tipologie.get(String(r.tipologiaId))?.categoria === 'ordinaria'));
       const avviso = avvisoOrdinarie(ordinari, risorsa.oreContrattualiGiorno, oreGiorno);
       if (avviso) avvisi.push({ data: g.testo, messaggio: avviso });
@@ -229,7 +246,15 @@ export class ConsuntiviService {
   }
 
   /** Righe finali di una giornata, con tutti i controlli. Le righe invariate restano come sono. */
-  private costruisciRighe(g: GiornataInput, vecchia: GiornataDb | undefined, ctx: Contesto, utenteId: string, adesso: Date): RigaSalvata[] {
+  private costruisciRighe(
+    g: GiornataInput,
+    vecchia: GiornataDb | undefined,
+    ctx: Contesto,
+    utenteId: string,
+    adesso: Date,
+    risorsaId: Id,
+    avvisi: Avviso[],
+  ): RigaSalvata[] {
     const vecchie = new Map((vecchia?.righe ?? []).map((r) => [String(r._id), r]));
     const usate = new Set<string>();
     const righe: RigaSalvata[] = [];
@@ -282,6 +307,9 @@ export class ConsuntiviService {
       const tipologia = ctx.tipologie.get(String(tipologiaId));
       if (!tipologia) throw errore(g.testo, `${n}: tipologia inesistente`);
       if (!tipologia.attiva) throw errore(g.testo, `${n}: la tipologia ${tipologia.codice} è disattivata`);
+      if (att && !(att.risorseAssegnateIds ?? []).some((id) => String(id) === String(risorsaId))) {
+        avvisi.push({ data: g.testo, messaggio: `attività ${att.codice} del progetto ${progetto.codice}: non risulti tra le risorse assegnate` });
+      }
 
       // Costo: invariato se tipologia e minuti non cambiano (il ricalcolo è un'operazione del controller).
       const costoInvariato = prima && String(prima.tipologiaId) === String(tipologiaId) && prima.minuti === minuti;
@@ -338,7 +366,10 @@ export class ConsuntiviService {
           ...[...esistenti.values()].flatMap((d) => d.righe.map((r) => (r as unknown as Record<string, unknown>)[campo])).filter(Boolean).map(String),
         ]),
       ].map((v) => new mongoose.Types.ObjectId(v));
-    const attivita = await this.attivita.find({ _id: { $in: ids('attivitaId') } }, { progettoId: 1, codice: 1, stato: 1 }).lean().exec();
+    const attivita = await this.attivita
+      .find({ _id: { $in: ids('attivitaId') } }, { progettoId: 1, codice: 1, stato: 1, risorseAssegnateIds: 1 })
+      .lean()
+      .exec();
     const progettiIds = [...ids('progettoId'), ...attivita.map((a) => a.progettoId)];
     const [progetti, tipologie] = await Promise.all([
       this.progetti.find({ _id: { $in: progettiIds } }, { codice: 1, stato: 1, soloSuAttivita: 1, centroCostoId: 1 }).lean().exec(),
@@ -433,6 +464,7 @@ interface AttivitaCtx {
   progettoId: Id;
   codice: string;
   stato: string;
+  risorseAssegnateIds?: Id[];
 }
 interface TipologiaCtx {
   _id: Id;

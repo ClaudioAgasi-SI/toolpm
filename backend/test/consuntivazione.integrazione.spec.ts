@@ -636,6 +636,40 @@ describe.skipIf(!URI_BASE)('Consuntivazione con MongoDB vero', () => {
       expect(chiavi.some((k: string) => k.startsWith('PC/'))).toBe(false);
     });
 
+    it('attività non assegnate: si consuntiva con un avviso; le assegnate stanno in testa alle voci', async () => {
+      await db.collection('attivita').updateOne({ _id: oid(att.COL) }, { $set: { risorseAssegnateIds: [oid(risorsa.rita)] } });
+      const voci = (await come('rita').get(`${URL_C}/voci`)).body;
+      expect(voci[0]).toMatchObject({ codice: 'PB', conAttivitaAssegnate: true });
+      expect(voci[0].attivita[0]).toMatchObject({ codice: 'COL', assegnata: true });
+      expect(voci.find((p: { codice: string }) => p.codice === 'PA').attivita[0]).toMatchObject({ codice: 'SVI', assegnata: false });
+      // Per paola COL non è assegnata.
+      expect((await come('paola').get(`${URL_C}/voci`)).body[0]).toMatchObject({ codice: 'PA', conAttivitaAssegnate: false });
+
+      const r = await come('rita').put(`${URL_C}/2026-03-11`, {
+        versione: 0,
+        righe: [
+          { attivitaId: att.COL, minuti: 240 },
+          { attivitaId: att.SVI, minuti: 120 },
+          { progettoId: prog.A, tipologiaId: tip.STRAORDINARIA, minuti: 60 },
+        ],
+      });
+      expect(r.status).toBe(200);
+      expect(r.body.avvisi).toEqual([{ data: '2026-03-11', messaggio: 'attività SVI del progetto PA: non risulti tra le risorse assegnate' }]);
+      // Righe invariate: nessun nuovo avviso.
+      const g = r.body.giornate[0];
+      const righe = g.righe.map((x: { _id: string; progettoId: string; attivitaId: string | null; tipologiaId: string; minuti: number }) => ({
+        _id: x._id,
+        progettoId: x.progettoId,
+        attivitaId: x.attivitaId,
+        tipologiaId: x.tipologiaId,
+        minuti: x.minuti,
+      }));
+      righe[2].minuti = 90;
+      const r2 = await come('rita').put(`${URL_C}/2026-03-11`, { versione: g.versione, righe });
+      expect(r2.status).toBe(200);
+      expect(r2.body.avvisi).toEqual([]);
+    });
+
     it('chi non ha una risorsa non consuntiva; senza accesso 401', async () => {
       expect((await api().get(`${URL_C}?da=${LUN}&a=${LUN}`)).status).toBe(401);
       expect((await api().put(`${URL_C}/${LUN}`).send({ versione: 0, righe: [] })).status).toBe(401);

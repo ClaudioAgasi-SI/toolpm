@@ -91,7 +91,7 @@ Ogni blocco si chiude con codice, test, documentazione in `docs/` aggiornata e p
 ### C3 — Consuntivo (backend)
 
 - Schema `consuntivi`: un documento per risorsa e giornata (indice unico `risorsaId + data`), `mese`, `versione`, righe incorporate con `progettoId`, `attivitaId`, `centroCostoId`, `tipologiaId`, `tipologiaCodice`, `minuti`, `nota`, `stato` (in fase 2 sempre `bozza`), `fonteTariffa`, `tariffaCentesimiOra`, `costoCentesimi`, `modificatoIl`, `modificatoDa`. I campi di approvazione esistono già nello schema ma restano vuoti fino alla fase 3.
-- API `GET /api/consuntivazione/consuntivi?da=&a=` (le proprie giornate; il controller anche con `risorsa=`), `PUT /api/consuntivazione/consuntivi/:data` (righe della giornata, con la `versione` letta), `PUT /api/consuntivazione/consuntivi` (più giornate insieme per la settimana, in una transazione), `GET /api/consuntivazione/consuntivi/voci` (progetti non chiusi con le attività attive), `GET /api/consuntivazione/consuntivi/proposte?settimana=` (progetti su cui la risorsa è allocata nel Pianificatore nei mesi della settimana, più quelli già usati la settimana prima).
+- API `GET /api/consuntivazione/consuntivi?da=&a=` (le proprie giornate; il controller anche con `risorsa=`), `PUT /api/consuntivazione/consuntivi/:data` (righe della giornata, con la `versione` letta), `PUT /api/consuntivazione/consuntivi` (più giornate insieme per la settimana, in una transazione), `GET /api/consuntivazione/consuntivi/voci` (progetti non chiusi con le attività attive, quelle assegnate alla risorsa segnate e in testa), `GET /api/consuntivazione/consuntivi/proposte?settimana=` (progetti su cui la risorsa è allocata nel Pianificatore nei mesi della settimana, più quelli già usati la settimana prima).
 - Al salvataggio: attività → progetto ricavato dal backend (un progetto diverso dal client è rifiutato), centro di costo copiato dal progetto, tariffa risolta e costo calcolato con `round(minuti × centesimiOra / 60)`; senza tariffa il costo resta vuoto e la riga è "da valorizzare".
 - Regole della giornata come nell'analisi; l'ora ordinaria oltre l'orario contrattuale è un avviso nella risposta, non un errore.
 - Riservatezza: le risposte alla risorsa non contengono mai tariffe né importi (né `fonteTariffa`); il controller li vede.
@@ -108,6 +108,7 @@ Ogni blocco si chiude con codice, test, documentazione in `docs/` aggiornata e p
 
 - Pagina `/toolpm/consuntivazione/settimana`: a scelta della risorsa vista del singolo giorno oppure vista settimanale (griglia righe progetto o attività + tipologia × giorni da lunedì a domenica), totali per riga e per giorno, ore in formato `h:mm` o decimale con passi di 15 minuti, nota per cella.
 - Scelta della riga da elenco (progetti non chiusi, con le loro attività attive), righe proposte dal Pianificatore, copia della settimana precedente, navigazione tra giorni e settimane, salvataggio delle sole giornate modificate (anche una sola) in un colpo; nessun obbligo di compilare la settimana intera.
+- Attività assegnate alla risorsa in cima all'elenco di scelta; avviso quando se ne sceglie una non assegnata.
 - Avvisi visibili: ore ordinarie oltre l'orario contrattuale, giorno oltre 24 h, progetto "solo su attività", ricarica dopo un conflitto di versione.
 - Ogni riga nuova parte con la tipologia predefinita (ordinaria), che la risorsa può cambiare. Nessun importo mostrato alla risorsa. Per la stessa risorsa, aggiornamento della percentuale delle attività a cui è assegnata (API già pronta dalla fase 1).
 
@@ -139,7 +140,7 @@ Ogni blocco si chiude con codice, test, documentazione in `docs/` aggiornata e p
 
 ## Decisioni confermate
 
-Confermate il 20/11/2026, insieme alle contromisure dei rischi della tabella; i punti 8 e 9 sono precisazioni dell'utente. Colmano punti che l'analisi lascia aperti o che cambiano l'ordine delle fasi.
+Confermate il 20/11/2026, insieme alle contromisure dei rischi della tabella; i punti 8, 9 e 10 sono precisazioni dell'utente. Colmano punti che l'analisi lascia aperti o che cambiano l'ordine delle fasi.
 
 1. **Ricalcolo (RF-18) in fase 2.** Il piano di rilascio dell'analisi non lo assegna a una fase precisa; lo porto in fase 2 perché senza ricalcolo le righe salvate prima che il controller inserisca una tariffa resterebbero "da valorizzare" per sempre.
 2. **Storico delle modifiche (`audit_log`) in fase 3**, come nell'analisi: in fase 2 su tariffe e tipologie resta il tracciamento dell'ultimo salvataggio; le tariffe non si sovrascrivono di fatto, perché una correzione si fa chiudendo un periodo e aprendone un altro.
@@ -150,6 +151,7 @@ Confermate il 20/11/2026, insieme alle contromisure dei rischi della tabella; i 
 7. **Chi consuntiva:** solo gli utenti collegati a una risorsa e solo per sé stessi. Un amministratore senza risorsa non vede la pagina; nessuno inserisce ore per conto di altri.
 8. **Nessun obbligo di ritmo.** La risorsa può consuntivare un giorno alla volta oppure per settimana, come preferisce: la pagina offre la vista del giorno e quella della settimana, e salva solo le giornate modificate. Nessun controllo pretende la settimana completa.
 9. **Tipologia ordinaria proposta di default.** Ogni riga nuova parte con la tipologia predefinita, ordinaria, e la risorsa può cambiarla (straordinaria, notturna, festiva e le altre). Serve a compilare più in fretta e con meno errori. La predefinita è un'impostazione della tipologia, modificabile dal controller; se la richiesta arriva senza tipologia, anche il backend usa la predefinita.
+10. **Attività non assegnate: permesse, con avviso.** La risorsa può consuntivare su tutte le attività attive dei progetti non chiusi, anche dove non è tra le risorse assegnate. Le voci consuntivabili indicano le attività assegnate alla risorsa, e la pagina le mostra per prime; scegliendo un'attività non assegnata compare un avviso, che arriva anche nella risposta del salvataggio. Dalla fase 3 l'approvatore vedrà evidenziate quelle righe. Lo stesso vale per le proposte: niente blocchi.
 
 | Rischio | Effetto | Contromisura |
 | --- | --- | --- |

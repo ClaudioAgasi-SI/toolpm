@@ -219,7 +219,7 @@ Regole: periodi della stessa coppia (ruolo + tipologia, risorsa + tipologia) mai
 | Metodo | Percorso | Permesso | Note |
 |---|---|---|---|
 | GET | `/consuntivi?da=&a=&risorsa=` | accesso | Al massimo 62 giorni. Senza `risorsa`: le proprie giornate; con `risorsa` di un altro: solo il controller (`gestireTariffe`). Per ogni giornata `data`, `versione`, `totaleMinuti`, righe con codici e titoli di progetto e attività |
-| GET | `/consuntivi/voci` | `consuntivare` | Progetti non chiusi (con `soloSuAttivita`) e le loro attività attive |
+| GET | `/consuntivi/voci` | `consuntivare` | Progetti non chiusi (con `soloSuAttivita`) e le loro attività attive; `assegnata: true` sulle attività a cui la risorsa è assegnata, che stanno in testa (e prima i progetti che ne hanno, `conAttivitaAssegnate`) |
 | GET | `/consuntivi/proposte?settimana=` | `consuntivare` | Righe proposte per la settimana: progetti allocati nel Pianificatore nei mesi della settimana (tipologia predefinita) e righe della settimana precedente; solo voci ancora consuntivabili |
 | PUT | `/consuntivi/:data` | `consuntivare` | `{ versione, righe }`: le righe della giornata (sostituiscono le precedenti in bozza) |
 | PUT | `/consuntivi` | `consuntivare` | `{ giornate: [{ data, versione, righe }] }`: tutte in una transazione, o nessuna |
@@ -232,7 +232,7 @@ Ogni riga in ingresso: `_id` (per le righe esistenti), `attivitaId` oppure `prog
 - per ogni riga nuova o cambiata: centro di costo copiato dal progetto, tariffa risolta con `TariffeService.risolutore()` e costo fotografato (`fonteTariffa`, `tariffaId`, `tariffaCentesimiOra`, `costoCentesimi`; null = da valorizzare), `modificatoIl` e `modificatoDa` della riga; le righe invariate restano come sono, e il costo si ricalcola solo se cambiano tipologia o minuti;
 - le righe non in bozza o respinte (dalla fase 3) non si cambiano né si tolgono (409);
 - salvataggio condizionato sulla `versione` letta (0 per una giornata nuova): se è cambiata, 409 "ricarica la pagina";
-- la risposta porta gli `avvisi` (ore ordinarie oltre l'orario contrattuale, o oltre il parametro `oreGiorno` se manca); gli errori iniziano con la data della giornata;
+- la risposta porta gli `avvisi`: ore ordinarie oltre l'orario contrattuale (o oltre il parametro `oreGiorno` se manca) e righe nuove o cambiate su attività a cui la risorsa non è assegnata (permesse, decisione 10 del piano); gli errori iniziano con la data della giornata;
 - riservatezza: tariffe, importi, fonte e centro di costo compaiono solo nelle risposte al controller.
 
 La copia del giorno o della settimana precedente si fa nella pagina (blocco C5): le righe copiate si vedono e si correggono prima di salvarle.
