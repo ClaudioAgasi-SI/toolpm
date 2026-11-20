@@ -2,7 +2,7 @@
 
 20/11/2026 · Claudio Agasi
 
-> Piano di lavoro della fase 2 (bozza da confermare, nessun codice ancora scritto). Versione di lavoro con commenti: [documento su Claude](https://claude.ai/artifact/C1SidhKdbZLTC9ZL6Lpvzp). Le decisioni da cui parte sono in [analisi-consuntivazione.md](analisi-consuntivazione.md); il modo di lavorare è quello della [fase 1](piano-fase1.md).
+> Piano di lavoro della fase 2 (confermato il 20/11/2026, nessun codice ancora scritto). Versione di lavoro con commenti: [documento su Claude](https://claude.ai/artifact/C1SidhKdbZLTC9ZL6Lpvzp). Le decisioni da cui parte sono in [analisi-consuntivazione.md](analisi-consuntivazione.md); il modo di lavorare è quello della [fase 1](piano-fase1.md).
 
 La fase 2 apre la sezione **Consuntivazione**: il controller censisce tipologie di costo e tariffe, ogni risorsa inserisce le proprie ore giorno per giorno e il sistema ne calcola e memorizza il costo. Le righe restano in **bozza**: invio, approvazione su due livelli e chiusura dei periodi sono la fase 3; report ed EVM la fase 4.
 
@@ -21,7 +21,7 @@ La fase 2 apre la sezione **Consuntivazione**: il controller censisce tipologie 
 
 ## Obiettivo e perimetro
 
-Alla fine della fase 2 una risorsa compila la propria settimana in meno di due minuti, scegliendo progetto o attività e tipologia di costo; ogni riga salvata porta il costo calcolato con la tariffa giusta, "fotografato" insieme alla tariffa usata e alla sua provenienza. Il controller gestisce tipologie e tariffe e vede le righe ancora senza tariffa.
+Alla fine della fase 2 una risorsa inserisce le proprie ore quando vuole, un giorno alla volta o una settimana intera (una settimana tipica in meno di due minuti), scegliendo progetto o attività e tipologia di costo; ogni riga salvata porta il costo calcolato con la tariffa giusta, "fotografato" insieme alla tariffa usata e alla sua provenienza. Il controller gestisce tipologie e tariffe e vede le righe ancora senza tariffa.
 
 **Compreso nella fase 2** (requisiti dell'analisi)
 
@@ -106,8 +106,8 @@ Ogni blocco si chiude con codice, test, documentazione in `docs/` aggiornata e p
 
 ### C5 — Il mio consuntivo (frontend)
 
-- Pagina `/toolpm/consuntivazione/settimana`: griglia righe (progetto o attività + tipologia) × giorni da lunedì a domenica, totali per riga e per giorno, ore in formato `h:mm` o decimale con passi di 15 minuti, nota per cella.
-- Scelta della riga da elenco (progetti non chiusi, con le loro attività attive), righe proposte dal Pianificatore, copia della settimana precedente, navigazione tra settimane, salvataggio della settimana in un colpo.
+- Pagina `/toolpm/consuntivazione/settimana`: a scelta della risorsa vista del singolo giorno oppure vista settimanale (griglia righe progetto o attività + tipologia × giorni da lunedì a domenica), totali per riga e per giorno, ore in formato `h:mm` o decimale con passi di 15 minuti, nota per cella.
+- Scelta della riga da elenco (progetti non chiusi, con le loro attività attive), righe proposte dal Pianificatore, copia della settimana precedente, navigazione tra giorni e settimane, salvataggio delle sole giornate modificate (anche una sola) in un colpo; nessun obbligo di compilare la settimana intera.
 - Avvisi visibili: ore ordinarie oltre l'orario contrattuale, giorno oltre 24 h, progetto "solo su attività", ricarica dopo un conflitto di versione.
 - Nessun importo mostrato alla risorsa. Per la stessa risorsa, aggiornamento della percentuale delle attività a cui è assegnata (API già pronta dalla fase 1).
 
@@ -137,17 +137,18 @@ Ogni blocco si chiude con codice, test, documentazione in `docs/` aggiornata e p
 - [ ] Il ricalcolo mostra l'anteprima e, confermato, aggiorna solo le righe interessate.
 - [ ] Documentazione in `docs/` e Swagger aggiornati; `docker compose up` sul PC con la migrazione 007 eseguita.
 
-## Decisioni da confermare prima di iniziare
+## Decisioni confermate
 
-Le ipotesi seguenti colmano punti che l'analisi lascia aperti o che cambiano l'ordine delle fasi.
+Confermate il 20/11/2026, insieme alle contromisure dei rischi della tabella; il punto 8 è una precisazione dell'utente. Colmano punti che l'analisi lascia aperti o che cambiano l'ordine delle fasi.
 
 1. **Ricalcolo (RF-18) in fase 2.** Il piano di rilascio dell'analisi non lo assegna a una fase precisa; lo porto in fase 2 perché senza ricalcolo le righe salvate prima che il controller inserisca una tariffa resterebbero "da valorizzare" per sempre.
 2. **Storico delle modifiche (`audit_log`) in fase 3**, come nell'analisi: in fase 2 su tariffe e tipologie resta il tracciamento dell'ultimo salvataggio; le tariffe non si sovrascrivono di fatto, perché una correzione si fa chiudendo un periodo e aprendone un altro.
 3. **Date di progetto e attività non bloccanti.** Si consuntiva su progetti In valutazione e In corso e su attività attive, a qualsiasi data; le date di inizio e fine servono all'EVM, non alla consuntivazione. Bloccanti restano solo le date di ingresso e uscita della risorsa.
 4. **Niente ore nel futuro.** Si consuntiva fino alla data di oggi; i giorni futuri della settimana sono in sola lettura.
 5. **Progetti aperti a tutte le risorse.** La risorsa può consuntivare su qualsiasi progetto non Chiuso, non solo su quelli dove è allocata o assegnata (l'analisi non restringe; sarà l'approvatore a respingere in fase 3). Le proposte del Pianificatore sono solo un aiuto.
-6. **Salvataggio della settimana in un'unica transazione** (`PUT /api/consuntivazione/consuntivi`), in aggiunta al salvataggio della singola giornata previsto dall'analisi.
+6. **Salvataggio di più giornate in un'unica transazione** (`PUT /api/consuntivazione/consuntivi`), in aggiunta al salvataggio della singola giornata previsto dall'analisi.
 7. **Chi consuntiva:** solo gli utenti collegati a una risorsa e solo per sé stessi. Un amministratore senza risorsa non vede la pagina; nessuno inserisce ore per conto di altri.
+8. **Nessun obbligo di ritmo.** La risorsa può consuntivare un giorno alla volta oppure per settimana, come preferisce: la pagina offre la vista del giorno e quella della settimana, e salva solo le giornate modificate. Nessun controllo pretende la settimana completa.
 
 | Rischio | Effetto | Contromisura |
 | --- | --- | --- |
