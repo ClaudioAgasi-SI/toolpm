@@ -127,6 +127,14 @@ export class AllocazioniService {
   }
 
   /** Progetti (id) di cui la risorsa è approvatore, TL o PM. */
+  /** Progetti su cui la risorsa ha ore consuntivate (fase 2): per i permessi del TL sulle caratteristiche. */
+  async progettiConsuntivati(risorsaId: mongoose.Types.ObjectId | string): Promise<string[]> {
+    const ids = await this.progetti.db
+      .collection('consuntivi')
+      .distinct('righe.progettoId', { risorsaId: new mongoose.Types.ObjectId(String(risorsaId)) });
+    return ids.map(String);
+  }
+
   async progettiDelSoggetto(risorsaId: string | undefined): Promise<string[]> {
     if (!risorsaId || !mongoose.isValidObjectId(risorsaId)) return [];
     const ids = await this.progetti.distinct('_id', { 'approvatori.risorsaId': new mongoose.Types.ObjectId(risorsaId) }).exec();

@@ -83,14 +83,18 @@ export class ConsuntiviService {
   }
 
   /**
-   * Progetti non chiusi con le loro attività attive: le voci su cui si può consuntivare.
-   * Con la risorsa, segna le attività a cui è assegnata e le mette in testa (anche i progetti che ne hanno):
+   * Progetti non chiusi su cui la risorsa lavora nel periodo (default: il mese corrente), con le loro attività
+   * attive: le voci su cui può consuntivare. Segna le attività a cui è assegnata e le mette in testa (anche i progetti che ne hanno):
    * si può consuntivare anche sulle altre, con un avviso (decisione 10 del piano della fase 2).
    */
-  async voci(utente?: UtenteAutenticato) {
-    const mia = utente?.risorsaId ?? null;
+  async voci(utente: UtenteAutenticato | undefined, periodo: { da?: unknown; a?: unknown } = {}) {
+    const risorsaId = this.risorsaPropria(utente);
+    const mia = String(risorsaId);
+    const oggi = oggiInItalia();
+    const { da, a } = intervallo(periodo.da ?? `${oggi.slice(0, 8)}01`, periodo.a ?? periodo.da ?? oggi);
+    const lavoro = await this.progettiDiLavoro(risorsaId, mesiTra(da, a));
     const progetti = await this.progetti
-      .find({ stato: { $ne: 'chiuso' } }, { codice: 1, titolo: 1, stato: 1, soloSuAttivita: 1 })
+      .find({ stato: { $ne: 'chiuso' }, _id: { $in: lavoro.tutti() } }, { codice: 1, titolo: 1, stato: 1, soloSuAttivita: 1 })
       .sort({ codice: 1 })
       .lean()
       .exec();
@@ -147,7 +151,7 @@ export class ConsuntiviService {
       }
     }
     // Solo voci ancora consuntivabili, senza doppioni (vince la prima: la settimana precedente).
-    const voci = await this.voci(utente);
+    const voci = await this.voci(utente, { da: testoData(inizio), a: testoData(fine) });
     const perId = new Map(voci.map((p) => [p._id, p]));
     const tipologieAttive = new Map((await this.tipologie.find({ attiva: true }, { codice: 1, descrizione: 1 }).lean().exec()).map((t) => [String(t._id), t]));
     const visti = new Set<string>();
@@ -302,6 +306,12 @@ export class ConsuntiviService {
       const progetto = ctx.progetti.get(String(progettoId));
       if (!progetto) throw errore(g.testo, `${n}: progetto inesistente`);
       if (progetto.stato === 'chiuso') throw errore(g.testo, `${n}: il progetto ${progetto.codice} è chiuso`);
+      if (!ctx.lavoro.lavora(String(progetto._id), meseDi(g.testo))) {
+        throw errore(
+          g.testo,
+          `${n}: non lavori sul progetto ${progetto.codice} (nessuna attività assegnata, nessuna allocazione nel mese nel Pianificatore): chiedi al TL o al PM del progetto`,
+        );
+      }
       if (!att && progetto.soloSuAttivita) throw errore(g.testo, `${n}: sul progetto ${progetto.codice} si consuntiva solo sulle attività`);
       if (att && att.stato !== 'attiva') throw errore(g.testo, `${n}: l'attività ${att.codice} è chiusa`);
       const tipologia = ctx.tipologie.get(String(tipologiaId));
@@ -377,16 +387,42 @@ export class ConsuntiviService {
     ]);
     const date = giornate.map((g) => g.data.getTime());
     const risolvi = await this.tariffe.risolutore(risorsaId, new Date(Math.min(...date)), new Date(Math.max(...date)));
+    const lavoro = await this.progettiDiLavoro(risorsaId, [...new Set(giornate.map((g) => meseDi(g.testo)))]);
     return {
       attivita: new Map(attivita.map((a) => [String(a._id), a as unknown as AttivitaCtx])),
       progetti: new Map(progetti.map((p) => [String(p._id), p as unknown as ProgettoCtx])),
       tipologie: new Map(tipologie.map((t) => [String(t._id), t as unknown as TipologiaCtx])),
       predefinita: (tipologie.find((t) => t.predefinita)?._id as Id | undefined) ?? null,
       risolvi,
+      lavoro,
     };
   }
 
   // ---- Parte comune ----
+
+  /**
+   * Progetti su cui la risorsa lavora (decisione 5 del piano della fase 2): approvatrice del progetto o
+   * assegnata ad almeno una sua attività (sempre), oppure allocata nel Pianificatore nel mese (percentuale > 0).
+   */
+  private async progettiDiLavoro(risorsaId: Id, mesi: string[]): Promise<ProgettiDiLavoro> {
+    const [approvatrice, assegnata, risorsa] = await Promise.all([
+      this.progetti.distinct('_id', { 'approvatori.risorsaId': risorsaId }).exec(),
+      this.attivita.distinct('progettoId', { risorseAssegnateIds: risorsaId }).exec(),
+      this.risorse.findById(risorsaId, { planned: 1 }).lean().exec(),
+    ]);
+    const sempre = new Set([...approvatrice, ...assegnata].map(String));
+    const perMese = new Map<string, Set<string>>();
+    for (const al of risorsa?.planned ?? []) {
+      if (al.progettoId && mesi.includes(al.mese) && (al.percentualeAllocazione ?? 0) > 0) {
+        if (!perMese.has(al.mese)) perMese.set(al.mese, new Set());
+        perMese.get(al.mese)!.add(String(al.progettoId));
+      }
+    }
+    return {
+      lavora: (progettoId, mese) => sempre.has(progettoId) || Boolean(perMese.get(mese)?.has(progettoId)),
+      tutti: () => [...new Set([...sempre, ...[...perMese.values()].flatMap((s) => [...s])])].map((id) => new mongoose.Types.ObjectId(id)),
+    };
+  }
 
   /** Giornate come le vede la pagina: con codici e titoli; tariffe e importi solo a chi li può vedere. */
   private async presenta(giornate: GiornataDb[], conCosti: boolean) {
@@ -472,12 +508,17 @@ interface TipologiaCtx {
   attiva: boolean;
   categoria: string;
 }
+interface ProgettiDiLavoro {
+  lavora(progettoId: string, mese: string): boolean;
+  tutti(): Id[];
+}
 interface Contesto {
   attivita: Map<string, AttivitaCtx>;
   progetti: Map<string, ProgettoCtx>;
   tipologie: Map<string, TipologiaCtx>;
   predefinita: Id | null;
   risolvi: Risolutore;
+  lavoro: ProgettiDiLavoro;
 }
 
 function leggiGiornata(grezza: unknown): GiornataInput {
@@ -488,6 +529,13 @@ function leggiGiornata(grezza: unknown): GiornataInput {
   if (!Array.isArray(c.righe)) throw errore(testoGiorno, 'righe: elenco obbligatorio (anche vuoto)');
   if (c.righe.length > 100) throw errore(testoGiorno, 'troppe righe');
   return { data: d, testo: testoData(d), versione, righe: c.righe.map((r) => corpo(r)) };
+}
+
+/** Mesi "AAAAMM" toccati dall'intervallo. */
+function mesiTra(da: Date, a: Date) {
+  const mesi = new Set<string>();
+  for (let d = da; d <= a; d = piuGiorni(d, 1)) mesi.add(meseDi(testoData(d)));
+  return [...mesi];
 }
 
 function intervallo(da: unknown, a: unknown) {

@@ -125,7 +125,7 @@ La riga di consuntivo appartiene alla giornata di una risorsa, punta sempre a un
 **Attività di progetto**
 
 19. **RF-19 Anagrafica attività.** Per ogni progetto, un elenco di attività: codice (univoco nel progetto), descrizione, date di inizio e fine facoltative, stato (attiva, chiusa), stima in giorni facoltativa. Un'attività appartiene a un solo progetto e non si sposta su un altro dopo il primo consuntivo. Le attività le creano e le modificano solo gli approvatori TL e PM del progetto e i PMSenior.
-20. **RF-20 Consuntivazione su attività.** In ogni riga la risorsa sceglie il progetto oppure una sua attività. Scegliendo l'attività, il progetto è implicito. La risorsa può consuntivare su tutte le attività attive dei progetti non chiusi, anche quelle a cui non è assegnata: la pagina mostra per prime le attività assegnate e avvisa quando se ne sceglie una non assegnata; dalla fase 3 l'approvatore vede evidenziate quelle righe (decisione del 20/11/2026).
+20. **RF-20 Consuntivazione su attività.** In ogni riga la risorsa sceglie il progetto oppure una sua attività. Scegliendo l'attività, il progetto è implicito. La risorsa consuntiva solo sui progetti non chiusi su cui lavora: assegnata ad almeno un'attività del progetto, allocata sul progetto nel Pianificatore nel mese della riga, oppure approvatrice del progetto. Su quei progetti può usare tutte le attività attive, anche quelle a cui non è assegnata: la pagina mostra per prime le attività assegnate e avvisa quando se ne sceglie una non assegnata; dalla fase 3 l'approvatore vede evidenziate quelle righe (decisione del 20/11/2026).
 21. **RF-21 Ribaltamento dei costi.** Il costo di una riga su un'attività si somma all'attività, al progetto a cui l'attività appartiene e al centro di costo di quel progetto, una sola volta per livello.
 22. **RF-22 Costo per attività.** Ore e costo per attività in un periodo, dentro la scheda del progetto e nei report, con dettaglio per risorsa e tipologia di costo.
 23. **RF-23 Approvazione delle attività.** Le righe su un'attività le approvano gli approvatori TL e PM del progetto a cui l'attività appartiene, con le stesse regole.
@@ -362,7 +362,8 @@ Il risultato per attività serve anche agli indicatori delle singole attività; 
 - DTO con `class-validator`: data ISO, minuti multipli di 15, tipologia, progetto e attività esistenti e attivi.
 - Ogni riga ha il progetto oppure l'attività; se arriva un'attività, il progetto lo ricava il backend (un progetto diverso inviato dal client viene rifiutato).
 - Se il progetto è impostato "solo su attività", le righe senza attività vengono rifiutate.
-- Attività a cui la risorsa non è assegnata: la riga è accettata, con un avviso nella risposta (non un errore).
+- Progetto su cui la risorsa non lavora (nessuna attività assegnata, nessuna allocazione nel mese della riga, non approvatrice): la riga è rifiutata.
+- Attività a cui la risorsa non è assegnata, in un progetto su cui lavora: la riga è accettata, con un avviso nella risposta (non un errore).
 - Regole della giornata nel servizio: totale ≤ 24 h, avviso sulle ore ordinarie oltre l'orario contrattuale, periodo non chiuso, righe approvate non modificabili.
 - Una sola giornata per risorsa e data (vincolo di unicità).
 - Tariffe: nessuna sovrapposizione di periodi per la stessa combinazione ruolo + tipologia o risorsa + tipologia.

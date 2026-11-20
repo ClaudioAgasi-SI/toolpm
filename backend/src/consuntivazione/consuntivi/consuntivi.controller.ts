@@ -30,11 +30,15 @@ export class ConsuntiviController {
   @Get('voci')
   @Permesso('consuntivare')
   @ApiOperation({
-    summary: 'Progetti non chiusi con le loro attività attive: le voci su cui si può consuntivare',
-    description: 'Le attività a cui la risorsa è assegnata hanno assegnata: true e stanno in testa; si consuntiva anche sulle altre, con un avviso.',
+    summary: 'Progetti non chiusi su cui la risorsa lavora nel periodo, con le loro attività attive: le voci su cui può consuntivare',
+    description:
+      'Lavora su un progetto chi è assegnato ad almeno una sua attività, chi ne è approvatore e chi è allocato nel Pianificatore nei mesi del periodo. ' +
+      'Le attività a cui la risorsa è assegnata hanno assegnata: true e stanno in testa; si consuntiva anche sulle altre, con un avviso.',
   })
-  voci(@UtenteRichiesta() utente: UtenteAutenticato | undefined) {
-    return this.service.voci(utente);
+  @ApiQuery({ name: 'da', required: false, description: 'AAAA-MM-GG; se manca, il primo del mese corrente' })
+  @ApiQuery({ name: 'a', required: false, description: 'AAAA-MM-GG; se manca, oggi (o da)' })
+  voci(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Query('da') da?: string, @Query('a') a?: string) {
+    return this.service.voci(utente, { da, a });
   }
 
   @Get('proposte')

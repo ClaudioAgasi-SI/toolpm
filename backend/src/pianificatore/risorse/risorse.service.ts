@@ -45,9 +45,11 @@ export class RisorseService {
     return doc;
   }
 
+  /** Risorsa con allocazioni arricchite e, per la pagina, i progetti su cui ha ore consuntivate (permessi del TL). */
   async findOne(id: string) {
-    const [r] = await this.allocazioni.arricchisci([await this.carica(id)]);
-    return r;
+    const attuale = await this.carica(id);
+    const [r] = await this.allocazioni.arricchisci([attuale]);
+    return Object.assign({}, r, { progettiConsuntivati: await this.allocazioni.progettiConsuntivati(attuale._id) });
   }
 
   /**
@@ -88,6 +90,7 @@ export class RisorseService {
       await this.allocazioni.progettiDelSoggetto(utente.risorsaId),
       attuale,
       $set as CaratteristicheRisorsa,
+      await this.allocazioni.progettiConsuntivati(attuale._id),
     );
     this.permessi.verifica(utente, negato === null, negato ?? '');
     await this.model.updateOne({ _id: attuale._id }, { $set }, { runValidators: true }).exec();

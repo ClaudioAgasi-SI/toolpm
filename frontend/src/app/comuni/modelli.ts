@@ -77,6 +77,8 @@ export interface Progetto extends Tracciamento {
   stato: StatoProgetto;
   percentualeCompletamento: number;
   stime: Stime;
+  /** Solo nel dettaglio: il progetto ha ore consuntivate, il centro di costo non cambia più. */
+  conConsuntivi?: boolean;
 }
 
 export interface Attivita extends Tracciamento {

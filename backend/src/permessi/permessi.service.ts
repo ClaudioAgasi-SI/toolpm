@@ -63,8 +63,14 @@ export class PermessiService {
     return regole.puoModificareCaratteristicheRisorsa(s, progettiDelSoggetto, progettiDellaRisorsa);
   }
 
-  motivoNegatoModificaRisorsa(s: Soggetto, progettiDelSoggetto: Iterable<string>, prima: CaratteristicheRisorsa, dopo: CaratteristicheRisorsa) {
-    return regole.motivoNegatoModificaRisorsa(s, progettiDelSoggetto, prima, dopo);
+  motivoNegatoModificaRisorsa(
+    s: Soggetto,
+    progettiDelSoggetto: Iterable<string>,
+    prima: CaratteristicheRisorsa,
+    dopo: CaratteristicheRisorsa,
+    progettiConsuntivati: Iterable<string> = [],
+  ) {
+    return regole.motivoNegatoModificaRisorsa(s, progettiDelSoggetto, prima, dopo, progettiConsuntivati);
   }
 
   /** Filtro per gli elenchi dei progetti gestibili; null = nessun progetto. */

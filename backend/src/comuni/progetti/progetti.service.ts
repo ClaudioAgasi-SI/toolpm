@@ -86,8 +86,15 @@ export class ProgettiService {
     return doc;
   }
 
+  /** Dettaglio del progetto, con conConsuntivi: true se ha già ore consuntivate (centro di costo bloccato). */
   async dettaglio(utente: UtenteAutenticato, id: string) {
-    return this.vista(utente, await this.carica(id));
+    const p = await this.carica(id);
+    return Object.assign({}, this.vista(utente, p), { conConsuntivi: await this.conConsuntivi(p._id) });
+  }
+
+  /** Il progetto ha già righe di consuntivo (in qualsiasi stato). */
+  private async conConsuntivi(id: mongoose.Types.ObjectId) {
+    return Boolean(await this.model.db.collection('consuntivi').findOne({ 'righe.progettoId': id }, { projection: { _id: 1 } }));
   }
 
   /**
@@ -130,9 +137,13 @@ export class ProgettiService {
     const $unset: Record<string, 1> = {};
     if (presente(c, 'titolo')) $set.titolo = testo(c.titolo, 'titolo', { obbligatorio: true, max: 200 });
     if (presente(c, 'centroCostoId')) {
-      // Fase 1: il centro di costo si può ancora correggere; dalla fase 2 resta bloccato dopo il primo consuntivo.
+      // Il centro di costo si corregge solo finché il progetto non ha ore consuntivate (fase 2, blocco C4):
+      // le righe ne portano una copia, che deve restare coerente.
       $set.centroCostoId = objectId(c.centroCostoId, 'centroCostoId', true);
       if (String($set.centroCostoId) !== String(p.centroCostoId)) {
+        if (await this.conConsuntivi(p._id)) {
+          throw new ConflictException('Il centro di costo non si può più cambiare: il progetto ha già ore consuntivate');
+        }
         await this.anagrafiche.centriCosto.verificaAttivo($set.centroCostoId, 'centroCostoId');
       }
     }

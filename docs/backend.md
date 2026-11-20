@@ -153,7 +153,7 @@ Modulo globale `src/permessi/`, con le regole decise nell'analisi. Le regole son
 | `puoModificarePercentualeAttivita` | risorse assegnate all'attività, TL e PM del progetto, PMSenior |
 | `puoGestireRisorse` | PM, PMSenior |
 | `puoModificareCaratteristicheRisorsa` | PM e PMSenior su tutte; TL sulle risorse che lavorano su un suo progetto (fase 1: allocate nel Pianificatore) |
-| `motivoNegatoModificaRisorsa` (modifica dal Pianificatore, confronto prima/dopo) | PM e PMSenior tutto; TL: alloca qualsiasi risorsa sui propri progetti e ne modifica o toglie quelle allocazioni, non tocca le allocazioni su altri progetti né i mesi liberi, skill e certificazioni solo se la risorsa lavora su un suo progetto (prima o dopo la modifica) |
+| `motivoNegatoModificaRisorsa` (modifica dal Pianificatore, confronto prima/dopo) | PM e PMSenior tutto; TL: alloca qualsiasi risorsa sui propri progetti e ne modifica o toglie quelle allocazioni, non tocca le allocazioni su altri progetti né i mesi liberi, skill e certificazioni solo se la risorsa lavora su un suo progetto: allocata (prima o dopo la modifica) o con ore consuntivate (fase 2; `GET /api/pianificatore/risorse/:id` porta `progettiConsuntivati`) |
 
 - **Elenchi.** `filtroProgettiGestibili(utente)` dà il filtro MongoDB dei progetti che l'utente può gestire: tutti per il PMSenior, quelli in cui è approvatore per TL e PM, nessuno (`null`) per gli altri.
 - Le regole controllano solo chi può agire. Se un passaggio di stato è ammesso (date, almeno un PM) lo controlla il modulo Comuni (blocco B4). Il collegamento ai dati veri (progetti, attività, allocazioni) arriva con i blocchi B4 e B5.
@@ -171,7 +171,7 @@ Modulo `src/comuni/`, registrato su `/api/comuni`: i dati condivisi da tutte le 
 | POST, PUT `/:id` | `/risorse` | PM, PMSenior | Email obbligatoria e unica; `storicoRuoli` sostituisce lo storico |
 | GET | `/progetti` (`?gestibili=true&stato=&clienteId=`), `/progetti/:id` | Chi ha fatto l'accesso | Stime in euro solo a chi gestisce il progetto e al controller |
 | POST | `/progetti` | TL, PM, PMSenior | Nasce In valutazione; chi lo crea diventa approvatore (TL se abilitato TL, altrimenti PM) |
-| PUT | `/progetti/:id` | TL e PM del progetto, PMSenior | Titolo, descrizione, cliente, centro di costo, date, stime, `soloSuAttivita` |
+| PUT | `/progetti/:id` | TL e PM del progetto, PMSenior | Titolo, descrizione, cliente, centro di costo, date, stime, `soloSuAttivita`. Il centro di costo non cambia più dopo il primo consuntivo (409); il dettaglio `GET /progetti/:id` porta `conConsuntivi` |
 | POST | `/progetti/:id/stato` | TL e PM del progetto, PMSenior; riapertura PM e PMSenior | `{ stato }`; In corso richiede data di inizio e un PM, Chiuso la data di fine |
 | PUT | `/progetti/:id/approvatori` | PM del progetto, PMSenior | `{ approvatori: [{ risorsaId, profilo }] }`; almeno un PM se In corso o Chiuso |
 | PUT | `/progetti/:id/completamento` | TL e PM del progetto, PMSenior | `{ percentuale }` 0–100, registrata in `avanzamenti` |
@@ -219,7 +219,7 @@ Regole: periodi della stessa coppia (ruolo + tipologia, risorsa + tipologia) mai
 | Metodo | Percorso | Permesso | Note |
 |---|---|---|---|
 | GET | `/consuntivi?da=&a=&risorsa=` | accesso | Al massimo 62 giorni. Senza `risorsa`: le proprie giornate; con `risorsa` di un altro: solo il controller (`gestireTariffe`). Per ogni giornata `data`, `versione`, `totaleMinuti`, righe con codici e titoli di progetto e attività |
-| GET | `/consuntivi/voci` | `consuntivare` | Progetti non chiusi (con `soloSuAttivita`) e le loro attività attive; `assegnata: true` sulle attività a cui la risorsa è assegnata, che stanno in testa (e prima i progetti che ne hanno, `conAttivitaAssegnate`) |
+| GET | `/consuntivi/voci?da=&a=` | `consuntivare` | Progetti non chiusi su cui la risorsa lavora nel periodo (default: il mese corrente), con `soloSuAttivita`, e le loro attività attive; `assegnata: true` sulle attività a cui la risorsa è assegnata, che stanno in testa (e prima i progetti che ne hanno, `conAttivitaAssegnate`) |
 | GET | `/consuntivi/proposte?settimana=` | `consuntivare` | Righe proposte per la settimana: progetti allocati nel Pianificatore nei mesi della settimana (tipologia predefinita) e righe della settimana precedente; solo voci ancora consuntivabili |
 | PUT | `/consuntivi/:data` | `consuntivare` | `{ versione, righe }`: le righe della giornata (sostituiscono le precedenti in bozza) |
 | PUT | `/consuntivi` | `consuntivare` | `{ giornate: [{ data, versione, righe }] }`: tutte in una transazione, o nessuna |
@@ -228,6 +228,7 @@ Ogni riga in ingresso: `_id` (per le righe esistenti), `attivitaId` oppure `prog
 
 - si consuntiva solo per sé (utente collegato a una risorsa), mai nel futuro (data di oggi in Italia), dentro le date di ingresso e uscita della risorsa;
 - minuti a passi di 15, almeno 15, totale della giornata al massimo 24 ore; una sola riga per progetto o attività e tipologia;
+- solo sui progetti su cui la risorsa lavora (decisione 5 del piano): assegnata ad almeno un'attività del progetto, approvatrice del progetto, oppure allocata sul progetto nel Pianificatore nel mese della riga con percentuale maggiore di zero; il controllo vale per le righe nuove o cambiate;
 - con l'attività il progetto si ricava (un progetto diverso è un errore); niente righe nuove o cambiate su progetti chiusi, attività chiuse, tipologie disattivate, né direttamente su un progetto "solo su attività";
 - per ogni riga nuova o cambiata: centro di costo copiato dal progetto, tariffa risolta con `TariffeService.risolutore()` e costo fotografato (`fonteTariffa`, `tariffaId`, `tariffaCentesimiOra`, `costoCentesimi`; null = da valorizzare), `modificatoIl` e `modificatoDa` della riga; le righe invariate restano come sono, e il costo si ricalcola solo se cambiano tipologia o minuti;
 - le righe non in bozza o respinte (dalla fase 3) non si cambiano né si tolgono (409);
@@ -389,7 +390,7 @@ I **test di integrazione** (`test/*.integrazione.spec.ts`) avviano l'applicazion
 | `comuni.integrazione.spec.ts` | Modulo Comuni: anagrafiche, risorse, progetti (stati, approvatori, stime in euro), attività, avanzamenti, validatori |
 | `pianificatore.integrazione.spec.ts` | Pianificatore: allocazioni su `progettoId`, permessi sulle caratteristiche (anche il TL che alloca sui suoi progetti), migrazione 006 |
 | `migrazione-dati.integrazione.spec.ts` | Migrazione B7 sui dati di esempio: esporta, errori per riga, prova, importazione, verifica, ripetibilità |
-| `consuntivazione.integrazione.spec.ts` | Consuntivazione (fase 2): migrazione 007 (tipologie iniziali con ORDINARIA predefinita, ripetibilità, validatori di tipologie, tariffe e consuntivi, indici unici); API delle tipologie di costo (permessi, codice, una sola predefinita sempre attiva); API delle tariffe (permessi, sovrapposizioni, modifica, risoluzione con cambio di ruolo a metà mese, cancellazione bloccata se usata); consuntivi (costo fotografato e riservatezza, versione e 409, ricalcolo solo se cambiano tipologia o minuti, regole su progetti, attività, tipologie, minuti, futuro e date della risorsa, avvisi, transazione su più giornate, righe non in bozza, voci e proposte) |
+| `consuntivazione.integrazione.spec.ts` | Consuntivazione (fase 2): migrazione 007 (tipologie iniziali con ORDINARIA predefinita, ripetibilità, validatori di tipologie, tariffe e consuntivi, indici unici); API delle tipologie di costo (permessi, codice, una sola predefinita sempre attiva); API delle tariffe (permessi, sovrapposizioni, modifica, risoluzione con cambio di ruolo a metà mese, cancellazione bloccata se usata); consuntivi (progetti su cui si lavora, costo fotografato e riservatezza, versione e 409, ricalcolo solo se cambiano tipologia o minuti, regole su progetti, attività, tipologie, minuti, futuro e date della risorsa, avvisi, transazione su più giornate, righe non in bozza, voci e proposte); vincoli del blocco C4 (centro di costo bloccato, TL e risorse con ore sui suoi progetti) |
 | `profili.integrazione.spec.ts` | Criteri di completamento della fase 1: 401 su tutte le API elencate da Swagger, 15 operazioni per ognuno dei 7 profili, tracciamento dell'utente giusto |
 
 ## Docker

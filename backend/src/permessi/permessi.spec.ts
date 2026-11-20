@@ -147,6 +147,13 @@ describe('modifica delle caratteristiche dal Pianificatore (decisioni del 19/11/
     expect(motivoNegatoModificaRisorsa(TL, miei, prima, { ...prima, skillTecnici: [] })).toMatch(/non lavora sui tuoi progetti/);
   });
 
+  it('skill di una risorsa con ore consuntivate su un progetto del TL: sì (fase 2)', () => {
+    expect(motivoNegatoModificaRisorsa(TL, miei, prima, { ...prima, skillTecnici: [] }, ['p1'])).toBeNull();
+    expect(motivoNegatoModificaRisorsa(TL, miei, prima, { ...prima, skillTecnici: [] }, ['p9'])).toMatch(/non lavora sui tuoi progetti/);
+    // Le ore consuntivate non danno diritto a toccare le allocazioni sui progetti altrui.
+    expect(motivoNegatoModificaRisorsa(TL, miei, prima, { ...prima, planned: [] }, ['p1'])).toMatch(/non sei approvatore/);
+  });
+
   it('PM e PMSenior tutto; risorse semplici e controller niente', () => {
     const tutto = { skillTecnici: [], planned: [] };
     expect(motivoNegatoModificaRisorsa(PM_ESTERNO, [], prima, tutto)).toBeNull();

@@ -37,12 +37,16 @@
         </select>
       </label>
       <label>Centro di costo
-        <select name="centro" required [(ngModel)]="m.centroCostoId">
+        <select name="centro" required [(ngModel)]="m.centroCostoId" [disabled]="!!progetto()?.conConsuntivi"
+          [title]="progetto()?.conConsuntivi ? 'Il progetto ha già ore consuntivate: il centro di costo non si può più cambiare' : ''">
           <option value="" disabled>— scegli —</option>
           @for (c of selezionabili(centri(), m.centroCostoId); track c._id) {
             <option [value]="c._id">{{ c.descrizione }} ({{ c.codice }})</option>
           }
         </select>
+        @if (progetto()?.conConsuntivi) {
+          <small class="tenue">Bloccato: il progetto ha già ore consuntivate.</small>
+        }
       </label>
       <label>Data di inizio <input name="inizio" type="date" [(ngModel)]="m.dataInizio" /></label>
       <label>Data di fine <input name="fine" type="date" [(ngModel)]="m.dataFine" /></label>

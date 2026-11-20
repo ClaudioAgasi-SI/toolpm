@@ -4,6 +4,7 @@
  * C1: API delle tipologie di costo (permessi, codice, predefinita sempre una e attiva).
  * C2: API delle tariffe (permessi, sovrapposizioni, risoluzione con cambio di ruolo, cancellazione).
  * C3: consuntivi giornalieri (regole della giornata, costo fotografato, versione, riservatezza, proposte).
+ * C4: vincoli su Comuni e permessi (centro di costo bloccato, TL e risorse con ore sui suoi progetti).
  *
  * Si esegue solo se è impostata MONGODB_URI_TEST, es.:
  *   MONGODB_URI_TEST="mongodb://localhost:27017/?directConnection=true" npm test
@@ -34,6 +35,7 @@ describe.skipIf(!URI_BASE)('Consuntivazione con MongoDB vero', () => {
     { nome: 'paola', abilitazione: 'PM', ruoli: ['risorsa'] },
     { nome: 'rita', abilitazione: null, ruoli: ['risorsa'] },
     { nome: 'carlo', abilitazione: null, ruoli: ['risorsa', 'controller'] },
+    { nome: 'tito', abilitazione: 'TL', ruoli: ['risorsa'] },
   ];
 
   const api = () => request(app.getHttpServer());
@@ -416,6 +418,7 @@ describe.skipIf(!URI_BASE)('Consuntivazione con MongoDB vero', () => {
               titolo: `Progetto ${codice}`,
               centroCostoId: oid(cdc),
               stato: 'inCorso',
+              dataInizio: new Date('2026-01-01'),
               approvatori: [],
               percentualeCompletamento: 0,
               soloSuAttivita: false,
@@ -427,6 +430,7 @@ describe.skipIf(!URI_BASE)('Consuntivazione con MongoDB vero', () => {
       prog.B = await progetto('PB', { stato: 'inValutazione' });
       prog.C = await progetto('PC', { stato: 'chiuso' });
       prog.S = await progetto('PS', { soloSuAttivita: true });
+      prog.D = await progetto('PD');
       const attivita = async (progettoId: string, codice: string, stato = 'attiva') =>
         String(
           (
@@ -451,8 +455,17 @@ describe.skipIf(!URI_BASE)('Consuntivazione con MongoDB vero', () => {
         { ruoloId: junior, tipologiaId: oid(tip.ORDINARIA), validoDal: new Date('2026-01-01'), validoAl: new Date('2026-12-31'), centesimiOra: 2500 },
         { ruoloId: junior, tipologiaId: oid(tip.STRAORDINARIA), validoDal: new Date('2026-01-01'), validoAl: new Date('2026-12-31'), centesimiOra: 3000 },
       ]);
-      // paola non ha un ruolo; la sua uscita è il 31/03/2026.
-      await db.collection('risorse').updateOne({ _id: oid(risorsa.paola) }, { $set: { dataUscita: new Date('2026-03-31'), oreContrattualiGiorno: 4 } });
+      // Dove lavorano (decisione 5): rita allocata a marzo 2026 su PA e PS e approvatrice di PB; PC chiuso;
+      // su PD nessuno. paola allocata su PA a marzo; non ha un ruolo e la sua uscita è il 31/03/2026.
+      await db.collection('risorse').updateOne(
+        { _id: oid(risorsa.rita) },
+        { $set: { planned: [{ mese: '202603', progettoId: oid(prog.A), percentualeAllocazione: 60 }, { mese: '202603', progettoId: oid(prog.S), percentualeAllocazione: 20 }] } },
+      );
+      await db.collection('progetti').updateOne({ _id: oid(prog.B) }, { $set: { approvatori: [{ risorsaId: oid(risorsa.rita), profilo: 'TL' }] } });
+      await db.collection('risorse').updateOne(
+        { _id: oid(risorsa.paola) },
+        { $set: { dataUscita: new Date('2026-03-31'), oreContrattualiGiorno: 4, planned: [{ mese: '202603', progettoId: oid(prog.A), percentualeAllocazione: 100 }] } },
+      );
     });
 
     const leggi = async (chi: string, da: string, a: string, extra = '') => (await come(chi).get(`${URL_C}?da=${da}&a=${a}${extra}`));
@@ -615,14 +628,15 @@ describe.skipIf(!URI_BASE)('Consuntivazione con MongoDB vero', () => {
     });
 
     it('voci e proposte: progetti non chiusi, attività attive, allocazioni e settimana precedente', async () => {
-      const voci = (await come('rita').get(`${URL_C}/voci`)).body;
+      const voci = (await come('rita').get(`${URL_C}/voci?da=2026-03-01&a=2026-03-31`)).body;
       expect(voci.map((p: { codice: string }) => p.codice)).toEqual(['PA', 'PB', 'PS']);
       expect(voci[0].attivita.map((a: { codice: string }) => a.codice)).toEqual(['SVI']);
-      expect((await come('carlo').get(`${URL_C}/voci`)).status).toBe(200);
+      // carlo non lavora su nessun progetto: nessuna voce.
+      expect((await come('carlo').get(`${URL_C}/voci?da=2026-03-01`)).body).toEqual([]);
 
-      await db.collection('risorse').updateOne(
+      await db.collection<{ planned: Record<string, unknown>[] }>('risorse').updateOne(
         { _id: oid(risorsa.rita) },
-        { $set: { planned: [{ mese: '202603', progettoId: oid(prog.B), percentualeAllocazione: 50 }, { mese: '202603', progettoId: oid(prog.C), percentualeAllocazione: 50 }] } },
+        { $push: { planned: { $each: [{ mese: '202603', progettoId: oid(prog.B), percentualeAllocazione: 50 }, { mese: '202603', progettoId: oid(prog.C), percentualeAllocazione: 50 }] } } },
       );
       const p = (await come('rita').get(`${URL_C}/proposte?settimana=2026-03-11`)).body;
       expect(p.settimana).toBe('2026-03-09');
@@ -638,12 +652,12 @@ describe.skipIf(!URI_BASE)('Consuntivazione con MongoDB vero', () => {
 
     it('attività non assegnate: si consuntiva con un avviso; le assegnate stanno in testa alle voci', async () => {
       await db.collection('attivita').updateOne({ _id: oid(att.COL) }, { $set: { risorseAssegnateIds: [oid(risorsa.rita)] } });
-      const voci = (await come('rita').get(`${URL_C}/voci`)).body;
+      const voci = (await come('rita').get(`${URL_C}/voci?da=2026-03-09&a=2026-03-15`)).body;
       expect(voci[0]).toMatchObject({ codice: 'PB', conAttivitaAssegnate: true });
       expect(voci[0].attivita[0]).toMatchObject({ codice: 'COL', assegnata: true });
       expect(voci.find((p: { codice: string }) => p.codice === 'PA').attivita[0]).toMatchObject({ codice: 'SVI', assegnata: false });
       // Per paola COL non è assegnata.
-      expect((await come('paola').get(`${URL_C}/voci`)).body[0]).toMatchObject({ codice: 'PA', conAttivitaAssegnate: false });
+      expect((await come('paola').get(`${URL_C}/voci?da=2026-03-09`)).body.map((p: { codice: string }) => p.codice)).toEqual(['PA']);
 
       const r = await come('rita').put(`${URL_C}/2026-03-11`, {
         versione: 0,
@@ -668,6 +682,86 @@ describe.skipIf(!URI_BASE)('Consuntivazione con MongoDB vero', () => {
       const r2 = await come('rita').put(`${URL_C}/2026-03-11`, { versione: g.versione, righe });
       expect(r2.status).toBe(200);
       expect(r2.body.avvisi).toEqual([]);
+    });
+
+    it('solo sui progetti su cui si lavora: attività assegnata, allocazione nel mese, approvatrice', async () => {
+      const prova = (giorno: string, riga: object) => come('rita').put(`${URL_C}/${giorno}`, { versione: 0, righe: [riga] });
+      const r = await prova('2026-03-12', { progettoId: prog.D, minuti: 60 });
+      expect(r.status).toBe(400);
+      expect(r.body.message).toMatch(/non lavori sul progetto PD/);
+      // L'allocazione vale solo nel suo mese.
+      await db.collection<{ planned: Record<string, unknown>[] }>('risorse').updateOne({ _id: oid(risorsa.rita) }, { $push: { planned: { mese: '202604', progettoId: oid(prog.D), percentualeAllocazione: 50 } } });
+      expect((await prova('2026-03-12', { progettoId: prog.D, minuti: 60 })).status).toBe(400);
+      expect((await prova('2026-04-01', { progettoId: prog.D, minuti: 60 })).status).toBe(200);
+      // Un mese libero (percentuale assente) non conta.
+      await db.collection<{ planned: Record<string, unknown>[] }>('risorse').updateOne({ _id: oid(risorsa.rita) }, { $push: { planned: { mese: '202603', progettoId: oid(prog.D) } } });
+      expect((await prova('2026-03-12', { progettoId: prog.D, minuti: 60 })).status).toBe(400);
+      // Assegnata a un'attività di PD: vale sempre, anche per le ore sul progetto.
+      const altra = String(
+        (await db.collection('attivita').insertOne({ progettoId: oid(prog.D), codice: 'D1', descrizione: 'D1', stato: 'attiva', percentualeCompletamento: 0, risorseAssegnateIds: [oid(risorsa.rita)] })).insertedId,
+      );
+      expect((await prova('2026-03-12', { progettoId: prog.D, minuti: 60 })).status).toBe(200);
+      expect((await come('rita').get(`${URL_C}/voci?da=2026-03-12`)).body.map((p: { codice: string }) => p.codice)).toContain('PD');
+      await db.collection('attivita').deleteOne({ _id: oid(altra) });
+      // Le righe già salvate restano valide anche se il legame cade, finché non si cambiano.
+      const g = (await leggi('rita', '2026-03-12', '2026-03-12')).body[0];
+      const riga = g.righe[0];
+      const base = { _id: riga._id, progettoId: riga.progettoId, attivitaId: riga.attivitaId, tipologiaId: riga.tipologiaId, minuti: riga.minuti };
+      expect((await come('rita').put(`${URL_C}/2026-03-12`, { versione: g.versione, righe: [base] })).status).toBe(200);
+      expect((await come('rita').put(`${URL_C}/2026-03-12`, { versione: g.versione + 1, righe: [{ ...base, minuti: 120 }] })).body.message).toMatch(/non lavori/);
+    });
+
+
+    describe('vincoli su Comuni e permessi (C4)', () => {
+      beforeAll(async () => {
+        // PA: tito TL e paola PM. rita ha ore su PA (2 marzo) ma da qui non vi è più allocata.
+        await db.collection('progetti').updateOne(
+          { _id: oid(prog.A) },
+          { $set: { approvatori: [{ risorsaId: oid(risorsa.tito), profilo: 'TL' }, { risorsaId: oid(risorsa.paola), profilo: 'PM' }] } },
+        );
+        await db.collection('risorse').updateOne(
+          { _id: oid(risorsa.rita) },
+          { $set: { planned: [{ mese: '202603', progettoId: oid(prog.S), percentualeAllocazione: 20 }] } },
+        );
+      });
+
+      it('il centro di costo di un progetto con ore consuntivate non cambia più', async () => {
+        const nuovo = String((await db.collection('centri_costo').insertOne({ codice: 'CDC2', descrizione: 'Manutenzione', attivo: true })).insertedId);
+        expect((await come('paola').get(`/api/comuni/progetti/${prog.A}`)).body.conConsuntivi).toBe(true);
+        const r = await come('paola').put(`/api/comuni/progetti/${prog.A}`, { centroCostoId: nuovo });
+        expect(r.status).toBe(409);
+        expect(r.body.message).toMatch(/ore consuntivate/);
+        // Lo stesso centro di costo si può rimandare (la pagina manda sempre tutto il progetto).
+        const ok = await come('paola').put(`/api/comuni/progetti/${prog.A}`, { centroCostoId: cdc, descrizione: 'ok' });
+        expect(ok.status).toBe(200);
+        // Un progetto senza ore lo cambia ancora.
+        const pe = String(
+          (
+            await db.collection('progetti').insertOne({
+              codice: 'PE',
+              titolo: 'Progetto PE',
+              centroCostoId: oid(cdc),
+              stato: 'inCorso',
+              dataInizio: new Date('2026-01-01'),
+              approvatori: [{ risorsaId: oid(risorsa.paola), profilo: 'PM' }],
+              percentualeCompletamento: 0,
+            })
+          ).insertedId,
+        );
+        expect((await come('paola').get(`/api/comuni/progetti/${pe}`)).body.conConsuntivi).toBe(false);
+        expect((await come('paola').put(`/api/comuni/progetti/${pe}`, { centroCostoId: nuovo })).status).toBe(200);
+      });
+
+      it('il TL modifica le skill delle risorse con ore sui suoi progetti, anche se non allocate', async () => {
+        const url = (r: string) => `/api/pianificatore/risorse/${r}`;
+        const r = (await come('tito').get(url(risorsa.rita))).body;
+        expect(r.progettiConsuntivati).toContain(prog.A);
+        expect((await come('tito').put(url(risorsa.rita), { ...r, skillTecnici: [{ skillName: 'NestJS' }] })).status).toBe(200);
+        // carlo non ha ore né allocazioni sui progetti di tito.
+        const c = (await come('tito').get(url(risorsa.carlo))).body;
+        expect(c.progettiConsuntivati).toEqual([]);
+        expect((await come('tito').put(url(risorsa.carlo), { ...c, skillTecnici: [{ skillName: 'NestJS' }] })).status).toBe(403);
+      });
     });
 
     it('chi non ha una risorsa non consuntiva; senza accesso 401', async () => {

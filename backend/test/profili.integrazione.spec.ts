@@ -88,6 +88,7 @@ describe.skipIf(!URI_BASE)('Criteri di completamento della fase 1 con MongoDB ve
       risorsaId[nome] = String((await db.collection('risorse').insertOne({ cognome: nome, nome, planned: [] })).insertedId);
     }
     cdc = String((await db.collection('centri_costo').insertOne({ codice: 'CDC', descrizione: 'Sviluppo', attivo: true })).insertedId);
+    await db.collection('ruoli').insertOne({ codice: 'R-TARIFFE', descrizione: 'Ruolo per le tariffe', attivo: true });
 
     const { AppModule } = await import('../src/app.module.js');
     const { MongooseErrorsFilter } = await import('../src/mongoose-errors.filter.js');
@@ -138,7 +139,7 @@ describe.skipIf(!URI_BASE)('Criteri di completamento della fase 1 con MongoDB ve
       }
     }
     // Tutte le sezioni sono coperte.
-    for (const prefisso of ['/api/comuni/', '/api/pianificatore/', '/api/utenti', '/api/parametri', '/api/auth/me']) {
+    for (const prefisso of ['/api/comuni/', '/api/pianificatore/', '/api/consuntivazione/', '/api/utenti', '/api/parametri', '/api/auth/me']) {
       expect(controllate.some((c) => c.includes(prefisso))).toBe(true);
     }
     expect(controllate.length).toBeGreaterThan(40);
@@ -239,6 +240,58 @@ describe.skipIf(!URI_BASE)('Criteri di completamento della fase 1 con MongoDB ve
       nome: 'vedere gli utenti',
       consentito: ['admin'],
       esegui: (chi) => chiama(chi, 'get', '/api/utenti'),
+    },
+    // Consuntivazione (fase 2, blocco C4)
+    {
+      nome: 'leggere le tipologie di costo',
+      consentito: [...PROFILI],
+      esegui: (chi) => chiama(chi, 'get', '/api/consuntivazione/tipologie-costo'),
+    },
+    {
+      nome: 'creare una tipologia di costo',
+      consentito: ['controller'],
+      esegui: (chi) => chiama(chi, 'post', '/api/consuntivazione/tipologie-costo', { codice: `TIP-${chi}`, descrizione: `Tipologia ${chi}`, categoria: 'straordinaria' }),
+    },
+    {
+      nome: 'leggere le tariffe standard',
+      consentito: ['controller'],
+      esegui: (chi) => chiama(chi, 'get', '/api/consuntivazione/tariffe-standard'),
+    },
+    {
+      nome: 'creare una tariffa standard',
+      consentito: ['controller'],
+      esegui: async (chi) => {
+        const ruolo = (await db.collection('ruoli').findOne({ codice: 'R-TARIFFE' }))!._id;
+        const tipologia = (await db.collection('tipologie_costo').findOne({ codice: 'ORDINARIA' }))!._id;
+        const anno = 2030 + PROFILI.indexOf(chi);
+        return chiama(chi, 'post', '/api/consuntivazione/tariffe-standard', {
+          ruoloId: String(ruolo),
+          tipologiaId: String(tipologia),
+          validoDal: `${anno}-01-01`,
+          validoAl: `${anno}-12-31`,
+          centesimiOra: 3000,
+        });
+      },
+    },
+    {
+      nome: 'vedere le tariffe applicabili a una risorsa',
+      consentito: ['controller'],
+      esegui: (chi) => chiama(chi, 'get', `/api/consuntivazione/risorse/${risorsaId.altrove}/tariffe-applicabili`),
+    },
+    {
+      nome: 'consuntivare (salvare una propria giornata)',
+      consentito: ['risorsa', 'tl', 'pm', 'pmEsterno', 'pmSenior', 'controller'],
+      esegui: (chi) => chiama(chi, 'put', '/api/consuntivazione/consuntivi/2026-01-05', { versione: 0, righe: [] }),
+    },
+    {
+      nome: 'leggere le proprie voci consuntivabili',
+      consentito: ['risorsa', 'tl', 'pm', 'pmEsterno', 'pmSenior', 'controller'],
+      esegui: (chi) => chiama(chi, 'get', '/api/consuntivazione/consuntivi/voci'),
+    },
+    {
+      nome: 'leggere i consuntivi di un\'altra risorsa',
+      consentito: ['controller'],
+      esegui: (chi) => chiama(chi, 'get', `/api/consuntivazione/consuntivi?da=2026-01-01&a=2026-01-31&risorsa=${risorsaId.altrove}`),
     },
   ];
 

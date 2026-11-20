@@ -68,7 +68,13 @@ export class RisorsaDettaglio {
   protected readonly puoSkill = computed(() => {
     this.versione();
     if (this.tutto()) return true;
-    return this.eTL() && (this.risorsa()?.planned ?? []).some((a) => !!a.progettoId && this.mieiProgetti().has(a.progettoId));
+    // Il TL cura le skill delle risorse che lavorano sui suoi progetti: allocate o con ore consuntivate.
+    const r = this.risorsa();
+    return (
+      this.eTL() &&
+      ((r?.planned ?? []).some((a) => !!a.progettoId && this.mieiProgetti().has(a.progettoId)) ||
+        (r?.progettiConsuntivati ?? []).some((id) => this.mieiProgetti().has(id)))
+    );
   });
   protected readonly puoSalvare = computed(() => this.tutto() || this.eTL());
 
