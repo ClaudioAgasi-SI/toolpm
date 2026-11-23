@@ -36,10 +36,13 @@ const cdc = (await db.collection('centri_costo').insertOne({ codice: 'CDC-SVI', 
 
 const hash = await cifraPassword('Password-e2e-1');
 const persone = {};
-for (const [nome, ruoli, conRuolo] of [
+for (const [nome, ruoli, conRuolo, abilitazione = null] of [
   ['rita', ['risorsa'], true],
   ['luca', ['risorsa'], false],
   ['carlo', ['risorsa', 'controller'], true],
+  // Approvatori (fase 3): pina PM di ALFA e BETA, tito TL di ALFA.
+  ['pina', ['risorsa'], true, 'PM'],
+  ['tito', ['risorsa'], true, 'TL'],
 ]) {
   const r = await db.collection('risorse').insertOne({
     cognome: nome.charAt(0).toUpperCase() + nome.slice(1),
@@ -57,7 +60,7 @@ for (const [nome, ruoli, conRuolo] of [
   await db.collection('utenti').insertOne({
     email: `${nome}@prova.it`,
     passwordHash: hash,
-    abilitazione: null,
+    abilitazione,
     ruoli,
     attivo: true,
     deveCambiarePassword: false,
@@ -65,7 +68,7 @@ for (const [nome, ruoli, conRuolo] of [
   });
 }
 
-const progetto = async (codice, titolo, stato = 'inCorso') =>
+const progetto = async (codice, titolo, stato = 'inCorso', approvatori = []) =>
   (
     await db.collection('progetti').insertOne({
       codice,
@@ -74,13 +77,16 @@ const progetto = async (codice, titolo, stato = 'inCorso') =>
       stato,
       dataInizio: inizioAnno,
       ...(stato === 'chiuso' ? { dataFine: inizioAnno } : {}),
-      approvatori: [],
+      approvatori,
       percentualeCompletamento: 0,
       soloSuAttivita: false,
     })
   ).insertedId;
-const alfa = await progetto('ALFA', 'Portale clienti');
-const beta = await progetto('BETA', 'Manutenzione evolutiva');
+const alfa = await progetto('ALFA', 'Portale clienti', 'inCorso', [
+  { risorsaId: persone.pina, profilo: 'PM' },
+  { risorsaId: persone.tito, profilo: 'TL' },
+]);
+const beta = await progetto('BETA', 'Manutenzione evolutiva', 'inCorso', [{ risorsaId: persone.pina, profilo: 'PM' }]);
 await progetto('GAMMA', 'Progetto chiuso', 'chiuso');
 const attivita = (codice, descrizione, assegnate) => ({
   progettoId: alfa,

@@ -1,11 +1,12 @@
 """
-Prova nel browser del Controllo (fase 3): invio e ritiro delle ore (blocco D1); approvazioni e chiusura dei mesi
-si aggiungono con i blocchi successivi.
+Prova nel browser del Controllo (fase 3): invio e ritiro delle ore (blocco D1), approvazioni (D3);
+la chiusura dei mesi si aggiunge con il blocco D4.
 
 Prima: database preparato con backend/scripts/e2e-prepara.mjs, backend e frontend avviati (e2e/README.md).
 Uso:  python3 e2e/controllo.py            (BASE=http://localhost:4201/toolpm, CHROME=/usr/bin/google-chrome)
 
-Lavora sulla settimana scorsa di rita (assegnata ad ALFA/SVI, allocata su BETA). Password: Password-e2e-1.
+Lavora sulla settimana scorsa di rita (assegnata ad ALFA/SVI, allocata su BETA). Approvatori: tito TL di ALFA,
+pina PM di ALFA e BETA. Password: Password-e2e-1.
 """
 import os
 import re
@@ -86,6 +87,63 @@ with sync_playwright() as pw:
     passo('risorsa: invio finale della settimana')
     invia.click()
     expect(p.locator('p.ok')).to_contain_text("Inviate all'approvazione: 6 righe")
+
+    passo('TL: vede le 6 righe inviate, senza costi; dà il via libera alla settimana di rita')
+    entra(p, 'tito')
+    p.goto(f'{BASE}/consuntivazione/approvazioni')
+    expect(p.locator('.sottomenu .contatore')).to_have_text('6')
+    gruppo = p.locator('section.gruppo', has_text='Rita Prova')
+    expect(gruppo.locator('tbody tr')).to_have_count(6)
+    expect(p.locator('th', has_text='Costo')).to_have_count(0)
+    gruppo.locator('h2 input[type=checkbox]').check()
+    expect(p.locator('button.azione-approva')).to_have_count(0)
+    p.locator('button.azione-viaLibera').click()
+    expect(p.locator('p.ok')).to_contain_text('Via libera dato a: 6 righe')
+    expect(p.locator('.vuoto')).to_contain_text('Nessuna riga aspetta una tua azione')
+
+    passo('PM: respinge lo straordinario con la motivazione, approva il resto')
+    entra(p, 'pina')
+    p.goto(f'{BASE}/consuntivazione/approvazioni')
+    righe = p.locator('section.gruppo tbody tr')
+    expect(righe).to_have_count(6)
+    expect(righe.first).to_contain_text('via libera: Tito Prova')
+    expect(p.locator('th', has_text='Costo')).to_have_count(1)
+    straordinario = righe.filter(has_text='Straordinaria')
+    straordinario.locator('input[type=checkbox]').check()
+    p.locator('button.azione-respingi').click()
+    p.fill('textarea[name=motivazione]', 'Lo straordinario non era autorizzato: segna 1:30')
+    p.get_by_role('button', name='Conferma il rifiuto').click()
+    expect(p.locator('p.ok')).to_contain_text('Respinte: 1 riga')
+    expect(righe).to_have_count(5)
+    p.get_by_label('Seleziona tutte').check()
+    p.locator('button.azione-approva').click()
+    expect(p.locator('p.ok')).to_contain_text('Approvate: 5 righe')
+    p.select_option('select[name=vista]', label='Approvate')
+    expect(righe).to_have_count(5)
+    p.screenshot(path=f'{SCREENSHOT}/e2e-approvazioni.png', full_page=True)
+
+    passo('risorsa: vede il rifiuto, corregge e reinvia; le righe approvate restano in sola lettura')
+    entra(p, 'rita')
+    p.goto(f'{BASE}/consuntivazione/settimana?vista=settimana&data={SETTIMANA}')
+    expect(p.locator('.respinte')).to_contain_text('non era autorizzato')
+    expect(riga(p, 'ALFA › SVI').first.locator('td.ore[data-stato=approvata]')).to_have_count(5)
+    straord = p.locator('table.griglia tbody tr').filter(has=p.locator('select option:checked', has_text='Straordinaria')).filter(has_text='ALFA › SVI')
+    straord.locator('td.ore input').nth(1).fill('1:30')
+    p.locator('.comandi button.primario').click()
+    expect(p.locator('p.ok')).to_contain_text('Salvato')
+    p.locator('button.invia').click()
+    expect(p.locator('p.ok')).to_contain_text("Inviate all'approvazione: 1 riga")
+
+    passo('PM: approva la riga corretta, che riparte senza via libera')
+    entra(p, 'pina')
+    p.goto(f'{BASE}/consuntivazione/approvazioni')
+    expect(righe).to_have_count(1)
+    expect(righe.first).not_to_contain_text('via libera')
+    expect(righe.first).to_contain_text('1:30')
+    righe.first.locator('input[type=checkbox]').check()
+    p.locator('button.azione-approva').click()
+    expect(p.locator('p.ok')).to_contain_text('Approvate: 1 riga')
+    expect(p.locator('.sottomenu .contatore')).to_have_count(0)
 
     browser.close()
     print('Prova del Controllo superata.')

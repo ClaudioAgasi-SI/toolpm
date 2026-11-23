@@ -11,6 +11,7 @@ Si entra da **Consuntivazione** nel menu in alto (`/toolpm/consuntivazione`). Il
 | Il mio consuntivo | chi è collegato a una risorsa | Inserire le proprie ore per giorno o per settimana |
 | Tipologie di costo | controller | Ordinaria, straordinaria, festiva...: quali esistono e qual è la predefinita |
 | Tariffe | controller | Costo orario standard per ruolo e personalizzato per risorsa, con i periodi di validità |
+| Approvazioni | TL, PM, PMSenior | Via libera, approvazione o rifiuto delle righe inviate sui propri progetti |
 | Consuntivi delle risorse | controller | Ore, tariffe e costi di una risorsa, settimana per settimana (sola lettura) |
 | Da valorizzare | controller | Righe senza costo, con il motivo, e ricalcolo dei costi |
 
@@ -68,6 +69,20 @@ con un messaggio e il pulsante **Ricarica**: ricarichi, rifai la modifica e salv
 Dal Pianificatore, voce **Le mie competenze**, aggiorni le tue skill (con il livello) e le tue certificazioni: nome dal catalogo, data di
 conseguimento (obbligatoria), scadenza, ente certificatore, codice e link (facoltativi). Le voci nuove si scelgono dal catalogo, curato da PM e PMSenior.
 Le tue allocazioni invece le gestiscono PM, PMSenior e TL dei progetti.
+
+## Per TL e PM: approvare le ore
+
+Nel sottomenu **Approvazioni** il numero rosso dice quante righe aspettano una tua azione. La pagina mostra le righe dei progetti di cui sei
+approvatore (il PMSenior di tutti), raggruppate per risorsa e settimana; le tue ore non compaiono mai: le approva un altro PM del progetto o un PMSenior.
+
+- **Mostra**: *Da lavorare* (il TL vede le righe inviate, il PM anche quelle con il via libera del TL), oppure Inviate, Con via libera del TL, Approvate, Respinte; il periodo con *dal* e *al*.
+- Puoi restringere a un progetto, a una risorsa, o alle sole righe su **attività non assegnate** alla risorsa (segnate "non assegnata").
+- Spunta le righe (o tutto il gruppo, o *Seleziona tutte*) e premi:
+  - **Via libera** (TL): un primo controllo, facoltativo; la riga passa al PM.
+  - **Approva** (PM): approvazione definitiva, con o senza via libera. La riga approvata non si modifica più.
+  - **Respingi** (TL sulle inviate, PM anche su quelle approvate): scrivi la motivazione, che la risorsa vedrà accanto alla riga. La riga corretta e reinviata riparte senza via libera.
+- Il numero sul pulsante dice a quante righe selezionate si applica; se una riga nel frattempo è stata lavorata da un altro o ritirata, viene saltata e l'esito ne dice il motivo.
+- Il PM vede anche il costo delle righe dei propri progetti (il PMSenior di tutti), con il totale del gruppo; il TL vede solo le ore.
 
 ## Per TL e PM: preparare i progetti
 
@@ -132,4 +147,4 @@ Le ore con il costo si vedono in **Consuntivi delle risorse**.
 
 **Più persone possono lavorare sulla stessa attività?** Sì, un'attività può essere assegnata a più risorse.
 
-**Chi approva le ore?** Il TL del progetto può dare un primo via libera, il PM approva in modo definitivo o respinge con una motivazione; nessuno approva le proprie ore. La pagina Approvazioni arriva con i prossimi rilasci della fase 3.
+**Chi approva le ore?** Il TL del progetto può dare un primo via libera, il PM approva in modo definitivo o respinge con una motivazione; nessuno approva le proprie ore. Vedi "Per TL e PM: approvare le ore".

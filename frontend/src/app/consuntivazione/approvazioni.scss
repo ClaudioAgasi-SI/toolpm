@@ -1,0 +1,42 @@
+.filtri { display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap;
+  label { display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.85rem; color: #5a6478; }
+}
+.secondari { margin: -0.25rem 0 0.75rem; select { max-width: 22rem; } }
+label.spunta { flex-direction: row !important; align-items: center; gap: 0.4rem; }
+.ok { color: #1a7f37; }
+.avviso { color: #9a5b00; background: #fff8e6; border: 1px solid #f3dca8; border-radius: 6px; padding: 4px 10px; margin: 0.35rem 0;
+  ul { margin: 0.2rem 0 0; padding-left: 1.2rem; }
+}
+.comandi { display: flex; align-items: center; gap: 0.5rem; margin: 0.5rem 0; padding: 6px 10px; background: #f6f8fb; border: 1px solid #e3e8f0; border-radius: 6px;
+  position: sticky; top: 0; z-index: 2;
+  .spazio { flex: 1; }
+}
+button.azione-viaLibera { border-color: #8250df; color: #8250df; }
+button.azione-approva { background: #1a7f37; border-color: #1a7f37; color: #fff; }
+button.azione-respingi { border-color: #d1242f; color: #d1242f; }
+button:disabled { opacity: 0.5; }
+.finestra-rifiuto { border: 1px solid #f1b8bc; background: #fff5f5; border-radius: 6px; padding: 8px 12px; margin: 0.5rem 0;
+  label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.9rem; }
+  textarea { width: 100%; max-width: 48rem; }
+  .pulsanti { display: flex; gap: 0.5rem; margin-top: 0.4rem; }
+}
+.gruppo { margin-top: 1rem;
+  h2 { display: flex; align-items: center; gap: 0.75rem; font-size: 1rem; margin: 0 0 0.25rem; }
+  .totale { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 600; }
+}
+.elenco {
+  .sel { width: 2rem; }
+  .giorno { white-space: nowrap; }
+  .numero { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .nota { max-width: 18rem; font-size: 0.85rem; }
+  .dettaglio { font-size: 0.8rem; }
+  .stato-riga { font-size: 0.85rem; }
+  tr.scelta td { background: #eef5ff; }
+  tr[data-stato='respinta'] .stato-riga { color: #d1242f; }
+  tr[data-stato='approvata'] .stato-riga { color: #1a7f37; }
+  tr[data-stato='approvataTL'] .stato-riga { color: #8250df; }
+}
+.segno { font-size: 0.75rem; margin-left: 0.4rem; padding: 0 6px; border-radius: 8px; background: #fff3d6; color: #8a5a00; }
+.segno.tenue { background: #eef1f7; color: #5a6478; }
+.totale-generale { margin-top: 1rem; font-weight: 600; }
+.vuoto { margin-top: 1rem; }

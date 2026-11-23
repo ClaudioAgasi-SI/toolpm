@@ -73,9 +73,9 @@ export class ConsuntivazioneInizio {
         { titolo: 'Righe da valorizzare', descrizione: 'Ore senza tariffa applicabile e ricalcolo dei costi.', percorso: 'da-valorizzare' },
       );
     }
-    // Fase 3: pagine in arrivo con i blocchi D3 (Approvazioni) e D4 (Periodi).
+    // Fase 3: Approvazioni (D3); Periodi in arrivo con il blocco D4.
     if (this.sessione.puo('approvare')) {
-      voci.push({ titolo: 'Approvazioni', descrizione: 'Righe inviate sui progetti di cui sei approvatore: via libera del TL, approvazione o rifiuto del PM.' });
+      voci.push({ titolo: 'Approvazioni', descrizione: 'Righe inviate sui progetti di cui sei approvatore: via libera del TL, approvazione o rifiuto del PM.', percorso: 'approvazioni' });
     }
     if (this.sessione.puo('gestirePeriodi')) {
       voci.push({ titolo: 'Periodi', descrizione: 'Chiusura e riapertura dei mesi.' });

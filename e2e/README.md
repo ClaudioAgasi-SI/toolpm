@@ -6,7 +6,7 @@ separato (`toolpm_e2e`), che lo script di preparazione cancella e ricrea ogni vo
 | Prova | Cosa controlla |
 |---|---|
 | `consuntivazione.py` | Consuntivazione (fase 2): il controller crea una tipologia e sposta la predefinita, inserisce le tariffe standard del ruolo (con il rifiuto di un periodo sovrapposto) e una personalizzata; rita compila la settimana scorsa con le righe proposte, un'attività assegnata, uno straordinario e una nota, salva e non vede importi; copia della settimana; luca, senza ruolo, salva ore che restano da valorizzare; il controller controlla costi e totali in "Consuntivi delle risorse", vede luca tra le righe da valorizzare, corregge una tariffa e applica il ricalcolo con anteprima |
-| `controllo.py` | Controllo (fase 3): rita compila e salva la settimana scorsa, la invia (celle in sola lettura e colorate), aggiunge una riga accanto a quelle inviate, ritira l'invio e invia di nuovo; si estende con approvazioni e chiusura dei mesi |
+| `controllo.py` | Controllo (fase 3): rita compila e salva la settimana scorsa, la invia (celle in sola lettura e colorate), aggiunge una riga accanto a quelle inviate, ritira l'invio e invia di nuovo; tito (TL) vede le righe senza costi e dà il via libera alla settimana; pina (PM) vede via libera e costi, respinge lo straordinario con la motivazione e approva il resto; rita vede il rifiuto, corregge e reinvia; pina approva la riga, che riparte senza via libera; contatore del sottomenu. Si estende con la chiusura dei mesi |
 
 ## Requisiti
 
@@ -40,5 +40,6 @@ Per ripetere la prova rilancia prima `node scripts/e2e-prepara.mjs`: la prova si
 ## Dati preparati
 
 Utenti con password `Password-e2e-1`: `carlo@prova.it` (risorsa e controller), `rita@prova.it` (ruolo SVS dal primo gennaio
-dell'anno scorso), `luca@prova.it` (senza ruolo). Progetti: ALFA (attività SVI assegnata a rita, TEST non assegnata),
-BETA (rita e luca allocati al 50% nel Pianificatore), GAMMA (chiuso). La prova lavora sulla settimana scorsa.
+dell'anno scorso), `luca@prova.it` (senza ruolo), `pina@prova.it` (abilitazione PM, PM di ALFA e BETA), `tito@prova.it` (abilitazione TL, TL di ALFA).
+Progetti: ALFA (attività SVI assegnata a rita, TEST non assegnata), BETA (rita e luca allocati al 50% nel Pianificatore), GAMMA (chiuso).
+Le prove lavorano sulla settimana scorsa e ognuna si aspetta un database appena preparato.

@@ -1,0 +1,168 @@
+<header class="testata">
+  <h1>Approvazioni</h1>
+  <div class="azioni filtri">
+    <label>
+      Mostra
+      <select name="vista" [(ngModel)]="vista" (ngModelChange)="carica()">
+        @for (v of viste; track v.valore) {
+          <option [value]="v.valore">{{ v.testo }}</option>
+        }
+      </select>
+    </label>
+    <label>dal <input type="date" name="da" [(ngModel)]="da" /></label>
+    <label>al <input type="date" name="a" [(ngModel)]="a" /></label>
+    <button type="button" (click)="carica()">Aggiorna</button>
+  </div>
+</header>
+
+<div class="filtri secondari">
+  <label>
+    Progetto
+    <select name="progetto" [ngModel]="progetto()" (ngModelChange)="progetto.set($event)">
+      <option value="">tutti</option>
+      @for (p of progetti(); track p.id) {
+        <option [value]="p.id">{{ p.testo }}</option>
+      }
+    </select>
+  </label>
+  <label>
+    Risorsa
+    <select name="risorsa" [ngModel]="risorsa()" (ngModelChange)="risorsa.set($event)">
+      <option value="">tutte</option>
+      @for (r of risorse(); track r.id) {
+        <option [value]="r.id">{{ r.testo }}</option>
+      }
+    </select>
+  </label>
+  <label class="spunta">
+    <input type="checkbox" name="nonAssegnate" [ngModel]="soloNonAssegnate()" (ngModelChange)="soloNonAssegnate.set($event)" />
+    solo attività non assegnate alla risorsa
+  </label>
+</div>
+
+@if (errore()) {
+  <p class="errore">{{ errore() }}</p>
+}
+@if (messaggio()) {
+  <p class="ok">{{ messaggio() }}</p>
+}
+@if (saltate().length) {
+  <div class="avviso">
+    Righe saltate:
+    <ul>
+      @for (s of saltate(); track $index) {
+        <li>{{ s.riga }}: {{ s.motivo }}</li>
+      }
+    </ul>
+  </div>
+}
+
+@if (caricamento()) {
+  <p class="tenue">Caricamento…</p>
+} @else if (!visibili().length) {
+  <p class="tenue vuoto">
+    {{ vista === 'daLavorare' ? 'Nessuna riga aspetta una tua azione.' : 'Nessuna riga con questi filtri.' }}
+    Le tue ore non compaiono qui: le approva un altro PM del progetto o un PMSenior.
+  </p>
+} @else {
+  <div class="comandi" role="toolbar" aria-label="Azioni sulle righe selezionate">
+    <label class="spunta">
+      <input type="checkbox" aria-label="Seleziona tutte" [checked]="scelte().length > 0 && scelte().length === visibili().filter((r) => r.azioni.length).length" (change)="scegliTutte($any($event.target).checked)" />
+      {{ scelte().length ? 'Selezionate: ' + quante(scelte().length) : 'Seleziona le righe' }}
+    </label>
+    <span class="spazio"></span>
+    @for (a of azioniPossibili; track a) {
+      @if (perAzione()[a] || (a === 'respingi' && scelte().length)) {
+        <button type="button" [class]="'azione-' + a" [disabled]="lavoro() || !perAzione()[a]" (click)="avvia(a)">
+          {{ nomiAzione[a].pulsante }} ({{ perAzione()[a] }})
+        </button>
+      }
+    }
+  </div>
+
+  @if (rifiuto(); as rf) {
+    <form class="finestra-rifiuto" (ngSubmit)="confermaRifiuto()">
+      <label>
+        Motivazione del rifiuto ({{ quante(perAzione().respingi) }}): la risorsa la vedrà accanto alle righe
+        <textarea name="motivazione" rows="2" maxlength="500" [(ngModel)]="rf.motivazione" placeholder="es. il 9 eri in ferie al pomeriggio" required></textarea>
+      </label>
+      <div class="pulsanti">
+        <button type="submit" class="azione-respingi" [disabled]="lavoro() || !rf.motivazione.trim()">Conferma il rifiuto</button>
+        <button type="button" (click)="rifiuto.set(null)">Annulla</button>
+      </div>
+    </form>
+  }
+
+  @if (troncato()) {
+    <p class="avviso">Mostrate le prime 2000 righe: restringi il periodo.</p>
+  }
+
+  @for (g of gruppi(); track g.chiave) {
+    <section class="gruppo">
+      <h2>
+        <label class="spunta">
+          <input type="checkbox" [checked]="gruppoScelto(g)" (change)="scegliGruppo(g, $any($event.target).checked)" [attr.aria-label]="'Seleziona ' + g.risorsa + ', ' + etichettaSettimana(g.settimana)" />
+          {{ g.risorsa }}
+        </label>
+        <span class="tenue">{{ etichettaSettimana(g.settimana) }}</span>
+        <span class="totale">{{ totaleOre(g.minuti) }} h{{ g.costo !== null ? ' · ' + euro(g.costo) + (g.daValorizzare ? ' + ' + g.daValorizzare + ' da valorizzare' : '') : '' }}</span>
+      </h2>
+      <table class="elenco">
+        <thead>
+          <tr>
+            <th class="sel"></th>
+            <th>Giorno</th>
+            <th>Progetto / attività</th>
+            <th>Tipologia</th>
+            <th class="numero">Ore</th>
+            <th>Nota</th>
+            <th>Stato</th>
+            @if (conCosti()) {
+              <th class="numero">Costo</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of g.righe; track r.rigaId) {
+            <tr [class.scelta]="scelta(r)" [attr.data-stato]="r.stato">
+              <td class="sel">
+                @if (r.azioni.length) {
+                  <input type="checkbox" [checked]="scelta(r)" (change)="scegli(r, $any($event.target).checked)" [attr.aria-label]="'Seleziona ' + r.risorsa + ', ' + etichettaGiorno(r.data) + ', ' + r.progetto.codice" />
+                }
+              </td>
+              <td class="giorno">{{ etichettaGiorno(r.data) }}</td>
+              <td>
+                <strong>{{ r.progetto.codice }}{{ r.attivita ? ' › ' + r.attivita.codice : '' }}</strong>
+                @if (r.attivitaNonAssegnata) {
+                  <span class="segno" title="La risorsa non è tra quelle assegnate a questa attività">non assegnata</span>
+                }
+                @if (r.progetto.stato === 'chiuso') {
+                  <span class="segno tenue">progetto chiuso</span>
+                }
+                <div class="tenue dettaglio">{{ r.attivita ? r.attivita.descrizione : r.progetto.titolo }}</div>
+              </td>
+              <td>{{ r.tipologia }}</td>
+              <td class="numero">{{ totaleOre(r.minuti) }}</td>
+              <td class="nota">{{ r.nota }}</td>
+              <td class="stato-riga">
+                {{ nomiStato[r.stato] }}
+                @if (r.viaLiberaTL) {
+                  <div class="tenue">via libera: {{ testoVia(r) }}</div>
+                }
+                @if (r.rifiuto) {
+                  <div class="tenue">{{ r.rifiuto.motivazione }} ({{ r.rifiuto.nome }})</div>
+                }
+              </td>
+              @if (conCosti()) {
+                <td class="numero">{{ 'costoCentesimi' in r ? (r.costoCentesimi === null ? 'da valorizzare' : euro(r.costoCentesimi)) : '' }}</td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+  }
+  <p class="totale-generale">
+    Totale: {{ quante(visibili().length) }}, {{ totaleOre(totaleMinuti()) }} h{{ totaleCosto() !== null ? ', ' + euro(totaleCosto()) + (daValorizzare() ? ' + ' + quante(daValorizzare()) + ' da valorizzare' : '') : '' }}
+  </p>
+}

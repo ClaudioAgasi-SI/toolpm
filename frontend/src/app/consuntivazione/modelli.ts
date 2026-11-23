@@ -208,3 +208,55 @@ export interface AnteprimaRicalcolo {
   righe: (RigaControllo & { prima: ValoriCosto; dopo: ValoriCosto })[];
   troncato: boolean;
 }
+
+// ---- Approvazioni (fase 3, blocchi D2 e D3) ----
+
+export type AzioneApprovazione = 'viaLibera' | 'approva' | 'respingi';
+
+/** Chi ha firmato (via libera, approvazione o rifiuto) e quando. */
+export interface Firma {
+  da: string;
+  nome: string;
+  il: string;
+}
+
+/** Riga come la vede un approvatore; costi solo al PM del progetto, al PMSenior e al controller. */
+export interface RigaApprovazione {
+  rigaId: string;
+  giornataId: string;
+  data: string;
+  risorsaId: string;
+  risorsa: string;
+  progettoId: string;
+  progetto: { codice: string; titolo: string; stato: string };
+  attivitaId: string | null;
+  attivita: { codice: string; descrizione: string } | null;
+  attivitaNonAssegnata: boolean;
+  tipologiaId: string;
+  tipologia: string;
+  tipologiaCodice: string;
+  minuti: number;
+  nota: string | null;
+  stato: StatoRiga;
+  profilo: 'TL' | 'PM';
+  azioni: AzioneApprovazione[];
+  viaLiberaTL: Firma | null;
+  approvazionePM: Firma | null;
+  rifiuto: (Firma & { motivazione: string }) | null;
+  fonteTariffa?: FonteTariffa | null;
+  tariffaCentesimiOra?: number | null;
+  costoCentesimi?: number | null;
+}
+
+export interface ElencoApprovazioni {
+  righe: RigaApprovazione[];
+  totali: { righe: number; minuti: number; costoCentesimi?: number };
+  troncato: boolean;
+}
+
+export interface EsitoApprovazione {
+  azione: AzioneApprovazione;
+  fatte: number;
+  saltate: number;
+  esiti: { rigaId: string; esito: 'fatta' | 'saltata'; motivo?: string }[];
+}

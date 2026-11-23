@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import type { AnteprimaRicalcolo, DaInviare, DatiTariffa, EsitoInvio, EsitoSalvataggio, Giornata, Proposta, RigaDaSalvare, RigaDaValorizzare, Tariffa, TariffeApplicabili, TipologiaCosto, TotaliRicalcolo, VoceProgetto } from './modelli';
+import type { AnteprimaRicalcolo, AzioneApprovazione, DaInviare, DatiTariffa, ElencoApprovazioni, EsitoApprovazione, EsitoInvio, EsitoSalvataggio, Giornata, Proposta, RigaDaSalvare, RigaDaValorizzare, Tariffa, TariffeApplicabili, TipologiaCosto, TotaliRicalcolo, VoceProgetto } from './modelli';
 
 /** Accesso alle API della sezione Consuntivazione (/api/consuntivazione). */
 @Injectable({ providedIn: 'root' })
@@ -73,6 +73,19 @@ export class ConsuntivazioneApiService {
   }
   daInviare() {
     return this.http.get<DaInviare>(`${this.base}/consuntivi/da-inviare`);
+  }
+
+  // Approvazioni (fase 3, blocchi D2 e D3)
+  approvazioni(filtri: { da?: string; a?: string; stato?: string }) {
+    let params = new HttpParams();
+    for (const [k, v] of Object.entries(filtri)) if (v) params = params.set(k, v);
+    return this.http.get<ElencoApprovazioni>(`${this.base}/approvazioni`, { params });
+  }
+  inAttesa() {
+    return this.http.get<{ righe: number }>(`${this.base}/approvazioni/in-attesa`);
+  }
+  agisci(azione: AzioneApprovazione, righe: string[], motivazione?: string) {
+    return this.http.post<EsitoApprovazione>(`${this.base}/approvazioni`, { azione, righe, motivazione });
   }
 
   // Righe da valorizzare e ricalcolo (blocco C6): solo controller
