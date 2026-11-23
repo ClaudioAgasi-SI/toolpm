@@ -17,6 +17,20 @@ export class Approvazione {
 }
 export const ApprovazioneSchema = SchemaFactory.createForClass(Approvazione);
 
+/** Rifiuto di una riga (fase 3): chi, quando e perché. Resta finché la riga non viene inviata di nuovo. */
+@Schema({ _id: false })
+export class Rifiuto {
+  @Prop({ required: true })
+  da: string;
+
+  @Prop({ type: Date, required: true })
+  il: Date;
+
+  @Prop({ required: true })
+  motivazione: string;
+}
+export const RifiutoSchema = SchemaFactory.createForClass(Rifiuto);
+
 /** Riga della giornata: ore su un progetto o su una sua attività, con tipologia e costo fotografato. */
 @Schema({ versionKey: false })
 export class RigaConsuntivo {
@@ -65,6 +79,9 @@ export class RigaConsuntivo {
 
   @Prop({ type: ApprovazioneSchema, default: null })
   approvazionePM: Approvazione | null;
+
+  @Prop({ type: RifiutoSchema, default: null })
+  rifiuto: Rifiuto | null;
 
   @Prop({ type: Date })
   modificatoIl: Date;

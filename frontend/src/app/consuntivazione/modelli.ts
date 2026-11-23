@@ -84,6 +84,32 @@ export interface VoceProgetto {
   attivita: VoceAttivita[];
 }
 
+export type StatoRiga = 'bozza' | 'inviata' | 'approvataTL' | 'approvata' | 'respinta' | 'chiusa';
+
+/** Nome di ogni stato della riga, come lo leggono le persone. */
+export const NOMI_STATO: Record<StatoRiga, string> = {
+  bozza: 'In bozza',
+  inviata: 'Inviata',
+  approvataTL: 'Via libera del TL',
+  approvata: 'Approvata',
+  respinta: 'Respinta',
+  chiusa: 'Mese chiuso',
+};
+
+/** Esito di invio e ritiro (fase 3, blocco D1). */
+export interface EsitoInvio {
+  giornate: Giornata[];
+  righe: number;
+  giorni: string[];
+}
+
+/** Righe proprie dei giorni passati ancora da inviare. */
+export interface DaInviare {
+  bozza: number;
+  respinte: number;
+  primaData: string | null;
+}
+
 /** Riga salvata, come la vede la risorsa (senza tariffe né importi). */
 export interface RigaGiornata {
   _id: string;
@@ -95,7 +121,9 @@ export interface RigaGiornata {
   tipologiaCodice: string;
   minuti: number;
   nota: string | null;
-  stato: string;
+  stato: StatoRiga;
+  /** Riga respinta: quando e perché (fase 3). */
+  rifiuto?: { il: string; motivazione: string } | null;
   /** Solo nelle risposte al controller. */
   fonteTariffa?: FonteTariffa | null;
   tariffaCentesimiOra?: number | null;

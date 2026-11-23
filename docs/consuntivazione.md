@@ -28,9 +28,20 @@ Si entra da **Consuntivazione** nel menu in alto (`/toolpm/consuntivazione`). Il
 4. Scrivi le ore nelle celle: `8`, `7,5` oppure `7:30`. Si va a quarti d'ora; in un giorno non si superano le 24 ore.
 5. Cliccando una cella puoi scrivere una **nota** sotto la griglia.
 6. Premi **Salva**: si salvano insieme tutte e sole le giornate cambiate. O si salvano tutte o nessuna.
+7. Quando le ore sono complete, premi **Invia** (vedi sotto).
 
 Ci vogliono di solito meno di due minuti per una settimana tipica: con le righe proposte bastano le ore di cinque celle e **Salva**
 (nella prova automatica: scelta della voce, Aggiungi, cinque celle, Salva).
+
+### Inviare le ore all'approvazione
+
+Quando le ore di un giorno o della settimana sono complete e salvate, premi **Invia la settimana** (o **Invia il giorno** nella vista del giorno): partono tutte le righe in bozza o respinte del periodo, il numero tra parentesi dice quante. Non si inviano righe singole.
+
+- Le celle inviate diventano in sola lettura e hanno un bordo colorato: blu inviata, viola via libera del TL, verde approvata, rosso respinta, grigio mese chiuso (legenda sotto la griglia). Senza colore sono in bozza.
+- Nello stesso giorno puoi aggiungere righe nuove accanto a quelle inviate: partono con il prossimo invio.
+- **Ritira l'invio**: finché nessun approvatore le ha guardate, le righe inviate tornano in bozza per correggerle; poi le invii di nuovo.
+- Le **righe respinte** compaiono in un riquadro rosso con la motivazione: correggile (restano respinte finché non le invii) e inviale di nuovo.
+- Se nei giorni passati restano righe da inviare fuori dalla settimana che stai guardando, un avviso te lo dice e ti porta alla settimana più vecchia.
 
 **Copia la settimana precedente** (o **il giorno precedente** nella vista del giorno) riporta righe e ore nei giorni passati ancora vuoti, senza salvare:
 controlli e premi **Salva**.
@@ -121,4 +132,4 @@ Le ore con il costo si vedono in **Consuntivi delle risorse**.
 
 **Più persone possono lavorare sulla stessa attività?** Sì, un'attività può essere assegnata a più risorse.
 
-**Chi approva le ore?** In fase 2 le righe restano in bozza; approvazione e storico delle modifiche arrivano nella fase 3.
+**Chi approva le ore?** Il TL del progetto può dare un primo via libera, il PM approva in modo definitivo o respinge con una motivazione; nessuno approva le proprie ore. La pagina Approvazioni arriva con i prossimi rilasci della fase 3.

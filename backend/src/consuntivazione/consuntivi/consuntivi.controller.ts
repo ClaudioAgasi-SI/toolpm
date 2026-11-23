@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Put, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post, Put, Query } from '@nestjs/common';
 import { ApiBody, ApiConflictResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Permesso, type UtenteAutenticato, UtenteRichiesta } from '../../auth/decoratori.js';
 import { ConsuntiviService } from './consuntivi.service.js';
@@ -8,7 +8,7 @@ const ESEMPIO_RIGHE = [
   { progettoId: '6740a1c2e1f0a1b2c3d4e401', tipologiaId: '6740a1c2e1f0a1b2c3d4e302', minuti: 120 },
 ];
 
-/** Consuntivi giornalieri (fase 2, blocco C3). */
+/** Consuntivi giornalieri (fase 2, blocco C3), con invio e ritiro (fase 3, blocco D1). */
 @ApiTags('consuntivazione')
 @Controller('consuntivi')
 export class ConsuntiviController {
@@ -47,6 +47,41 @@ export class ConsuntiviController {
   @ApiQuery({ name: 'settimana', required: false, description: 'Un giorno qualsiasi della settimana (AAAA-MM-GG); se manca, oggi' })
   proposte(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Query('settimana') settimana?: string) {
     return this.service.proposte(utente, settimana);
+  }
+
+  @Get('da-inviare')
+  @Permesso('consuntivare')
+  @ApiOperation({ summary: 'Quante righe proprie dei giorni passati sono ancora in bozza o respinte, e la data più vecchia' })
+  daInviare(@UtenteRichiesta() utente: UtenteAutenticato | undefined) {
+    return this.service.daInviare(utente);
+  }
+
+  @Post('invio')
+  @HttpCode(200)
+  @Permesso('consuntivare')
+  @ApiOperation({
+    summary: 'Invia all\'approvazione le giornate indicate',
+    description:
+      'Tutte le righe in bozza o respinte di quei giorni passano a "inviata" (non si inviano righe singole); le righe respinte perdono la motivazione, ' +
+      'che resta nello storico. Ogni giornata porta la versione letta: se è cambiata, 409 e non parte nulla.',
+  })
+  @ApiBody({ schema: { example: { giornate: [{ data: '2027-03-01', versione: 2 }, { data: '2027-03-02', versione: 1 }] } } })
+  @ApiConflictResponse({ description: 'Versione cambiata' })
+  invia(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Body() body: unknown) {
+    return this.service.invia(utente, body);
+  }
+
+  @Post('ritiro')
+  @HttpCode(200)
+  @Permesso('consuntivare')
+  @ApiOperation({
+    summary: 'Ritira l\'invio delle giornate indicate',
+    description: 'Le righe ancora "inviata" (senza via libera né approvazione) tornano in bozza; le altre restano come sono.',
+  })
+  @ApiBody({ schema: { example: { giornate: [{ data: '2027-03-01', versione: 3 }] } } })
+  @ApiConflictResponse({ description: 'Versione cambiata' })
+  ritira(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Body() body: unknown) {
+    return this.service.ritira(utente, body);
   }
 
   @Put()

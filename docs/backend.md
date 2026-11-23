@@ -225,6 +225,9 @@ Regole: periodi della stessa coppia (ruolo + tipologia, risorsa + tipologia) mai
 | GET | `/consuntivi/proposte?settimana=` | `consuntivare` | Righe proposte per la settimana: progetti allocati nel Pianificatore nei mesi della settimana (tipologia predefinita) e righe della settimana precedente; solo voci ancora consuntivabili |
 | PUT | `/consuntivi/:data` | `consuntivare` | `{ versione, righe }`: le righe della giornata (sostituiscono le precedenti in bozza) |
 | PUT | `/consuntivi` | `consuntivare` | `{ giornate: [{ data, versione, righe }] }`: tutte in una transazione, o nessuna |
+| POST | `/consuntivi/invio` | `consuntivare` | Fase 3, blocco D1. `{ giornate: [{ data, versione }] }`: tutte le righe in bozza o respinte di quei giorni passano a `inviata` (non si inviano righe singole) e perdono via libera e rifiuto; i giorni senza righe da inviare si saltano. Una transazione, condizionata sulla versione di ogni giornata (409); una voce di storico `invio` per giornata, con stato, minuti, tipologia e rifiuto delle righe prima dell'invio. Risposta `{ giornate, righe, giorni }` |
+| POST | `/consuntivi/ritiro` | `consuntivare` | Stesso corpo: le righe ancora `inviata` (nessun approvatore le ha toccate) tornano in bozza; storico `ritiro` |
+| GET | `/consuntivi/da-inviare` | `consuntivare` | `{ bozza, respinte, primaData }`: righe proprie dei giorni fino a oggi ancora da inviare, per il contatore della pagina |
 
 Ogni riga in ingresso: `_id` (per le righe esistenti), `attivitaId` oppure `progettoId`, `tipologiaId` (se manca, la predefinita), `minuti`, `nota`. Regole (`ConsuntiviService` e le funzioni pure di `regole-giornata.ts`):
 
@@ -233,7 +236,7 @@ Ogni riga in ingresso: `_id` (per le righe esistenti), `attivitaId` oppure `prog
 - solo sui progetti su cui la risorsa lavora (decisione 5 del piano): assegnata ad almeno un'attività del progetto, approvatrice del progetto, oppure allocata sul progetto nel Pianificatore nel mese della riga con percentuale maggiore di zero; il controllo vale per le righe nuove o cambiate;
 - con l'attività il progetto si ricava (un progetto diverso è un errore); niente righe nuove o cambiate su progetti chiusi, attività chiuse, tipologie disattivate, né direttamente su un progetto "solo su attività";
 - per ogni riga nuova o cambiata: centro di costo copiato dal progetto, tariffa risolta con `TariffeService.risolutore()` e costo fotografato (`fonteTariffa`, `tariffaId`, `tariffaCentesimiOra`, `costoCentesimi`; null = da valorizzare), `modificatoIl` e `modificatoDa` della riga; le righe invariate restano come sono, e il costo si ricalcola solo se cambiano tipologia o minuti;
-- le righe non in bozza o respinte (dalla fase 3) non si cambiano né si tolgono (409);
+- le righe non in bozza o respinte (inviate, con via libera, approvate, chiuse) non si cambiano né si tolgono (409); accanto a loro si aggiungono righe nuove in bozza; una riga respinta corretta resta `respinta`, con il suo `rifiuto` (`{ da, il, motivazione }`), finché non viene inviata di nuovo;
 - salvataggio condizionato sulla `versione` letta (0 per una giornata nuova): se è cambiata, 409 "ricarica la pagina";
 - la risposta porta gli `avvisi`: ore ordinarie oltre l'orario contrattuale (o oltre il parametro `oreGiorno` se manca) e righe nuove o cambiate su attività a cui la risorsa non è assegnata (permesse, decisione 10 del piano); gli errori iniziano con la data della giornata;
 - riservatezza: tariffe, importi, fonte e centro di costo compaiono solo nelle risposte al controller.

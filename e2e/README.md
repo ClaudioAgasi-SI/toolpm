@@ -6,6 +6,7 @@ separato (`toolpm_e2e`), che lo script di preparazione cancella e ricrea ogni vo
 | Prova | Cosa controlla |
 |---|---|
 | `consuntivazione.py` | Consuntivazione (fase 2): il controller crea una tipologia e sposta la predefinita, inserisce le tariffe standard del ruolo (con il rifiuto di un periodo sovrapposto) e una personalizzata; rita compila la settimana scorsa con le righe proposte, un'attività assegnata, uno straordinario e una nota, salva e non vede importi; copia della settimana; luca, senza ruolo, salva ore che restano da valorizzare; il controller controlla costi e totali in "Consuntivi delle risorse", vede luca tra le righe da valorizzare, corregge una tariffa e applica il ricalcolo con anteprima |
+| `controllo.py` | Controllo (fase 3): rita compila e salva la settimana scorsa, la invia (celle in sola lettura e colorate), aggiunge una riga accanto a quelle inviate, ritira l'invio e invia di nuovo; si estende con approvazioni e chiusura dei mesi |
 
 ## Requisiti
 
@@ -31,7 +32,7 @@ Da tre terminali, nella cartella del repository (comandi per PowerShell; in bash
 
 2. Avvia il frontend: `cd frontend; npx ng serve --port 4201`.
 
-3. Lancia la prova: `python e2e/consuntivazione.py`. Variabili facoltative: `BASE` (default `http://localhost:4201/toolpm`),
+3. Lancia la prova: `python e2e/consuntivazione.py` oppure `python e2e/controllo.py`. Variabili facoltative: `BASE` (default `http://localhost:4201/toolpm`),
    `CHROME` (percorso di Chrome), `SCREENSHOT` (cartella delle catture, default `/tmp`).
 
 Per ripetere la prova rilancia prima `node scripts/e2e-prepara.mjs`: la prova si aspetta un database appena preparato.

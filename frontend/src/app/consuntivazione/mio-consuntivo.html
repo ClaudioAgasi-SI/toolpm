@@ -30,6 +30,22 @@
 @if (caricamento()) {
   <p class="tenue">Caricamento…</p>
 } @else {
+  @if (daInviareAltrove() > 0 && daInviare(); as d) {
+    <p class="avviso da-inviare">
+      Hai ancora {{ d.bozza + d.respinte === 1 ? '1 riga da inviare' : d.bozza + d.respinte + ' righe da inviare' }} nei giorni passati{{ d.respinte ? ', di cui ' + (d.respinte === 1 ? '1 respinta' : d.respinte + ' respinte') : '' }}, a partire da {{ etichettaGiorno(d.primaData!) }}.
+      <button type="button" (click)="vai({ vista: 'settimana', data: d.primaData! })">Vai a quella settimana</button>
+    </p>
+  }
+  @if (respinte().length) {
+    <section class="respinte" aria-label="Righe respinte">
+      <strong>Righe respinte: correggile e inviale di nuovo</strong>
+      <ul>
+        @for (x of respinte(); track x.cella.rigaId) {
+          <li>{{ etichettaGiorno(x.giorno) }} — {{ x.riga.etichetta }} ({{ nomeTipologia(x.riga.tipologiaId) }}, {{ x.cella.testo }}): {{ x.cella.motivazione }}</li>
+        }
+      </ul>
+    </section>
+  }
   <div class="comandi">
     <button type="button" (click)="copiaPrecedente()">Copia {{ vista() === 'settimana' ? 'la settimana precedente' : 'il giorno precedente' }}</button>
     @if (proposteDaAggiungere().length) {
@@ -41,6 +57,20 @@
     }
     <button type="button" class="primario" [disabled]="!giorniCambiati().length || salvataggio()" (click)="salva()">
       {{ salvataggio() ? 'Salvataggio…' : 'Salva' }}
+    </button>
+    @if (ritirabili().length) {
+      <button type="button" [disabled]="invio() || giorniCambiati().length > 0" (click)="ritira()" title="Le righe inviate che nessuno ha ancora guardato tornano in bozza">
+        Ritira l'invio ({{ ritirabili().length }})
+      </button>
+    }
+    <button
+      type="button"
+      class="invia"
+      [disabled]="!daInviareQui().length || invio() || giorniCambiati().length > 0"
+      [title]="giorniCambiati().length ? 'Salva prima le ore' : 'Invia all\'approvazione tutte le righe in bozza o respinte di questo periodo'"
+      (click)="invia()"
+    >
+      {{ invio() ? 'Invio…' : 'Invia ' + (vista() === 'settimana' ? 'la settimana' : 'il giorno') + (daInviareQui().length ? ' (' + daInviareQui().length + ')' : '') }}
     </button>
   </div>
 
@@ -84,11 +114,16 @@
             </td>
             @for (g of giorni(); track g) {
               @let c = cella(r, g);
-              <td class="ore" [class.festivo]="fineSettimana(g)" [class.selezionata]="selezionata()?.riga === r && selezionata()?.giorno === g">
+              <td
+                class="ore"
+                [class.festivo]="fineSettimana(g)"
+                [class.selezionata]="selezionata()?.riga === r && selezionata()?.giorno === g"
+                [attr.data-stato]="statoCella(r, g) || null"
+              >
                 <input
                   [disabled]="!modificabile(r, g)"
                   [class.sbagliata]="erroreCella(r, g)"
-                  [title]="erroreCella(r, g) || (g > oggi ? 'Giorno futuro' : c.stato && !modificabile(r, g) ? 'Riga ' + c.stato : '')"
+                  [title]="titoloCella(r, g)"
                   inputmode="decimal"
                   placeholder="–"
                   [(ngModel)]="c.testo"
@@ -127,6 +162,13 @@
       </tfoot>
     </table>
   </div>
+
+  <p class="legenda tenue">
+    @for (s of statiLegenda; track s) {
+      <span class="voce-legenda" [attr.data-stato]="s">{{ nomiStato[s] }}</span>
+    }
+    <span>Le celle senza colore sono in bozza: si modificano finché non le invii.</span>
+  </p>
 
   @if (selezionata(); as s) {
     @let c = cella(s.riga, s.giorno);
@@ -167,7 +209,8 @@
     }
   </form>
   <p class="tenue suggerimento">
-    Scrivi le ore come 8, 7,5 oppure 7:30 (passi di 15 minuti). I giorni futuri non si compilano. Puoi salvare un giorno alla volta o tutta la settimana.
+    Scrivi le ore come 8, 7,5 oppure 7:30 (passi di 15 minuti). I giorni futuri non si compilano. Puoi salvare un giorno alla volta o tutta la settimana;
+    quando le ore sono complete, <strong>Invia</strong> le manda all'approvazione.
   </p>
 
   @if (attivitaAssegnate().length) {

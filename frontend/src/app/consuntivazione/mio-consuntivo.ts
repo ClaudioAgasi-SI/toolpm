@@ -5,7 +5,7 @@ import { forkJoin } from 'rxjs';
 import { ComuniApiService } from '../comuni/comuni-api.service';
 import { messaggioErrore } from '../core/errori';
 import { ConsuntivazioneApiService } from './consuntivazione-api.service';
-import type { Giornata, Proposta, RigaDaSalvare, TipologiaCosto, VoceAttivita, VoceProgetto } from './modelli';
+import { type DaInviare, type Giornata, NOMI_STATO, type Proposta, type RigaDaSalvare, type StatoRiga, type TipologiaCosto, type VoceAttivita, type VoceProgetto } from './modelli';
 import { etichettaGiorno, etichettaSettimana, fineSettimana, leggiOre, oggi, piuGiorni, scriviOre, settimana, totaleOre } from './ore';
 
 type Vista = 'settimana' | 'giorno';
@@ -16,7 +16,9 @@ interface Cella {
   nota: string;
   rigaId?: string;
   /** Stato della riga salvata: solo bozza e respinta si modificano. */
-  stato?: string;
+  stato?: StatoRiga;
+  /** Motivazione del rifiuto, sulle righe respinte. */
+  motivazione?: string;
 }
 
 /** Riga della griglia: progetto o attività, più tipologia; una cella per giorno. */
@@ -35,7 +37,7 @@ interface RigaGriglia {
 }
 
 const chiaveDi = (progettoId: string, attivitaId: string | null, tipologiaId: string) => `${progettoId}|${attivitaId ?? '-'}|${tipologiaId}`;
-const MODIFICABILI = ['bozza', 'respinta'];
+const MODIFICABILI: StatoRiga[] = ['bozza', 'respinta'];
 
 /**
  * Il mio consuntivo (fase 2, blocco C5): ore della risorsa per settimana o per giorno.
@@ -43,6 +45,8 @@ const MODIFICABILI = ['bozza', 'respinta'];
  * - Salva insieme solo le giornate cambiate, con la versione letta (409 → ricaricare).
  * - Copia della settimana o del giorno precedente nella pagina: le ore copiate si vedono prima di salvarle.
  * - Nessun importo: la risorsa non vede tariffe né costi.
+ * - Invio e ritiro delle giornate del periodo (fase 3, blocco D1): stato di ogni cella, righe respinte con la motivazione,
+ *   contatore delle righe ancora da inviare nei giorni passati.
  */
 @Component({
   selector: 'app-mio-consuntivo',
@@ -60,6 +64,8 @@ export class MioConsuntivo {
   protected readonly totaleOre = totaleOre;
   protected readonly etichettaGiorno = etichettaGiorno;
   protected readonly fineSettimana = fineSettimana;
+  protected readonly nomiStato = NOMI_STATO;
+  protected readonly statiLegenda: StatoRiga[] = ['inviata', 'approvataTL', 'approvata', 'respinta', 'chiusa'];
 
   protected readonly oggi = oggi();
   protected readonly vista = signal<Vista>('settimana');
@@ -83,6 +89,9 @@ export class MioConsuntivo {
   protected readonly messaggio = signal('');
   protected readonly avvisi = signal<{ data: string; messaggio: string }[]>([]);
   protected readonly selezionata = signal<{ riga: RigaGriglia; giorno: string } | null>(null);
+  protected readonly invio = signal(false);
+  /** Righe proprie ancora da inviare nei giorni passati, in tutto il calendario. */
+  protected readonly daInviare = signal<DaInviare | null>(null);
 
   // Nuova riga
   protected nuova = { voce: '', tipologiaId: '' };
@@ -113,6 +122,94 @@ export class MioConsuntivo {
         .map((g) => `${r.etichetta}, ${etichettaGiorno(g)}: ${(leggiOre(r.celle[g].testo) as { errore: string }).errore}`),
     );
   });
+
+  // ---- Invio (fase 3) ----
+
+  /** Righe salvate del periodo per stato: le celle con rigaId vengono dal database. */
+  private righeSalvate(filtro: (s: StatoRiga) => boolean) {
+    this.modifiche();
+    return this.righe().flatMap((r) =>
+      this.giorni()
+        .filter((g) => r.celle[g]?.rigaId && filtro(r.celle[g].stato!))
+        .map((g) => ({ riga: r, giorno: g, cella: r.celle[g] })),
+    );
+  }
+  protected readonly daInviareQui = computed(() => this.righeSalvate((s) => MODIFICABILI.includes(s)));
+  protected readonly ritirabili = computed(() => this.righeSalvate((s) => s === 'inviata'));
+  protected readonly respinte = computed(() => this.righeSalvate((s) => s === 'respinta'));
+  /** Righe da inviare fuori dal periodo visibile: il contatore le segnala. */
+  protected readonly daInviareAltrove = computed(() => {
+    const d = this.daInviare();
+    if (!d) return 0;
+    return d.bozza + d.respinte - this.daInviareQui().length;
+  });
+
+  protected statoCella(r: RigaGriglia, g: string) {
+    const s = r.celle[g]?.rigaId ? r.celle[g].stato : undefined;
+    return s && s !== 'bozza' ? s : '';
+  }
+
+  protected titoloCella(r: RigaGriglia, g: string) {
+    const c = r.celle[g];
+    if (this.erroreCella(r, g)) return this.erroreCella(r, g);
+    if (g > this.oggi) return 'Giorno futuro';
+    if (c?.stato === 'respinta') return `Respinta: ${c.motivazione ?? ''}`;
+    if (c?.rigaId && c.stato && c.stato !== 'bozza') return `${NOMI_STATO[c.stato]}: non si modifica`;
+    return '';
+  }
+
+  protected invia() {
+    this.cambiaStato('invio', this.daInviareQui());
+  }
+
+  protected ritira() {
+    this.cambiaStato('ritiro', this.ritirabili());
+  }
+
+  private cambiaStato(operazione: 'invio' | 'ritiro', righe: { giorno: string }[]) {
+    if (this.giorniCambiati().length) {
+      this.errore.set('Ci sono ore non salvate: salva prima di inviare.');
+      return;
+    }
+    const giorni = [...new Set(righe.map((x) => x.giorno))].sort();
+    if (!giorni.length) return;
+    const quante = righe.length === 1 ? '1 riga' : `${righe.length} righe`;
+    const di = giorni.length === 1 ? etichettaGiorno(giorni[0]) : `${giorni.length} giorni`;
+    const domanda =
+      operazione === 'invio'
+        ? `Inviare all'approvazione ${quante} (${di})? Dopo l'invio le ore non si modificano, a meno di ritirarle prima che un approvatore le guardi.`
+        : `Ritirare l'invio di ${quante} (${di})? Tornano in bozza e potrai correggerle e inviarle di nuovo.`;
+    if (!confirm(domanda)) return;
+    this.invio.set(true);
+    this.errore.set('');
+    this.messaggio.set('');
+    this.avvisi.set([]);
+    const giornate = giorni.map((g) => ({ data: g, versione: this.versioni.get(g) ?? 0 }));
+    const chiamata = operazione === 'invio' ? this.api.invia(giornate) : this.api.ritira(giornate);
+    chiamata.subscribe({
+      next: (esito) => {
+        this.invio.set(false);
+        const n = esito.righe === 1 ? '1 riga' : `${esito.righe} righe`;
+        this.messaggio.set(operazione === 'invio' ? `Inviate all'approvazione: ${n}.` : `Invio ritirato: ${n} di nuovo in bozza.`);
+        this.ricarica();
+      },
+      error: (e: { status?: number }) => {
+        this.invio.set(false);
+        this.conflitto.set(e.status === 409);
+        this.errore.set(messaggioErrore(e));
+      },
+    });
+  }
+
+  /** Dopo un salvataggio o un invio: giornate del periodo e contatore; le righe proposte ancora vuote restano. */
+  private ricarica() {
+    const proposte = this.righe().filter((r) => r.proposta && this.totaleRiga(r) === 0);
+    this.api.consuntivi(this.giorni()[0], this.giorni()[this.giorni().length - 1]).subscribe((g) => {
+      this.costruisci(g);
+      this.righe.update((rr) => [...rr, ...proposte.filter((p) => !rr.some((r) => r.chiave === p.chiave))]);
+    });
+    this.api.daInviare().subscribe({ next: (d) => this.daInviare.set(d), error: () => this.daInviare.set(null) });
+  }
 
   constructor() {
     this.route.queryParamMap.subscribe((q) => {
@@ -158,6 +255,7 @@ export class MioConsuntivo {
         this.caricamento.set(false);
       },
     });
+    this.api.daInviare().subscribe({ next: (d) => this.daInviare.set(d), error: () => this.daInviare.set(null) });
   }
 
   /** Griglia dalle giornate salvate; memorizza versioni e contenuto originale per riconoscere le modifiche. */
@@ -168,7 +266,7 @@ export class MioConsuntivo {
       for (const r of g.righe) {
         const k = chiaveDi(r.progettoId, r.attivitaId, r.tipologiaId);
         if (!righe.has(k)) righe.set(k, this.nuovaRiga(r.progettoId, r.attivitaId, r.tipologiaId, r));
-        righe.get(k)!.celle[g.data] = { testo: scriviOre(r.minuti), nota: r.nota ?? '', rigaId: r._id, stato: r.stato };
+        righe.get(k)!.celle[g.data] = { testo: scriviOre(r.minuti), nota: r.nota ?? '', rigaId: r._id, stato: r.stato, motivazione: r.rifiuto?.motivazione };
       }
     }
     this.righe.set([...righe.values()].sort((x, y) => x.etichetta.localeCompare(y.etichetta)));
@@ -402,13 +500,8 @@ export class MioConsuntivo {
       next: (esito) => {
         this.salvataggio.set(false);
         this.avvisi.set(esito.avvisi);
-        this.messaggio.set(`Salvato: ${giornate.length === 1 ? '1 giornata' : `${giornate.length} giornate`}.`);
-        const proposte = this.righe().filter((r) => r.proposta && this.totaleRiga(r) === 0);
-        // Ricarico le giornate del periodo (versioni nuove); le righe proposte ancora vuote restano.
-        this.api.consuntivi(this.giorni()[0], this.giorni()[this.giorni().length - 1]).subscribe((g) => {
-          this.costruisci(g);
-          this.righe.update((rr) => [...rr, ...proposte.filter((p) => !rr.some((r) => r.chiave === p.chiave))]);
-        });
+        this.messaggio.set(`Salvato: ${giornate.length === 1 ? '1 giornata' : `${giornate.length} giornate`}. Quando le ore sono complete, inviale all'approvazione.`);
+        this.ricarica();
       },
       error: (e: { status?: number }) => {
         this.salvataggio.set(false);

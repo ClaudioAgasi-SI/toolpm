@@ -11,7 +11,7 @@ La fase 3 porta il **controllo** sulle ore consuntivate: la risorsa invia le pro
 | Blocco | Stato | Note |
 | --- | --- | --- |
 | D0 — Preparazione | Fatto | Commit 9afa07f. Migrazione `008-controllo` (`periodi`, `audit_log` con validatori e indici; l'indice `righe.progettoId + righe.stato + data` c'era già dalla 007), `AuditService` nell'infrastruttura (scrittura nella transazione della modifica, cronologia), permessi `approvare` (TL, PM, PMSenior) e `gestirePeriodi` (controller), regole pure `profiloDiApprovazione` e `motivoNegatoApprovazione` (transizioni per profilo, niente auto-approvazione), pagina iniziale con Approvazioni e Periodi "in preparazione" (le voci del sottomenu arrivano con le pagine, D3 e D4). Test: 181 backend (nuovo `test/controllo.integrazione.spec.ts`), 16 frontend. Da fare sul PC: migrazione 008. |
-| D1 — Invio delle ore | Da fare | |
+| D1 — Invio delle ore | Fatto | API `POST consuntivi/invio` e `consuntivi/ritiro` (`{ giornate: [{ data, versione }] }`, transazione con versione, storico per giornata) e `GET consuntivi/da-inviare`; campo `rifiuto` sulle righe (la riga respinta corretta resta respinta con la motivazione fino al nuovo invio). Pagina "Il mio consuntivo": stato delle celle con legenda, riquadro delle respinte, Invia e Ritira con conferma, contatore delle righe da inviare nei giorni passati. Prova nel browser `e2e/controllo.py`. Test: 188 backend, 16 frontend. |
 | D2 — Approvazioni (backend) | Da fare | |
 | D3 — Pagina Approvazioni | Da fare | |
 | D4 — Chiusura dei periodi | Da fare | |

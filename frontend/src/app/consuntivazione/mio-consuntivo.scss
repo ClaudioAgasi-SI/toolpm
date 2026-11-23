@@ -44,3 +44,20 @@
 }
 .suggerimento { font-size: 0.85rem; }
 .mie-attivita { margin-top: 2rem; h2 { font-size: 1.05rem; } input[type='number'] { width: 4.5rem; } }
+
+// Stato delle righe (fase 3): bordo colorato a sinistra della cella e legenda.
+$stati: (inviata: #1f6feb, approvataTL: #8250df, approvata: #1a7f37, respinta: #d1242f, chiusa: #6e7781);
+@each $stato, $colore in $stati {
+  .griglia td.ore[data-stato='#{$stato}'] { box-shadow: inset 3px 0 0 $colore; }
+  .griglia td.ore[data-stato='#{$stato}'] input:disabled { color: $colore; background: #fafbfc; }
+  .voce-legenda[data-stato='#{$stato}'] { border-left: 3px solid $colore; }
+}
+.griglia td.ore[data-stato='respinta'] input { border-color: #d1242f; }
+.legenda { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; font-size: 0.8rem; margin: 0.4rem 0 0; }
+.voce-legenda { padding-left: 6px; }
+.respinte { border: 1px solid #f1b8bc; background: #fff5f5; border-radius: 6px; padding: 6px 12px; margin: 0.5rem 0;
+  ul { margin: 0.3rem 0 0; padding-left: 1.2rem; }
+}
+.da-inviare button { margin-left: 0.5rem; }
+button.invia { background: #1a7f37; color: #fff; border-color: #1a7f37; }
+button.invia:disabled { background: #cfd6dd; border-color: #cfd6dd; color: #fff; }

@@ -5,6 +5,7 @@ import type { UtenteAutenticato } from '../../auth/decoratori.js';
 import { Attivita, Progetto } from '../../comuni/schemi/progetto.schema.js';
 import { Risorsa } from '../../comuni/schemi/risorsa.schema.js';
 import { corpo, data as leggiData, numero, objectId, testo } from '../../comuni/validazione.js';
+import { AuditService } from '../../infrastruttura/audit.service.js';
 import { ParametriService } from '../../infrastruttura/parametri.service.js';
 import { PermessiService } from '../../permessi/permessi.service.js';
 import { costoCentesimi } from '../tariffe/risoluzione.js';
@@ -55,7 +56,9 @@ const errore = (giorno: string, msg: string) => new BadRequestException(`${giorn
  * - Salvataggio di una o più giornate in una transazione, condizionato sulla versione letta (409 se cambiata).
  * - Per ogni riga nuova o cambiata: progetto ricavato dall'attività, centro di costo copiato dal progetto,
  *   tipologia predefinita se manca, tariffa risolta e costo fotografati (null = da valorizzare).
- * - Le righe non in bozza/respinte (dalla fase 3) non si toccano; le righe invariate restano come sono.
+ * - Le righe non in bozza/respinte non si toccano; le righe invariate restano come sono. Una riga respinta
+ *   corretta resta respinta, con la motivazione, finché la risorsa non la invia di nuovo.
+ * - Invio e ritiro (fase 3, blocco D1): per giornate intere, con la versione letta e lo storico.
  * - La risorsa non riceve mai tariffe né importi.
  */
 @Injectable()
@@ -70,6 +73,7 @@ export class ConsuntiviService {
     private readonly tariffe: TariffeService,
     private readonly parametri: ParametriService,
     private readonly permessi: PermessiService,
+    private readonly audit: AuditService,
   ) {}
 
   // ---- Lettura ----
@@ -250,6 +254,116 @@ export class ConsuntiviService {
     return { giornate: await this.presenta(salvate, this.vedeCosti(utente)), avvisi, date: giorniOrdinati };
   }
 
+  /**
+   * Invio (RF-10, decisione 1 della fase 3): { giornate: [{ data, versione }] }. Tutte le righe in bozza
+   * o respinte di quei giorni passano a "inviata" e perdono via libera e rifiuto (che resta nello storico).
+   * I giorni senza righe da inviare si saltano. Tutto in una transazione, condizionata sulla versione letta.
+   */
+  invia(utente: UtenteAutenticato | undefined, body: unknown) {
+    return this.cambiaStato(utente, body, 'invio');
+  }
+
+  /** Ritiro (decisione 2): le righe ancora "inviata" (nessuno le ha toccate) tornano in bozza. */
+  ritira(utente: UtenteAutenticato | undefined, body: unknown) {
+    return this.cambiaStato(utente, body, 'ritiro');
+  }
+
+  /** Quante righe proprie dei giorni passati aspettano ancora l'invio, per i contatori delle pagine. */
+  async daInviare(utente: UtenteAutenticato | undefined) {
+    const risorsaId = this.risorsaPropria(utente);
+    const [esito] = await this.model
+      .aggregate<{ bozza: number; respinte: number; primaData: Date | null }>([
+        { $match: { risorsaId, data: { $lte: leggiData(oggiInItalia(), 'oggi', true)! }, 'righe.stato': { $in: [...STATI_MODIFICABILI] } } },
+        { $unwind: '$righe' },
+        { $match: { 'righe.stato': { $in: [...STATI_MODIFICABILI] } } },
+        {
+          $group: {
+            _id: null,
+            bozza: { $sum: { $cond: [{ $eq: ['$righe.stato', 'bozza'] }, 1, 0] } },
+            respinte: { $sum: { $cond: [{ $eq: ['$righe.stato', 'respinta'] }, 1, 0] } },
+            primaData: { $min: '$data' },
+          },
+        },
+      ])
+      .exec();
+    return { bozza: esito?.bozza ?? 0, respinte: esito?.respinte ?? 0, primaData: esito?.primaData ? testoData(esito.primaData) : null };
+  }
+
+  private async cambiaStato(utente: UtenteAutenticato | undefined, body: unknown, operazione: 'invio' | 'ritiro') {
+    const risorsaId = this.risorsaPropria(utente);
+    const c = corpo(body);
+    if (!Array.isArray(c.giornate) || c.giornate.length === 0) throw new BadRequestException('giornate: elenco obbligatorio');
+    if (c.giornate.length > MAX_GIORNI) throw new BadRequestException(`al massimo ${MAX_GIORNI} giornate per volta`);
+    const richieste = c.giornate.map((grezza) => {
+      const g = corpo(grezza);
+      const d = leggiData(g.data, 'data', true)!;
+      const testoGiorno = testoData(d);
+      return { data: d, testo: testoGiorno, versione: numero(g.versione, `${testoGiorno}: versione`, { min: 0, intero: true, obbligatorio: true })! };
+    });
+    const testi = richieste.map((g) => g.testo);
+    if (new Set(testi).size !== testi.length) throw new BadRequestException('giornate: la stessa data compare due volte');
+
+    const esistenti = new Map(
+      (await this.model.find({ risorsaId, data: { $in: richieste.map((g) => g.data) } }).lean<GiornataDb[]>().exec()).map((d) => [testoData(d.data), d]),
+    );
+    const daCambiare = (r: RigaSalvata) =>
+      operazione === 'invio' ? STATI_MODIFICABILI.includes(r.stato as (typeof STATI_MODIFICABILI)[number]) : r.stato === 'inviata';
+    const nuovoStato = operazione === 'invio' ? 'inviata' : 'bozza';
+    const adesso = new Date();
+    const scritture: { giornata: GiornataDb; righe: RigaSalvata[]; toccate: RigaSalvata[] }[] = [];
+    for (const g of richieste) {
+      const giornata = esistenti.get(g.testo);
+      if ((giornata?.versione ?? 0) !== g.versione) throw this.conflitto(g.testo);
+      const toccate = giornata?.righe.filter(daCambiare) ?? [];
+      if (!giornata || !toccate.length) continue;
+      const righe = giornata.righe.map((r) =>
+        toccate.includes(r)
+          ? Object.assign({}, r, { stato: nuovoStato, approvazioneTL: null, approvazionePM: null, rifiuto: null, modificatoIl: adesso, modificatoDa: utente!.id })
+          : r,
+      );
+      scritture.push({ giornata, righe, toccate });
+    }
+
+    if (scritture.length) {
+      await this.connection.transaction(async (session) => {
+        for (const { giornata, righe } of scritture) {
+          const r = await this.model
+            .updateOne({ _id: giornata._id, versione: giornata.versione }, { $set: { righe, versione: giornata.versione + 1 } }, { session })
+            .exec();
+          if (r.matchedCount === 0) throw this.conflitto(testoData(giornata.data));
+        }
+        await this.audit.registra(
+          scritture.map(({ giornata, toccate }) => ({
+            collezione: 'consuntivi',
+            documentoId: giornata._id,
+            righeIds: toccate.map((r) => r._id),
+            operazione,
+            prima: toccate.map((r) => ({
+              _id: String(r._id),
+              stato: r.stato,
+              minuti: r.minuti,
+              tipologiaCodice: r.tipologiaCodice,
+              ...(r.rifiuto ? { rifiuto: r.rifiuto } : {}),
+            })),
+            dopo: { stato: nuovoStato },
+          })),
+          session,
+        );
+      });
+    }
+
+    const salvate = await this.model
+      .find({ risorsaId, data: { $in: richieste.map((g) => g.data) } })
+      .sort({ data: 1 })
+      .lean<GiornataDb[]>()
+      .exec();
+    return {
+      giornate: await this.presenta(salvate, this.vedeCosti(utente)),
+      righe: scritture.reduce((n, s) => n + s.toccate.length, 0),
+      giorni: scritture.map((s) => testoData(s.giornata.data)),
+    };
+  }
+
   /** Righe finali di una giornata, con tutti i controlli. Le righe invariate restano come sono. */
   private costruisciRighe(
     g: GiornataInput,
@@ -339,13 +453,14 @@ export class ConsuntiviService {
         tipologiaCodice: tipologia.codice,
         minuti,
         nota,
-        stato: 'bozza',
+        stato: prima?.stato === 'respinta' ? 'respinta' : 'bozza',
         fonteTariffa: tariffa.fonte,
         tariffaId: tariffa.tariffaId,
         tariffaCentesimiOra: tariffa.centesimiOra,
         costoCentesimi: tariffa.costo,
         approvazioneTL: null,
         approvazionePM: null,
+        rifiuto: prima?.stato === 'respinta' ? (prima.rifiuto ?? null) : null,
         modificatoIl: adesso,
         modificatoDa: utenteId,
       });
@@ -452,6 +567,7 @@ export class ConsuntiviService {
           minuti: r.minuti,
           nota: r.nota ?? null,
           stato: r.stato,
+          rifiuto: r.rifiuto ? { il: r.rifiuto.il, motivazione: r.rifiuto.motivazione } : null,
           modificatoIl: r.modificatoIl,
         };
         if (!conCosti) return base;

@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import type { AnteprimaRicalcolo, DatiTariffa, RigaDaValorizzare, TotaliRicalcolo, EsitoSalvataggio, Giornata, Proposta, RigaDaSalvare, TariffeApplicabili, Tariffa, TipologiaCosto, VoceProgetto } from './modelli';
+import type { AnteprimaRicalcolo, DaInviare, DatiTariffa, EsitoInvio, EsitoSalvataggio, Giornata, Proposta, RigaDaSalvare, RigaDaValorizzare, Tariffa, TariffeApplicabili, TipologiaCosto, TotaliRicalcolo, VoceProgetto } from './modelli';
 
 /** Accesso alle API della sezione Consuntivazione (/api/consuntivazione). */
 @Injectable({ providedIn: 'root' })
@@ -62,6 +62,17 @@ export class ConsuntivazioneApiService {
   }
   salvaGiornate(giornate: { data: string; versione: number; righe: RigaDaSalvare[] }[]) {
     return this.http.put<EsitoSalvataggio>(`${this.base}/consuntivi`, { giornate });
+  }
+
+  // Invio e ritiro (fase 3, blocco D1)
+  invia(giornate: { data: string; versione: number }[]) {
+    return this.http.post<EsitoInvio>(`${this.base}/consuntivi/invio`, { giornate });
+  }
+  ritira(giornate: { data: string; versione: number }[]) {
+    return this.http.post<EsitoInvio>(`${this.base}/consuntivi/ritiro`, { giornate });
+  }
+  daInviare() {
+    return this.http.get<DaInviare>(`${this.base}/consuntivi/da-inviare`);
   }
 
   // Righe da valorizzare e ricalcolo (blocco C6): solo controller
