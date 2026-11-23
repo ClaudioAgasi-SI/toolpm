@@ -259,6 +259,16 @@ Regole dell'approvazione in `src/permessi/regole.ts` (funzioni pure, provate in 
 - `profiloDiApprovazione(soggetto, progetto)` → `TL`, `PM` o null: il PMSenior approva come PM su tutti i progetti, chi è TL e PM sullo stesso progetto come PM, chi non ha più un'abilitazione non approva.
 - `motivoNegatoApprovazione(soggetto, progetto, riga, azione)` per `viaLibera`, `approva`, `respingi`: motivo del no oppure null. Nessuno agisce sulle proprie ore (decisione 3); TL: via libera o rifiuto delle righe `inviata`; PM: approvazione delle righe `inviata` o `approvataTL`, rifiuto anche delle `approvata`; righe `chiusa` mai.
 
+### Approvazioni — `/api/consuntivazione/approvazioni` (blocco D2)
+
+Permesso `approvare` (chi ha un'abilitazione TL, PM o PMSenior). Servizio `ApprovazioniService`.
+
+| Metodo | Percorso | Note |
+|---|---|---|
+| GET | `/approvazioni?da=&a=&progetto=&attivita=&risorsa=&stato=` | Righe dei progetti di cui l'utente è approvatore (tutti per il PMSenior), **mai le proprie**. Senza `stato`: quelle che aspettano una sua azione (TL: `inviata`; PM: `inviata` e `approvataTL`); con `stato` (uno o più tra `inviata`, `approvataTL`, `approvata`, `respinta`, `chiusa`, separati da virgola) quelle chieste. Periodo facoltativo, al massimo un anno; al massimo 2000 righe (`troncato`). Per ogni riga: data, risorsa, progetto e attività, `attivitaNonAssegnata` (decisione 10 della fase 2, calcolata in lettura), tipologia, minuti, nota, stato, `profilo` dell'utente sul progetto, `azioni` possibili, `viaLiberaTL` e `approvazionePM` (`{ da, nome, il }`), `rifiuto` (con la motivazione); `fonteTariffa`, `tariffaCentesimiOra` e `costoCentesimi` solo al PM del progetto, al PMSenior e al controller (decisione 6). `totali`: righe, minuti e, se tutti visibili, costo |
+| GET | `/approvazioni/in-attesa` | `{ righe }`: quante aspettano un'azione dell'utente, per il contatore del menu |
+| POST | `/approvazioni` | `{ azione: 'viaLibera' \| 'approva' \| 'respingi', righe: [rigaId], motivazione? }`, fino a 1000 righe. Regole di `motivoNegatoApprovazione`; motivazione obbligatoria per respingere (max 500). In una transazione: ogni riga si aggiorna solo se è ancora nello stato letto (`$elemMatch` su `_id` e `stato`), con firma `{ da, il }` in `approvazioneTL` o `approvazionePM`, oppure `rifiuto` `{ da, il, motivazione }` (che azzera via libera e approvazione); la versione della giornata cresce, così un salvataggio della risorsa nel frattempo riceve 409; una voce di storico per giornata (`viaLibera`, `approvazione`, `rifiuto`). Risposta `{ azione, fatte, saltate, esiti: [{ rigaId, esito: 'fatta' \| 'saltata', motivo? }] }`: le righe non trovate, non permesse o cambiate nel frattempo sono "saltate" con il motivo, senza fermare le altre |
+
 ## Moduli
 
 ### RisorseModule — `/api/pianificatore/risorse`

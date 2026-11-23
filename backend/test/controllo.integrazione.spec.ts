@@ -2,6 +2,7 @@
  * Test di integrazione della fase 3 (Controllo) contro un MongoDB vero (replica set).
  * D0: migrazione 008 (periodi, audit_log), storico delle modifiche dentro le transazioni, permessi.
  * D1: invio e ritiro delle giornate, righe non modificabili dopo l'invio, righe respinte, storico.
+ * D2: approvazioni (elenco per profilo, via libera, approvazione, rifiuto, concorrenza, auto-approvazione, costi).
  *
  * Si esegue solo se è impostata MONGODB_URI_TEST, es.:
  *   MONGODB_URI_TEST="mongodb://localhost:27017/?directConnection=true" npm test
@@ -37,6 +38,7 @@ describe.skipIf(!URI_BASE)('Controllo (fase 3) con MongoDB vero', () => {
     { nome: 'rita', abilitazione: null, ruoli: ['risorsa'] },
     { nome: 'carlo', abilitazione: null, ruoli: ['risorsa', 'controller'] },
     { nome: 'tito', abilitazione: 'TL', ruoli: ['risorsa'] },
+    { nome: 'sara', abilitazione: 'PMSenior', ruoli: ['risorsa'] },
   ];
 
   const api = () => request(app.getHttpServer());
@@ -281,6 +283,131 @@ describe.skipIf(!URI_BASE)('Controllo (fase 3) con MongoDB vero', () => {
       expect(r.status).toBe(200);
       expect(r.body.righe).toBe(0);
       expect((await giornata(LUN)).righe[0].stato).toBe('bozza');
+    });
+  });
+
+  describe('D2 — approvazioni', () => {
+    const URL = '/api/consuntivazione/approvazioni';
+    const CONS = '/api/consuntivazione/consuntivi';
+    const GIORNI = ['2026-03-09', '2026-03-10', '2026-03-11'];
+    const PERIODO = `da=${GIORNI[0]}&a=${GIORNI[2]}`;
+    type Riga = { rigaId: string; data: string; stato: string; azioni: string[]; minuti: number; risorsa: string; costoCentesimi?: number | null; viaLiberaTL: { nome: string } | null; rifiuto: { motivazione: string } | null; attivitaNonAssegnata: boolean };
+    let svi = '';
+    let straordinaria = '';
+    const elenco = async (chi: string, extra = '') => (await come(chi).get(`${URL}?${PERIODO}${extra}`)).body.righe as Riga[];
+    const giornata = async (chi: string, data: string) => (await come(chi).get(`${CONS}?da=${data}&a=${data}`)).body[0];
+    const scrivi = async (chi: string, data: string, righe: object[]) => {
+      const g = await giornata(chi, data);
+      expect((await come(chi).put(`${CONS}/${data}`, { versione: g?.versione ?? 0, righe })).status).toBe(200);
+    };
+    const invia = async (chi: string, ...date: string[]) => {
+      const giornate = await Promise.all(date.map(async (d) => ({ data: d, versione: (await giornata(chi, d))?.versione ?? 0 })));
+      expect((await come(chi).post(`${CONS}/invio`, { giornate })).status).toBe(200);
+    };
+    const agisci = (chi: string, azione: string, righe: string[], motivazione?: string) => come(chi).post(URL, { azione, righe, motivazione });
+
+    beforeAll(async () => {
+      svi = String((await db.collection('attivita').findOne({ codice: 'SVI' }))!._id);
+      const altra = (await db.collection('attivita').insertOne({ progettoId: (await db.collection('progetti').findOne({ codice: 'PA' }))!._id, codice: 'TEST', descrizione: 'Collaudo', stato: 'attiva', percentualeCompletamento: 0, risorseAssegnateIds: [] })).insertedId;
+      for (const t of (await come('rita').get('/api/consuntivazione/tipologie-costo')).body) if (t.codice === 'STRAORDINARIA') straordinaria = t._id;
+      await scrivi('rita', GIORNI[0], [{ attivitaId: svi, minuti: 480 }, { attivitaId: svi, tipologiaId: straordinaria, minuti: 60 }]);
+      await scrivi('rita', GIORNI[1], [{ attivitaId: svi, minuti: 480 }]);
+      await scrivi('rita', GIORNI[2], [{ attivitaId: String(altra), minuti: 240 }]);
+      await invia('rita', ...GIORNI);
+    });
+
+    it('chi non ha un\'abilitazione non vede le approvazioni', async () => {
+      expect((await come('rita').get(URL)).status).toBe(403);
+      expect((await come('carlo').get(URL)).status).toBe(403);
+    });
+
+    it('TL: le righe inviate dei suoi progetti, solo ore, con via libera e rifiuto', async () => {
+      const righe = await elenco('tito');
+      expect(righe).toHaveLength(4);
+      expect(righe.every((r) => r.stato === 'inviata' && r.risorsa === 'rita rita')).toBe(true);
+      expect(righe[0].azioni).toEqual(['viaLibera', 'respingi']);
+      expect(righe.some((r) => 'costoCentesimi' in r)).toBe(false);
+      expect(righe.find((r) => r.data === GIORNI[2])!.attivitaNonAssegnata).toBe(true);
+      expect(righe.find((r) => r.data === GIORNI[1])!.attivitaNonAssegnata).toBe(false);
+      expect((await come('tito').get(`${URL}?${PERIODO}`)).body.totali).toEqual({ righe: 4, minuti: 1260 });
+    });
+
+    it('PM: anche i costi; approvazione diretta, niente via libera', async () => {
+      const righe = await elenco('paola');
+      expect(righe).toHaveLength(4);
+      expect(righe.every((r) => 'costoCentesimi' in r)).toBe(true);
+      expect(righe[0].azioni).toEqual(['approva', 'respingi']);
+    });
+
+    it('via libera del TL, poi l\'approvazione definitiva del PM; il TL non approva', async () => {
+      const [a, b, c] = (await elenco('tito')).map((r) => r.rigaId);
+      const vl = await agisci('tito', 'viaLibera', [a, b]);
+      expect(vl.status).toBe(200);
+      expect(vl.body).toMatchObject({ fatte: 2, saltate: 0 });
+      const no = await agisci('tito', 'approva', [c]);
+      expect(no.body.esiti[0]).toMatchObject({ esito: 'saltata', motivo: expect.stringMatching(/Solo il PM/) });
+      expect(await elenco('tito')).toHaveLength(2);
+      const conVia = await elenco('paola', '&stato=approvataTL');
+      expect(conVia.map((r) => r.rigaId).sort()).toEqual([a, b].sort());
+      expect(conVia[0].viaLiberaTL?.nome).toBe('tito tito');
+
+      const ok = await agisci('paola', 'approva', [a, b, c]);
+      expect(ok.body).toMatchObject({ fatte: 3, saltate: 0 });
+      expect((await elenco('paola', '&stato=approvata')).length).toBe(3);
+      expect(await db.collection('audit_log').countDocuments({ operazione: 'approvazione' })).toBeGreaterThan(0);
+      const riga = (await giornata('rita', GIORNI[0])).righe.find((r: { _id: string }) => r._id === a || r._id === b);
+      expect(riga.stato).toBe('approvata');
+    });
+
+    it('rifiuto: motivazione obbligatoria; anche di una riga approvata; la risorsa corregge e reinvia', async () => {
+      const approvata = (await elenco('paola', '&stato=approvata'))[0];
+      expect((await agisci('paola', 'respingi', [approvata.rigaId])).status).toBe(400);
+      const r = await agisci('paola', 'respingi', [approvata.rigaId], 'Il 9 marzo eri in ferie al pomeriggio');
+      expect(r.body.fatte).toBe(1);
+      const vista = (await giornata('rita', approvata.data)).righe.find((x: { _id: string }) => x._id === approvata.rigaId);
+      expect(vista).toMatchObject({ stato: 'respinta', rifiuto: { motivazione: 'Il 9 marzo eri in ferie al pomeriggio' } });
+      expect((await elenco('paola', '&stato=respinta'))[0].rifiuto?.motivazione).toMatch(/ferie/);
+      const voce = await db.collection('audit_log').findOne({ operazione: 'rifiuto' });
+      expect(voce).toMatchObject({ motivazione: 'Il 9 marzo eri in ferie al pomeriggio', prima: [{ stato: 'approvata' }] });
+      await invia('rita', approvata.data);
+      const reinviata = (await elenco('tito')).find((x) => x.rigaId === approvata.rigaId)!;
+      expect(reinviata).toMatchObject({ stato: 'inviata', viaLiberaTL: null, rifiuto: null });
+    });
+
+    it('due approvatori sulla stessa riga: una sola azione va a segno, l\'altra è saltata', async () => {
+      const riga = (await elenco('paola')).find((r) => r.stato === 'inviata')!;
+      const [x, y] = await Promise.all([agisci('paola', 'approva', [riga.rigaId]), agisci('sara', 'approva', [riga.rigaId])]);
+      expect(x.body.fatte + y.body.fatte).toBe(1);
+      const saltata = x.body.fatte ? y : x;
+      expect(saltata.body.esiti[0].motivo).toMatch(/cambiata nel frattempo|Azione non ammessa/);
+    });
+
+    it('niente auto-approvazione: le ore di paola le approva il PMSenior', async () => {
+      await scrivi('paola', GIORNI[0], [{ attivitaId: svi, minuti: 120 }]);
+      await invia('paola', GIORNI[0]);
+      expect((await elenco('paola')).some((r) => r.risorsa === 'paola paola')).toBe(false);
+      const mia = (await giornata('paola', GIORNI[0])).righe[0]._id;
+      const no = await agisci('paola', 'approva', [mia]);
+      expect(no.body.esiti[0].motivo).toMatch(/proprie ore/);
+      const delPmSenior = (await elenco('sara')).find((r) => r.rigaId === mia)!;
+      expect(delPmSenior.azioni).toEqual(['approva', 'respingi']);
+      expect((await agisci('sara', 'approva', [mia])).body.fatte).toBe(1);
+    });
+
+    it('contatore delle righe in attesa e righe inesistenti', async () => {
+      const attese = (await elenco('tito')).length;
+      expect((await come('tito').get(`${URL}/in-attesa`)).body.righe).toBeGreaterThanOrEqual(attese);
+      const r = await agisci('paola', 'approva', [String(new mongoose.Types.ObjectId())]);
+      expect(r.body.esiti[0]).toMatchObject({ esito: 'saltata', motivo: expect.stringMatching(/non trovata/) });
+      expect((await agisci('paola', 'cancella', ['x'])).status).toBe(400);
+    });
+
+    it('la risorsa non modifica le righe approvate e non le ritira', async () => {
+      const g = await giornata('rita', GIORNI[1]);
+      expect(g.righe[0].stato).toBe('approvata');
+      expect((await come('rita').put(`${CONS}/${GIORNI[1]}`, { versione: g.versione, righe: [] })).status).toBe(409);
+      const r = await come('rita').post(`${CONS}/ritiro`, { giornate: [{ data: GIORNI[1], versione: g.versione }] });
+      expect(r.body.righe).toBe(0);
     });
   });
 });
