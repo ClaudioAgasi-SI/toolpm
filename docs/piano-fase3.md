@@ -10,7 +10,7 @@ La fase 3 porta il **controllo** sulle ore consuntivate: la risorsa invia le pro
 
 | Blocco | Stato | Note |
 | --- | --- | --- |
-| D0 — Preparazione | Fatto | Migrazione `008-controllo` (`periodi`, `audit_log` con validatori e indici; l'indice `righe.progettoId + righe.stato + data` c'era già dalla 007), `AuditService` nell'infrastruttura (scrittura nella transazione della modifica, cronologia), permessi `approvare` (TL, PM, PMSenior) e `gestirePeriodi` (controller), regole pure `profiloDiApprovazione` e `motivoNegatoApprovazione` (transizioni per profilo, niente auto-approvazione), pagina iniziale con Approvazioni e Periodi "in preparazione" (le voci del sottomenu arrivano con le pagine, D3 e D4). Test: 181 backend (nuovo `test/controllo.integrazione.spec.ts`), 16 frontend. Da fare sul PC: migrazione 008. |
+| D0 — Preparazione | Fatto | Commit 9afa07f. Migrazione `008-controllo` (`periodi`, `audit_log` con validatori e indici; l'indice `righe.progettoId + righe.stato + data` c'era già dalla 007), `AuditService` nell'infrastruttura (scrittura nella transazione della modifica, cronologia), permessi `approvare` (TL, PM, PMSenior) e `gestirePeriodi` (controller), regole pure `profiloDiApprovazione` e `motivoNegatoApprovazione` (transizioni per profilo, niente auto-approvazione), pagina iniziale con Approvazioni e Periodi "in preparazione" (le voci del sottomenu arrivano con le pagine, D3 e D4). Test: 181 backend (nuovo `test/controllo.integrazione.spec.ts`), 16 frontend. Da fare sul PC: migrazione 008. |
 | D1 — Invio delle ore | Da fare | |
 | D2 — Approvazioni (backend) | Da fare | |
 | D3 — Pagina Approvazioni | Da fare | |
@@ -68,9 +68,9 @@ Ogni blocco si chiude con codice, test, documentazione in `docs/` aggiornata e p
 
 ### D0 — Preparazione
 
-- Migrazione `008-controllo`: collection `periodi` (un documento per mese: stato aperto o chiuso, chi e quando ha chiuso o riaperto, motivazione della riapertura) e `audit_log` (collection, id del documento, id della riga se c'è, operazione, utente, data, valori prima e dopo, motivazione) con validatori `$jsonSchema`; indici di `audit_log` su collezione, documento e data, righe, data, utente (l'indice `consuntivi { "righe.progettoId": 1, "righe.stato": 1, data: 1 }` esiste già dalla migrazione 007).
-- `AuditService.registra(...)` nel modulo `infrastruttura`, da chiamare dentro le stesse transazioni delle modifiche; utente dal contesto della richiesta, utenti tecnici `sistema:...` come per il tracciamento.
-- Permessi globali `approvare` (abilitazione TL, PM o PMSenior) e `gestirePeriodi` (controller); regole pure `puoDareViaLibera`, `puoApprovare`, `puoRespingere` per riga, profilo e stato.
+- Migrazione `008-controllo`: collection `periodi` (un documento per mese: stato aperto o chiuso, chi e quando ha chiuso o riaperto, chiusura forzata con motivazione, motivazione della riapertura) e `audit_log` (collezione, id del documento, righe toccate, operazione, utente, data, valori prima e dopo, motivazione) con validatori `$jsonSchema` e indici su collezione, documento e data, righe, data, utente (l'indice `consuntivi { "righe.progettoId": 1, "righe.stato": 1, data: 1 }` esiste già dalla migrazione 007).
+- `AuditService.registra(voci, session)` nel modulo `infrastruttura`, da chiamare dentro le stesse transazioni delle modifiche; utente dal contesto della richiesta, utenti tecnici `sistema:...` come per il tracciamento; `cronologia()` per leggerlo.
+- Permessi globali `approvare` (abilitazione TL, PM o PMSenior) e `gestirePeriodi` (controller); regole pure `profiloDiApprovazione` e `motivoNegatoApprovazione` per riga, profilo, stato e azione.
 - "Approvazioni" (chi ha `approvare`) e "Periodi" (controller) nella pagina iniziale della Consuntivazione, in preparazione; nel sottomenu arrivano con le pagine (D3, D4).
 
 ### D1 — Invio delle ore
