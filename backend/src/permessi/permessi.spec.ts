@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { PermessiService } from './permessi.service.js';
 import {
   filtroProgettiGestibili,
+  motivoNegatoApprovazione,
   motivoNegatoModificaRisorsa,
   permessiGlobali,
   type ProgettoPerPermessi,
@@ -181,8 +182,8 @@ describe('permessi globali', () => {
   it('per ogni profilo', () => {
     const riga = (s: Soggetto) => Object.entries(permessiGlobali(s)).filter(([, v]) => v).map(([k]) => k);
     expect(riga(RISORSA)).toEqual(['consuntivare']);
-    expect(riga(TL)).toEqual(['creareProgetto', 'consuntivare']);
-    expect(riga(PM)).toEqual(['creareProgetto', 'gestireRisorse', 'gestireCaratteristicheTutteLeRisorse', 'consuntivare']);
+    expect(riga(TL)).toEqual(['creareProgetto', 'consuntivare', 'approvare']);
+    expect(riga(PM)).toEqual(['creareProgetto', 'gestireRisorse', 'gestireCaratteristicheTutteLeRisorse', 'consuntivare', 'approvare']);
     expect(riga(PMSENIOR)).toEqual([
       'gestireClienti',
       'gestireCentriDiCosto',
@@ -190,8 +191,9 @@ describe('permessi globali', () => {
       'gestireRisorse',
       'gestireCaratteristicheTutteLeRisorse',
       'consuntivare',
+      'approvare',
     ]);
-    expect(riga(CONTROLLER)).toEqual(['gestireParametri', 'gestireTipologieCosto', 'gestireTariffe', 'consuntivare']);
+    expect(riga(CONTROLLER)).toEqual(['gestireParametri', 'gestireTipologieCosto', 'gestireTariffe', 'consuntivare', 'gestirePeriodi']);
     // L'amministratore senza risorsa collegata non consuntiva.
     expect(riga(ADMIN)).toEqual(['gestireRuoli', 'gestireUtenti']);
   });
@@ -220,5 +222,53 @@ describe('PermessiService.verifica', () => {
       new ForbiddenException('Non hai il permesso di riaprire il progetto'),
     );
     expect(() => servizio.verifica(PM, true, 'riaprire il progetto')).not.toThrow();
+  });
+});
+
+describe('approvazione delle righe (fase 3)', () => {
+  const di = (risorsaId: string, stato: Parameters<typeof motivoNegatoApprovazione>[2]['stato']) => ({ risorsaId, stato });
+  const puo = (s: Soggetto, riga: ReturnType<typeof di>, azione: Parameters<typeof motivoNegatoApprovazione>[3]) =>
+    motivoNegatoApprovazione(s, PROGETTO, riga, azione) === null;
+
+  it('TL: via libera e rifiuto delle sole righe inviate, non l\'approvazione definitiva', () => {
+    expect(puo(TL, di('r-rita', 'inviata'), 'viaLibera')).toBe(true);
+    expect(puo(TL, di('r-rita', 'inviata'), 'respingi')).toBe(true);
+    expect(puo(TL, di('r-rita', 'inviata'), 'approva')).toBe(false);
+    expect(puo(TL, di('r-rita', 'approvataTL'), 'respingi')).toBe(false);
+    expect(puo(TL, di('r-rita', 'bozza'), 'viaLibera')).toBe(false);
+  });
+
+  it('PM: approva con o senza via libera, respinge anche le approvate; niente via libera', () => {
+    expect(puo(PM, di('r-rita', 'inviata'), 'approva')).toBe(true);
+    expect(puo(PM, di('r-rita', 'approvataTL'), 'approva')).toBe(true);
+    expect(puo(PM, di('r-rita', 'approvata'), 'respingi')).toBe(true);
+    expect(puo(PM, di('r-rita', 'approvata'), 'approva')).toBe(false);
+    expect(puo(PM, di('r-rita', 'respinta'), 'approva')).toBe(false);
+    expect(motivoNegatoApprovazione(PM, PROGETTO, di('r-rita', 'inviata'), 'viaLibera')).toMatch(/approvi direttamente/);
+  });
+
+  it('chi è TL e PM sullo stesso progetto approva come PM; il PMSenior ovunque', () => {
+    expect(puo(TL_PM, di('r-rita', 'inviata'), 'approva')).toBe(true);
+    expect(puo(PMSENIOR, di('r-rita', 'approvataTL'), 'approva')).toBe(true);
+  });
+
+  it('nessuno agisce sulle proprie ore', () => {
+    expect(motivoNegatoApprovazione(PM, PROGETTO, di('r-paola', 'inviata'), 'approva')).toMatch(/proprie ore/);
+    expect(puo(TL, di('r-tullio', 'inviata'), 'viaLibera')).toBe(false);
+    expect(puo(PMSENIOR, di('r-sara', 'inviata'), 'approva')).toBe(false);
+    // Le ore del PM le approva un altro PM del progetto o un PMSenior.
+    expect(puo(TL_PM, di('r-paola', 'inviata'), 'approva')).toBe(true);
+    expect(puo(PMSENIOR, di('r-paola', 'inviata'), 'approva')).toBe(true);
+  });
+
+  it('esterni, risorse, controller e approvatori senza abilitazione: no', () => {
+    for (const s of [RISORSA, TL_ESTERNO, PM_ESTERNO, CONTROLLER, ADMIN, EX_PM]) {
+      expect(puo(s, di('r-tina', 'inviata'), 'approva')).toBe(false);
+      expect(puo(s, di('r-tina', 'inviata'), 'respingi')).toBe(false);
+    }
+  });
+
+  it('righe chiuse: nessuna azione', () => {
+    expect(motivoNegatoApprovazione(PM, PROGETTO, di('r-rita', 'chiusa'), 'respingi')).toMatch(/mese chiuso/);
   });
 });

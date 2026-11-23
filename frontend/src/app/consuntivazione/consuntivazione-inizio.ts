@@ -11,14 +11,14 @@ interface Voce {
 
 /**
  * Pagina iniziale della sezione Consuntivazione (fase 2, blocco C0): mostra a ciascuno le funzioni
- * che lo riguardano. Le singole pagine si aggiungono con i blocchi C1, C2, C5 e C6.
+ * che lo riguardano. Le pagine della fase 3 (Approvazioni, Periodi) compaiono "in preparazione" fino ai blocchi D3 e D4.
  */
 @Component({
   selector: 'app-consuntivazione-inizio',
   imports: [RouterLink],
   template: `
     <h1>Consuntivazione</h1>
-    <p class="sottotitolo">Le funzioni della sezione arrivano un po' alla volta con i rilasci della fase 2.</p>
+    <p class="sottotitolo">Le funzioni della sezione arrivano un po' alla volta con i rilasci; quelle in preparazione sono della fase 3.</p>
     @if (voci().length) {
       <ul class="voci">
         @for (v of voci(); track v.titolo) {
@@ -72,6 +72,13 @@ export class ConsuntivazioneInizio {
         { titolo: 'Consuntivi delle risorse', descrizione: 'Ore consuntivate da ciascuna risorsa per settimana, con tariffa e costo.', percorso: 'consuntivi-risorse' },
         { titolo: 'Righe da valorizzare', descrizione: 'Ore senza tariffa applicabile e ricalcolo dei costi.', percorso: 'da-valorizzare' },
       );
+    }
+    // Fase 3: pagine in arrivo con i blocchi D3 (Approvazioni) e D4 (Periodi).
+    if (this.sessione.puo('approvare')) {
+      voci.push({ titolo: 'Approvazioni', descrizione: 'Righe inviate sui progetti di cui sei approvatore: via libera del TL, approvazione o rifiuto del PM.' });
+    }
+    if (this.sessione.puo('gestirePeriodi')) {
+      voci.push({ titolo: 'Periodi', descrizione: 'Chiusura e riapertura dei mesi.' });
     }
     return voci;
   });

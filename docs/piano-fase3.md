@@ -2,7 +2,7 @@
 
 23/11/2026 · Claudio Agasi
 
-> Piano di lavoro della fase 3, **in attesa di conferma**: nessun codice ancora scritto. Versione di lavoro con commenti: [documento su Claude](https://claude.ai/artifact/Ha8p19r8NfxpZZEbqfV2SQ). Le decisioni da cui parte sono in [analisi-consuntivazione.md](analisi-consuntivazione.md); il modo di lavorare è quello delle fasi [1](piano-fase1.md) e [2](piano-fase2.md).
+> Piano di lavoro della fase 3, confermato il 23/11/2026. Versione di lavoro con commenti: [documento su Claude](https://claude.ai/artifact/Ha8p19r8NfxpZZEbqfV2SQ). Le decisioni da cui parte sono in [analisi-consuntivazione.md](analisi-consuntivazione.md); il modo di lavorare è quello delle fasi [1](piano-fase1.md) e [2](piano-fase2.md).
 
 La fase 3 porta il **controllo** sulle ore consuntivate: la risorsa invia le proprie righe, il TL dà un primo via libera facoltativo, il PM approva in modo definitivo o respinge, il controller chiude i mesi. Da qui in avanti solo le righe approvate dal PM contano come costi validi, e ogni modifica ai dati sensibili lascia una traccia nello storico. Report ed EVM restano alla fase 4.
 
@@ -10,7 +10,7 @@ La fase 3 porta il **controllo** sulle ore consuntivate: la risorsa invia le pro
 
 | Blocco | Stato | Note |
 | --- | --- | --- |
-| D0 — Preparazione | Da fare | |
+| D0 — Preparazione | Fatto | Migrazione `008-controllo` (`periodi`, `audit_log` con validatori e indici; l'indice `righe.progettoId + righe.stato + data` c'era già dalla 007), `AuditService` nell'infrastruttura (scrittura nella transazione della modifica, cronologia), permessi `approvare` (TL, PM, PMSenior) e `gestirePeriodi` (controller), regole pure `profiloDiApprovazione` e `motivoNegatoApprovazione` (transizioni per profilo, niente auto-approvazione), pagina iniziale con Approvazioni e Periodi "in preparazione" (le voci del sottomenu arrivano con le pagine, D3 e D4). Test: 181 backend (nuovo `test/controllo.integrazione.spec.ts`), 16 frontend. Da fare sul PC: migrazione 008. |
 | D1 — Invio delle ore | Da fare | |
 | D2 — Approvazioni (backend) | Da fare | |
 | D3 — Pagina Approvazioni | Da fare | |
@@ -36,7 +36,7 @@ Alla fine della fase 3 una risorsa invia le ore di uno o più giorni con un clic
 **Fuori dalla fase 3**
 
 - Scheda costi del progetto, report per centro di costo, pianificato contro consuntivato, EVM, esportazioni (fase 4).
-- Notifiche via email (vedi le decisioni da confermare).
+- Notifiche via email (vedi le decisioni confermate).
 - Integrazioni con altri sistemi (fase 5, facoltativa).
 
 ## Punto di partenza
@@ -68,10 +68,10 @@ Ogni blocco si chiude con codice, test, documentazione in `docs/` aggiornata e p
 
 ### D0 — Preparazione
 
-- Migrazione `008-controllo`: collection `periodi` (un documento per mese: stato aperto o chiuso, chi e quando ha chiuso o riaperto, motivazione della riapertura) e `audit_log` (collection, id del documento, id della riga se c'è, operazione, utente, data, valori prima e dopo, motivazione) con validatori `$jsonSchema`; indici `consuntivi { "righe.progettoId": 1, "righe.stato": 1, data: 1 }` e `audit_log { collection: 1, documentoId: 1, il: -1 }`, `{ il: -1 }`.
+- Migrazione `008-controllo`: collection `periodi` (un documento per mese: stato aperto o chiuso, chi e quando ha chiuso o riaperto, motivazione della riapertura) e `audit_log` (collection, id del documento, id della riga se c'è, operazione, utente, data, valori prima e dopo, motivazione) con validatori `$jsonSchema`; indici di `audit_log` su collezione, documento e data, righe, data, utente (l'indice `consuntivi { "righe.progettoId": 1, "righe.stato": 1, data: 1 }` esiste già dalla migrazione 007).
 - `AuditService.registra(...)` nel modulo `infrastruttura`, da chiamare dentro le stesse transazioni delle modifiche; utente dal contesto della richiesta, utenti tecnici `sistema:...` come per il tracciamento.
 - Permessi globali `approvare` (abilitazione TL, PM o PMSenior) e `gestirePeriodi` (controller); regole pure `puoDareViaLibera`, `puoApprovare`, `puoRespingere` per riga, profilo e stato.
-- Voce "Approvazioni" nel sottomenu della Consuntivazione per chi ha `approvare`, "Periodi" per il controller.
+- "Approvazioni" (chi ha `approvare`) e "Periodi" (controller) nella pagina iniziale della Consuntivazione, in preparazione; nel sottomenu arrivano con le pagine (D3, D4).
 
 ### D1 — Invio delle ore
 
@@ -125,20 +125,20 @@ Ogni blocco si chiude con codice, test, documentazione in `docs/` aggiornata e p
 - [ ] Ogni modifica elencata in D5 compare nello storico con utente, data, valori prima e dopo.
 - [ ] Documentazione in `docs/` e Swagger aggiornati; `docker compose up` sul PC con la migrazione 008 eseguita.
 
-## Decisioni da confermare
+## Decisioni confermate
 
-Punti che l'analisi lascia aperti o che conviene fissare prima di scrivere il codice; per ognuno la proposta.
+Confermate il 23/11/2026, tutte come proposte, insieme alle contromisure dei rischi. Colmano punti che l'analisi lascia aperti (2, 3, 4, 5, 8, 9) o li precisano.
 
-1. **Granularità dell'invio.** Si inviano giorni (uno, alcuni o la settimana): partono tutte le righe in bozza o respinte di quei giorni. Non si inviano righe singole, così una giornata non resta inviata a metà per dimenticanza. *Proposta: sì.*
-2. **Ritiro di un invio.** La risorsa può ritirare le righe inviate finché nessuno le ha ancora toccate (né via libera né approvazione) e correggerle; dopo, solo un rifiuto le restituisce. L'analisi non lo prevede. *Proposta: sì, perché evita rifiuti solo per correggere un errore appena fatto.*
-3. **Niente auto-approvazione.** Un approvatore non dà il via libera né approva le proprie ore: se è l'unico PM del progetto, le approva un PMSenior (o un altro PM aggiunto al progetto). L'analisi non ne parla. *Proposta: sì, è la regola più comune nei controlli interni.*
-4. **Chiusura con righe non approvate.** Alla chiusura l'anteprima mostra le righe del mese ancora in bozza, inviate, con via libera o respinte. *Proposta:* la chiusura è bloccata finché ce ne sono, con l'elenco e i collegamenti; il controller può **forzarla** con una motivazione: quelle righe restano nel loro stato, non contano nei costi e non si toccano più finché il mese non viene riaperto.
-5. **Mese chiuso solo dal controller, senza chiusura automatica.** Nessuna chiusura a data fissa; i mesi si chiudono in ordine (non si chiude giugno se maggio è aperto). *Proposta: sì.*
-6. **Costi visibili al PM.** Nella pagina Approvazioni il PM vede costo e tariffa delle righe dei propri progetti, il PMSenior di tutti, il TL solo le ore, come dice l'analisi (requisito di riservatezza). *Proposta: sì, da subito nella fase 3.*
-7. **Ricalcolo sulle righe inviate e approvate.** Il ricalcolo del controller vale anche per le righe inviate e approvate, con lo storico, mai per quelle di un mese chiuso; lo stato della riga non cambia. *Proposta: sì* (era già annunciato nel piano della fase 2).
-8. **Nessuna notifica via email in fase 3.** Gli approvatori vedono il numero di righe in attesa nel sottomenu, le risorse il numero di righe respinte nella propria pagina. L'invio di email richiede un server di posta aziendale da configurare. *Proposta: rimandare le email a dopo la fase 4.*
-9. **Lo storico è a scrittura esplicita.** Ogni servizio registra le proprie modifiche nella stessa transazione, invece di un intercettore generico: le righe incorporate nelle giornate non si prestano a un confronto automatico prima/dopo. Lo storico si conserva senza scadenza. *Proposta: sì.*
-10. **Approvatori modificano le ore?** No: l'approvatore approva o respinge, non cambia ore, tipologia o voce delle righe altrui. *Proposta: sì, come nell'analisi.*
+1. **Invio per giorni.** Si inviano giorni (uno, alcuni o la settimana): partono tutte le righe in bozza o respinte di quei giorni. Non si inviano righe singole, così una giornata non resta inviata a metà per dimenticanza.
+2. **Ritiro di un invio.** La risorsa può ritirare le righe inviate finché nessuno le ha ancora toccate (né via libera né approvazione) e correggerle; dopo, solo un rifiuto gliele restituisce. Evita rifiuti fatti solo per correggere un errore appena commesso.
+3. **Niente auto-approvazione.** Un approvatore non dà il via libera né approva o respinge le proprie ore: se è l'unico PM del progetto, le approva un PMSenior (o un altro PM aggiunto al progetto).
+4. **Chiusura con righe non approvate.** Alla chiusura l'anteprima mostra le righe del mese ancora in bozza, inviate, con via libera o respinte. La chiusura è bloccata finché ce ne sono, con l'elenco e i collegamenti; il controller può **forzarla** con una motivazione: quelle righe restano nel loro stato, non contano nei costi e non si toccano più finché il mese non viene riaperto.
+5. **Chiusura solo manuale e in ordine.** I mesi li chiude il controller, senza chiusure automatiche a data fissa, e in ordine: non si chiude giugno se maggio è aperto.
+6. **Costi visibili al PM.** Nella pagina Approvazioni il PM vede costo e tariffa delle righe dei propri progetti, il PMSenior di tutti, il TL solo le ore, come dice il requisito di riservatezza dell'analisi.
+7. **Ricalcolo sulle righe inviate e approvate.** Il ricalcolo del controller vale anche per le righe inviate e approvate, con lo storico, mai per quelle di un mese chiuso; lo stato della riga non cambia (come annunciato nel piano della fase 2).
+8. **Nessuna email in fase 3.** Gli approvatori vedono il numero di righe in attesa nel sottomenu, le risorse il numero di righe respinte nella propria pagina. Le email, che richiedono un server di posta aziendale da configurare, sono rimandate a dopo la fase 4.
+9. **Storico a scrittura esplicita.** Ogni servizio registra le proprie modifiche nella stessa transazione, invece di un intercettore generico: le righe incorporate nelle giornate non si prestano a un confronto automatico prima/dopo. Lo storico si conserva senza scadenza.
+10. **Gli approvatori non modificano le ore.** L'approvatore approva o respinge; non cambia ore, tipologia o voce delle righe altrui, come nell'analisi.
 
 ## Rischi
 

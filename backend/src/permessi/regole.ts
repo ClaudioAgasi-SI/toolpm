@@ -60,6 +60,8 @@ export const PERMESSI_GLOBALI = [
   'gestireTipologieCosto',
   'gestireTariffe',
   'consuntivare',
+  'approvare',
+  'gestirePeriodi',
 ] as const;
 export type PermessoGlobale = (typeof PERMESSI_GLOBALI)[number];
 
@@ -95,7 +97,11 @@ export function permessoGlobale(s: Soggetto, permesso: PermessoGlobale): boolean
     case 'gestireParametri':
     case 'gestireTipologieCosto':
     case 'gestireTariffe':
+    case 'gestirePeriodi':
       return s.ruoli.includes('controller');
+    case 'approvare':
+      // Pagina Approvazioni (fase 3): chi ha un'abilitazione; quali righe vede lo decide il progetto.
+      return s.abilitazione !== null;
     case 'consuntivare':
       // Consuntiva solo chi è collegato a una risorsa, e solo per sé stesso (decisione 7 della fase 2).
       return Boolean(s.risorsaId);
@@ -253,3 +259,57 @@ export function filtroProgettiGestibili(s: Soggetto): Record<string, unknown> | 
   if (!s.abilitazione || !s.risorsaId) return null;
   return { 'approvatori.risorsaId': s.risorsaId };
 }
+
+/** Azioni sulle righe di consuntivo inviate (fase 3). */
+export type AzioneApprovazione = 'viaLibera' | 'approva' | 'respingi';
+
+/** Stato di una riga di consuntivo, come nello schema della Consuntivazione. */
+export type StatoRigaPerPermessi = 'bozza' | 'inviata' | 'approvataTL' | 'approvata' | 'respinta' | 'chiusa';
+
+/** Stati da cui parte ogni azione, per profilo sul progetto (schema "Stati di una riga" dell'analisi). */
+const TRANSIZIONI: Record<'TL' | 'PM', Partial<Record<AzioneApprovazione, StatoRigaPerPermessi[]>>> = {
+  TL: { viaLibera: ['inviata'], respingi: ['inviata'] },
+  PM: { approva: ['inviata', 'approvataTL'], respingi: ['inviata', 'approvataTL', 'approvata'] },
+};
+
+/** Profilo con cui il soggetto approva sul progetto: il PMSenior sempre come PM. */
+export function profiloDiApprovazione(s: Soggetto, progetto: ProgettoPerPermessi): 'TL' | 'PM' | null {
+  if (!s.abilitazione || !s.risorsaId) return null;
+  if (ePMSenior(s)) return 'PM';
+  const profilo = profiloSulProgetto(s, progetto);
+  return profilo === 'PMSenior' ? 'PM' : profilo;
+}
+
+/**
+ * Può il soggetto fare l'azione sulla riga? Restituisce il motivo del no, oppure null.
+ * - Nessuno agisce sulle proprie ore (decisione 3 della fase 3).
+ * - TL: via libera o rifiuto delle righe inviate; PM (e PMSenior su tutti i progetti): approvazione
+ *   delle righe inviate o con via libera, rifiuto anche delle approvate. Chi è TL e PM approva come PM.
+ * - Righe chiuse: il mese va prima riaperto dal controller.
+ */
+export function motivoNegatoApprovazione(
+  s: Soggetto,
+  progetto: ProgettoPerPermessi,
+  riga: { risorsaId: string | { toString(): string }; stato: StatoRigaPerPermessi },
+  azione: AzioneApprovazione,
+): string | null {
+  if (s.risorsaId && id(riga.risorsaId) === s.risorsaId) return 'Non si approvano né si respingono le proprie ore';
+  const profilo = profiloDiApprovazione(s, progetto);
+  if (!profilo) return 'Non sei approvatore del progetto';
+  if (riga.stato === 'chiusa') return 'La riga è in un mese chiuso';
+  const ammessi = TRANSIZIONI[profilo][azione];
+  if (!ammessi) {
+    return azione === 'viaLibera' ? 'Il via libera è del TL: come PM approvi direttamente' : 'Solo il PM del progetto approva in modo definitivo';
+  }
+  if (!ammessi.includes(riga.stato)) return `Azione non ammessa su una riga ${DESCRIZIONE_STATO[riga.stato]}`;
+  return null;
+}
+
+const DESCRIZIONE_STATO: Record<StatoRigaPerPermessi, string> = {
+  bozza: 'in bozza',
+  inviata: 'inviata',
+  approvataTL: 'con il via libera del TL',
+  approvata: 'già approvata',
+  respinta: 'respinta',
+  chiusa: 'chiusa',
+};

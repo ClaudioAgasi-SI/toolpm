@@ -17,7 +17,7 @@ Si accede con email e password; i permessi dipendono dal profilo (TL, PM, PMSeni
 | [consuntivazione.md](consuntivazione.md) | Guida d'uso della Consuntivazione: il mio consuntivo, le mie competenze, preparazione dei progetti per TL e PM, tipologie, tariffe, consuntivi delle risorse, righe da valorizzare e ricalcolo per il controller, domande frequenti |
 | [piano-fase1.md](piano-fase1.md) | Piano della fase 1 (fondamenta): autenticazione e profili, modulo Comuni, permessi, adattamento del Pianificatore, migrazione dei dati, criteri di completamento e rischi |
 | [piano-fase2.md](piano-fase2.md) | Piano della fase 2 (consuntivazione): tipologie di costo, tariffe standard e personalizzate, consuntivo giornaliero e settimanale, calcolo dei costi, righe da valorizzare e ricalcolo; confermato e completato il 20/11/2026 |
-| [piano-fase3.md](piano-fase3.md) | Piano della fase 3 (controllo): invio delle ore, approvazione TL e PM, rifiuto motivato, chiusura dei periodi, storico delle modifiche; in attesa di conferma |
+| [piano-fase3.md](piano-fase3.md) | Piano della fase 3 (controllo): invio delle ore, approvazione TL e PM, rifiuto motivato, chiusura dei periodi, storico delle modifiche; confermato il 23/11/2026 |
 | [mongodb-replica-set.md](mongodb-replica-set.md) | Passaggio di MongoDB a replica set a un nodo (fase 1, blocco B0): backup, nuovo container, inizializzazione, stringa di connessione, verifica |
 | [migrazione-dati.md](migrazione-dati.md) | Migrazione dei dati del Pianificatore verso le anagrafiche comuni (fase 1, blocco B7): esportazione dei CSV, come compilarli, importazione in prova e definitiva, verifica |
 

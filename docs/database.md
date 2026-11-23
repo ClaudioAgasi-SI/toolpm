@@ -3,7 +3,7 @@
 - **Database**: `toolpm` (stessa istanza MongoDB del vecchio database `pianificazione`)
 - **Connessione**: variabile `MONGODB_URI` del backend (default in Docker: `mongodb://host.docker.internal:27017/toolpm?directConnection=true`; default fuori da Docker: `mongodb://localhost:27017/toolpm`)
 - **Replica set**: dalla fase 1 MongoDB gira come replica set a un nodo (`rs0`), necessario per le transazioni. Procedura e verifica in [mongodb-replica-set.md](mongodb-replica-set.md); `npm run verifica-mongodb` nel backend controlla connessione, replica set e transazioni.
-- **Collection**: del Pianificatore `skills`, `rate`, `certificazioni`; comuni a tutte le sezioni (fase 1, blocco B4) `risorse`, `clienti`, `centri_costo`, `ruoli`, `progetti`, `attivita`, `avanzamenti`; della Consuntivazione (fase 2, migrazione `007-consuntivazione`) `tipologie_costo`, `tariffe_standard`, `tariffe_personalizzate`, `consuntivi`; tecniche `utenti`, `parametri`, `migrazioni`
+- **Collection**: del Pianificatore `skills`, `rate`, `certificazioni`; comuni a tutte le sezioni (fase 1, blocco B4) `risorse`, `clienti`, `centri_costo`, `ruoli`, `progetti`, `attivita`, `avanzamenti`; della Consuntivazione (fase 2, migrazione `007-consuntivazione`) `tipologie_costo`, `tariffe_standard`, `tariffe_personalizzate`, `consuntivi`; del controllo (fase 3, migrazione `008-controllo`) `periodi`, `audit_log`; tecniche `utenti`, `parametri`, `migrazioni`
 - **Accesso**: solo tramite il backend (Mongoose). Gli schemi sono in `backend/src/comuni/schemi/` (risorse e dati comuni), `backend/src/pianificatore/anagrafiche/anagrafiche.schema.ts`, `backend/src/auth/utente.schema.ts` e `backend/src/infrastruttura/parametro.schema.ts`.
 - **Validatori**: le collection del modulo Comuni (tranne `risorse`) hanno un validatore `$jsonSchema` creato dalla migrazione `004-comuni`: anche chi scrive direttamente nel database, senza passare dal backend, non può salvare documenti con campi obbligatori mancanti o di tipo sbagliato.
 
@@ -228,6 +228,14 @@ Costo orario per tipologia in un periodo: per ruolo (`ruoloId`) nelle standard, 
 
 Un documento per risorsa e giornata (indice unico `{ risorsaId: 1, data: 1 }`), con `mese` (`AAAAMM`), `versione` (cresce a ogni salvataggio, contro le sovrascritture) e le righe incorporate. Ogni riga: `_id`, `progettoId`, `attivitaId` (null = sul progetto), `centroCostoId` (copiato dal progetto), `tipologiaId` e `tipologiaCodice`, `minuti` (da 15 a 1440, multipli di 15), `nota`, `stato` (`bozza`, `inviata`, `approvataTL`, `approvata`, `respinta`, `chiusa`), la tariffa fotografata (`fonteTariffa` `personalizzata`/`standard`/null, `tariffaId`, `tariffaCentesimiOra`, `costoCentesimi`: null = "da valorizzare"), `approvazioneTL` e `approvazionePM` (`{ da, il }`, dalla fase 3), `modificatoIl`, `modificatoDa`. Indici anche su `righe.progettoId + righe.stato + data`, `righe.attivitaId + data`, `righe.centroCostoId + data`, `righe.tipologiaId`, `mese`, `modificatoIl`.
 
+## Collection `periodi`
+
+Un documento per mese (indice unico su `mese`, `AAAAMM`); un mese senza documento è aperto (fase 3). Campi: `stato` (`aperto`, `chiuso`), `chiusoIl`, `chiusoDa`, `forzata` (chiusura con righe non approvate, decisione 4 della fase 3) con `motivazioneChiusura`, `riapertoIl`, `riapertoDa`, `motivazioneRiapertura`, più il tracciamento. Creata dalla migrazione `008-controllo`; la usa la chiusura dei mesi (blocco D4).
+
+## Collection `audit_log`
+
+Storico delle modifiche (fase 3): una voce per azione, scritta da `AuditService` nella stessa transazione della modifica e mai cambiata. Campi: `collezione` e `documentoId` del documento modificato, `righeIds` (per i consuntivi, le righe toccate), `operazione` (es. `invio`, `approvazione`, `rifiuto`, `chiusura`), `utente`, `il`, `prima`, `dopo`, `motivazione`, più il tracciamento. Si conserva senza scadenza. Indici `{ collezione: 1, documentoId: 1, il: -1 }`, `{ righeIds: 1 }`, `{ il: -1 }`, `{ utente: 1, il: -1 }`.
+
 ## Collection `utenti`
 
 Utenti che accedono a ToolPM (fase 1, blocco B2). Indice unico su `email` (migrazione `003-indici-utenti`).
@@ -270,6 +278,7 @@ Registro delle migrazioni eseguite da `npm run migra`: `_id` è il nome dello sc
 | `005-alias-pianificatore` | Indice su `progetti.aliasPianificatore` |
 | `006-allocazioni-progettoid` | Toglie i testi `cliente` e `progetto` dalle allocazioni che hanno `progettoId` (conservando `clienteTesto` e `progettoTesto`); non tocca quelle non collegate |
 | `007-consuntivazione` | Crea `tipologie_costo`, `tariffe_standard`, `tariffe_personalizzate`, `consuntivi` con i validatori `$jsonSchema` e i loro indici; aggiunge le quattro tipologie iniziali (ORDINARIA predefinita) senza toccare quelle già presenti |
+| `008-controllo` | Crea `periodi` e `audit_log` con i validatori `$jsonSchema` e i loro indici (fase 3) |
 
 L'importazione della migrazione dei dati del Pianificatore (blocco B7, `npm run migrazione-dati -- importa`) si registra nella stessa collection con `_id` `B7-importa` e il riepilogo dell'ultima esecuzione.
 
@@ -283,7 +292,7 @@ L'importazione della migrazione dei dati del Pianificatore (blocco B7, `npm run 
 
 ## Indici
 
-Gli indici delle collection comuni li crea la migrazione `004-comuni`, quelli della Consuntivazione la `007-consuntivazione` (vedi le singole collection). Definiti nello schema di `risorse`:
+Gli indici delle collection comuni li crea la migrazione `004-comuni`, quelli della Consuntivazione la `007-consuntivazione` e la `008-controllo` (vedi le singole collection). Definiti nello schema di `risorse`:
 
 | Indice | Uso |
 |---|---|
