@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import type { ClientSession, Connection, Model } from 'mongoose';
 import { booleano, codice, corpo, idRotta, numero, presente, scelta, testo } from '../../comuni/validazione.js';
+import { AuditService, differenze } from '../../infrastruttura/audit.service.js';
 import { CATEGORIE_TIPOLOGIA, TipologiaCosto } from './tipologia-costo.schema.js';
 
 /**
@@ -15,6 +16,7 @@ export class TipologieService {
   constructor(
     @InjectModel(TipologiaCosto.name) private readonly model: Model<TipologiaCosto>,
     @InjectConnection() private readonly connection: Connection,
+    private readonly audit: AuditService,
   ) {}
 
   elenco(soloAttive: boolean) {
@@ -54,6 +56,7 @@ export class TipologieService {
     return this.connection.transaction(async (session) => {
       if (dati.predefinita) await this.togliPredefinita(session);
       const [doc] = await this.model.create([dati], { session });
+      await this.audit.registra({ collezione: 'tipologie_costo', documentoId: doc._id, operazione: 'creazione', dopo: dati }, session);
       return doc.toObject();
     });
   }
@@ -95,6 +98,8 @@ export class TipologieService {
         .lean()
         .exec();
       if (!doc) throw new NotFoundException(`Tipologia di costo ${id} non trovata`);
+      const diff = differenze(attuale, $set);
+      if (diff) await this.audit.registra({ collezione: 'tipologie_costo', documentoId: attuale._id, operazione: 'modifica', ...diff }, session);
       return doc;
     });
   }

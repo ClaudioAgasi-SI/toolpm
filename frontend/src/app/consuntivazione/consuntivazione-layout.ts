@@ -32,6 +32,9 @@ import { ContatoreApprovazioni } from './contatore-approvazioni';
       @if (sessione.puo('gestirePeriodi')) {
         <a routerLink="periodi" routerLinkActive="attivo">Periodi</a>
       }
+      @if (sessione.puo('consultareStorico')) {
+        <a routerLink="storico" routerLinkActive="attivo">Storico</a>
+      }
     </nav>
     <router-outlet />
   `,

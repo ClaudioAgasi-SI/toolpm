@@ -5,6 +5,7 @@ import { forkJoin } from 'rxjs';
 import { ComuniApiService } from '../comuni/comuni-api.service';
 import { messaggioErrore } from '../core/errori';
 import { ConsuntivazioneApiService } from './consuntivazione-api.service';
+import { CronologiaRiga } from './cronologia-riga';
 import { type DaInviare, type Giornata, NOMI_STATO, type Proposta, type RigaDaSalvare, type StatoRiga, type TipologiaCosto, type VoceAttivita, type VoceProgetto } from './modelli';
 import { etichettaGiorno, etichettaSettimana, fineSettimana, leggiOre, oggi, piuGiorni, scriviOre, settimana, totaleOre } from './ore';
 
@@ -50,7 +51,7 @@ const MODIFICABILI: StatoRiga[] = ['bozza', 'respinta'];
  */
 @Component({
   selector: 'app-mio-consuntivo',
-  imports: [FormsModule],
+  imports: [FormsModule, CronologiaRiga],
   templateUrl: './mio-consuntivo.html',
   styleUrl: './mio-consuntivo.scss',
 })

@@ -14,6 +14,7 @@ Si entra da **Consuntivazione** nel menu in alto (`/toolpm/consuntivazione`). Il
 | Approvazioni | TL, PM, PMSenior | Via libera, approvazione o rifiuto delle righe inviate sui propri progetti |
 | Consuntivi delle risorse | controller | Ore, tariffe e costi di una risorsa, settimana per settimana (sola lettura) |
 | Periodi | controller | Chiusura e riapertura dei mesi |
+| Storico | controller, PMSenior | Chi ha cambiato cosa e quando |
 | Da valorizzare | controller | Righe senza costo, con il motivo, e ricalcolo dei costi |
 
 ## Per le risorse: il mio consuntivo
@@ -44,6 +45,7 @@ Quando le ore di un giorno o della settimana sono complete e salvate, premi **In
 - **Ritira l'invio**: finché nessun approvatore le ha guardate, le righe inviate tornano in bozza per correggerle; poi le invii di nuovo.
 - Le **righe respinte** compaiono in un riquadro rosso con la motivazione: correggile (restano respinte finché non le invii) e inviale di nuovo.
 - Se nei giorni passati restano righe da inviare fuori dalla settimana che stai guardando, un avviso te lo dice e ti porta alla settimana più vecchia.
+- Cliccando una cella (anche inviata o approvata) e poi **Cronologia della riga** vedi i passaggi della riga: inviata, via libera, approvata, respinta con la motivazione, corretta.
 - Quando il controller **chiude un mese**, le sue ore non si modificano più (un avviso lo dice): per una correzione chiedi di riaprirlo.
 
 **Copia la settimana precedente** (o **il giorno precedente** nella vista del giorno) riporta righe e ore nei giorni passati ancora vuoti, senza salvare:
@@ -121,6 +123,13 @@ In **Periodi** c'è un mese per riga, dal più recente, con quante righe sono in
 - Se ci sono righe non approvate, l'anteprima le elenca: falle approvare (o inviare), oppure **Chiudi comunque** scrivendo il motivo. Quelle righe restano ferme nel loro stato e fuori dai costi.
 - **Riapri…** sull'ultimo mese chiuso, con la motivazione: le righe chiuse tornano approvate. Chiusure e riaperture restano nello storico.
 - In fondo alla pagina, i progetti con righe in attesa e nessun PM tra gli approvatori: le può approvare solo un PMSenior, conviene aggiungere un PM.
+
+### Storico delle modifiche
+
+In **Storico** (controller e PMSenior) trovi chi ha cambiato cosa e quando: invii, approvazioni, rifiuti e correzioni delle ore, ricalcoli dei costi,
+chiusure e riaperture dei mesi, progetti (dati, stato, approvatori), attività (dati e risorse assegnate), tipologie e tariffe, con i valori prima e dopo
+e le motivazioni. Si filtra per tipo di dato, operazione e periodo. Lo storico non si modifica né si cancella. In **Consuntivi delle risorse**,
+**Cronologia** su una riga mostra i suoi passaggi.
 
 ### Come si calcola il costo
 

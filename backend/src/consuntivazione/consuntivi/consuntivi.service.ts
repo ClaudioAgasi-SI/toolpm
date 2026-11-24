@@ -236,9 +236,31 @@ export class ConsuntiviService {
       return { g, vecchia, righe };
     });
 
+    // Storico (fase 3, D5): correzioni e cancellazioni delle righe respinte.
+    const correzioni = scritture.flatMap(({ vecchia, righe }) => {
+      if (!vecchia) return [];
+      const voci = [];
+      for (const r of vecchia.righe.filter((x) => x.stato === 'respinta')) {
+        const nuova = righe.find((x) => String(x._id) === String(r._id));
+        const valori = (x: RigaSalvata) => ({ progettoId: x.progettoId, attivitaId: x.attivitaId ?? null, tipologiaCodice: x.tipologiaCodice, minuti: x.minuti, nota: x.nota ?? null });
+        if (nuova === r) continue;
+        if (nuova && JSON.stringify(valori(nuova)) === JSON.stringify(valori(r))) continue;
+        voci.push({
+          collezione: 'consuntivi',
+          documentoId: vecchia._id,
+          righeIds: [r._id],
+          operazione: nuova ? 'correzione' : 'cancellazione',
+          prima: { ...valori(r), stato: r.stato, rifiuto: r.rifiuto ?? null },
+          dopo: nuova ? valori(nuova) : null,
+        });
+      }
+      return voci;
+    });
+
     await this.connection.transaction(async (session) => {
       // Mese chiuso (fase 3, D4): nessuna riga nuova o cambiata.
       await this.periodi.verificaAperti(giornate.map((g) => g.testo), session);
+      await this.audit.registra(correzioni, session);
       for (const { g, vecchia, righe } of scritture) {
         if (vecchia) {
           const r = await this.model

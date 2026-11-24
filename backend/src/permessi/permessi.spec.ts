@@ -192,8 +192,9 @@ describe('permessi globali', () => {
       'gestireCaratteristicheTutteLeRisorse',
       'consuntivare',
       'approvare',
+      'consultareStorico',
     ]);
-    expect(riga(CONTROLLER)).toEqual(['gestireParametri', 'gestireTipologieCosto', 'gestireTariffe', 'consuntivare', 'gestirePeriodi']);
+    expect(riga(CONTROLLER)).toEqual(['gestireParametri', 'gestireTipologieCosto', 'gestireTariffe', 'consuntivare', 'gestirePeriodi', 'consultareStorico']);
     // L'amministratore senza risorsa collegata non consuntiva.
     expect(riga(ADMIN)).toEqual(['gestireRuoli', 'gestireUtenti']);
   });

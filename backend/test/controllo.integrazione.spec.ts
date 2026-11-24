@@ -4,6 +4,7 @@
  * D1: invio e ritiro delle giornate, righe non modificabili dopo l'invio, righe respinte, storico.
  * D2: approvazioni (elenco per profilo, via libera, approvazione, rifiuto, concorrenza, auto-approvazione, costi).
  * D4: chiusura e riapertura dei mesi (ordine, righe non approvate, chiusura forzata, blocchi nel mese chiuso).
+ * D5: storico di tipologie, tariffe, progetti, attività, ricalcolo e correzioni; consultazione e cronologia della riga.
  *
  * Si esegue solo se è impostata MONGODB_URI_TEST, es.:
  *   MONGODB_URI_TEST="mongodb://localhost:27017/?directConnection=true" npm test
@@ -495,6 +496,84 @@ describe.skipIf(!URI_BASE)('Controllo (fase 3) con MongoDB vero', () => {
       expect((await mese('202602'))).toMatchObject({ stato: 'aperto', chiudibile: true });
       expect(await db.collection('audit_log').countDocuments({ collezione: 'periodi', operazione: 'riapertura' })).toBe(2);
       expect((await come('rita').put(`${CONS}/2026-02-04`, { versione: 0, righe: [{ attivitaId: svi, minuti: 60 }] })).status).toBe(200);
+    });
+  });
+
+  describe('D5 — storico delle modifiche', () => {
+    const ST = '/api/consuntivazione/storico';
+    const CONS = '/api/consuntivazione/consuntivi';
+    type VoceElenco = { operazione: string; documento: string; nomeUtente: string; prima: Record<string, unknown> | null; dopo: Record<string, unknown> | null; motivazione: string | null };
+    const voci = async (q: string) => (await come('carlo').get(`${ST}?${q}`)).body.voci as VoceElenco[];
+    let svi = '';
+    let pa = '';
+
+    beforeAll(async () => {
+      svi = String((await db.collection('attivita').findOne({ codice: 'SVI' }))!._id);
+      pa = String((await db.collection('progetti').findOne({ codice: 'PA' }))!._id);
+    });
+
+    it('consultazione: controller e PMSenior sì, gli altri no', async () => {
+      expect((await come('carlo').get(ST)).status).toBe(200);
+      expect((await come('sara').get(ST)).status).toBe(200);
+      expect((await come('paola').get(ST)).status).toBe(403);
+      expect((await come('rita').get(ST)).status).toBe(403);
+      const periodi = await voci('collezione=periodi');
+      expect(periodi.map((v) => v.operazione)).toEqual(expect.arrayContaining(['chiusura', 'riapertura']));
+      expect(periodi.find((v) => v.operazione === 'riapertura' && v.documento === 'febbraio 2026')).toMatchObject({ nomeUtente: 'carlo carlo', motivazione: 'Correzione delle ore di febbraio' });
+    });
+
+    it('tipologie: creazione e modifica con i soli campi cambiati', async () => {
+      const t = await come('carlo').post('/api/consuntivazione/tipologie-costo', { codice: 'TRASFERTA', descrizione: 'Trasferta', categoria: 'straordinaria' });
+      expect(t.status).toBe(201);
+      expect((await come('carlo').put(`/api/consuntivazione/tipologie-costo/${t.body._id}`, { descrizione: 'Trasferta fuori sede', ordine: t.body.ordine })).status).toBe(200);
+      const [modifica, creazione] = await voci(`collezione=tipologie_costo&documento=${t.body._id}`);
+      expect(creazione).toMatchObject({ operazione: 'creazione', documento: 'TRASFERTA' });
+      expect(modifica).toMatchObject({ operazione: 'modifica', prima: { descrizione: 'Trasferta' }, dopo: { descrizione: 'Trasferta fuori sede' } });
+    });
+
+    it('progetti e attività: approvatori, stato, assegnazioni', async () => {
+      const approvatori = [{ risorsaId: risorsa.paola, profilo: 'PM' }, { risorsaId: risorsa.tito, profilo: 'TL' }, { risorsaId: risorsa.sara, profilo: 'PM' }];
+      expect((await come('paola').put(`/api/comuni/progetti/${pa}/approvatori`, { approvatori })).status).toBe(200);
+      const [voce] = await voci(`collezione=progetti&documento=${pa}`);
+      expect(voce).toMatchObject({ operazione: 'approvatori', documento: 'PA', nomeUtente: 'paola paola' });
+      expect((voce.dopo!.approvatori as unknown[]).length).toBe(3);
+      expect((await come('paola').put(`/api/comuni/progetti/${pa}/attivita/${svi}/risorse`, { risorseAssegnateIds: [risorsa.rita, risorsa.paola] })).status).toBe(200);
+      const [ass] = await voci(`collezione=attivita&documento=${svi}`);
+      expect(ass).toMatchObject({ operazione: 'assegnazioni', documento: 'PA › SVI' });
+      expect((await come('paola').put(`/api/comuni/progetti/${pa}/attivita/${svi}`, { descrizione: 'Sviluppo e test' })).status).toBe(200);
+      expect((await voci(`collezione=attivita&documento=${svi}`))[0]).toMatchObject({ operazione: 'modifica', prima: { descrizione: 'Sviluppo' }, dopo: { descrizione: 'Sviluppo e test' } });
+    });
+
+    it('riga respinta corretta e cronologia della riga: la risorsa senza importi, il controller con il ricalcolo', async () => {
+      const GIORNO = '2026-02-05';
+      expect((await come('rita').put(`${CONS}/${GIORNO}`, { versione: 0, righe: [{ attivitaId: svi, minuti: 480 }] })).status).toBe(200);
+      const g = (await come('rita').get(`${CONS}?da=${GIORNO}&a=${GIORNO}`)).body[0];
+      const rigaId = g.righe[0]._id;
+      await come('rita').post(`${CONS}/invio`, { giornate: [{ data: GIORNO, versione: g.versione }] });
+      expect((await come('paola').post('/api/consuntivazione/approvazioni', { azione: 'respingi', righe: [rigaId], motivazione: 'Erano 6 ore' })).body.fatte).toBe(1);
+      const r = (await come('rita').get(`${CONS}?da=${GIORNO}&a=${GIORNO}`)).body[0];
+      expect((await come('rita').put(`${CONS}/${GIORNO}`, { versione: r.versione, righe: [{ _id: rigaId, attivitaId: svi, minuti: 360 }] })).status).toBe(200);
+      const [corr] = await voci(`riga=${rigaId}&operazione=correzione`);
+      expect(corr).toMatchObject({ prima: { minuti: 480, stato: 'respinta', rifiuto: { motivazione: 'Erano 6 ore' } }, dopo: { minuti: 360 } });
+
+      // Ricalcolo con una tariffa nuova: va nello storico con gli importi.
+      const ruolo = (await db.collection('ruoli').insertOne({ codice: 'SVS', descrizione: 'Sviluppatore senior', attivo: true })).insertedId;
+      await db.collection('risorse').updateOne({ _id: oid(risorsa.rita) }, { $set: { storicoRuoli: [{ ruoloId: ruolo, dal: new Date('2026-01-01') }] } });
+      const ord = (await db.collection('tipologie_costo').findOne({ codice: 'ORDINARIA' }))!._id;
+      expect((await come('carlo').post('/api/consuntivazione/tariffe-standard', { ruoloId: String(ruolo), tipologiaId: String(ord), validoDal: '2026-01-01', centesimiOra: 3000 })).status).toBe(201);
+      expect((await voci('collezione=tariffe_standard'))[0]).toMatchObject({ operazione: 'creazione', dopo: { centesimiOra: 3000 } });
+      const ric = await come('carlo').post('/api/consuntivazione/ricalcolo', { da: GIORNO, a: GIORNO, risorsaId: risorsa.rita, conferma: true });
+      expect(ric.status).toBe(200);
+      expect((await voci(`riga=${rigaId}&operazione=ricalcolo`))[0].dopo).toEqual([{ _id: rigaId, fonte: 'standard', tariffaId: expect.any(String), centesimiOra: 3000, costo: 18000 }]);
+
+      const perRita = (await come('rita').get(`${ST}/riga/${rigaId}`)).body;
+      expect(perRita.voci.map((v: { operazione: string }) => v.operazione)).toEqual(['invio', 'rifiuto', 'correzione']);
+      expect(perRita.voci[1]).toMatchObject({ nomeUtente: 'paola paola', motivazione: 'Erano 6 ore' });
+      const perCarlo = (await come('carlo').get(`${ST}/riga/${rigaId}`)).body;
+      expect(perCarlo.voci.map((v: { operazione: string }) => v.operazione)).toEqual(['invio', 'rifiuto', 'correzione', 'ricalcolo']);
+      expect(perCarlo.voci[3].prima).toMatchObject({ _id: rigaId, costo: null });
+      expect((await come('tito').get(`${ST}/riga/${rigaId}`)).body.voci).toHaveLength(3);
+      expect((await come('carlo').get(`${ST}/riga/000000000000000000000000`)).status).toBe(404);
     });
   });
 });

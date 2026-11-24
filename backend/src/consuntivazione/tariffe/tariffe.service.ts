@@ -4,6 +4,7 @@ import mongoose, { type Connection, type Model } from 'mongoose';
 import { Ruolo } from '../../comuni/schemi/anagrafiche.schema.js';
 import { Risorsa } from '../../comuni/schemi/risorsa.schema.js';
 import { corpo, data, idRotta, numero, objectId, presente } from '../../comuni/validazione.js';
+import { AuditService, differenze } from '../../infrastruttura/audit.service.js';
 import { TipologiaCosto } from '../tipologie/tipologia-costo.schema.js';
 import { periodiSovrapposti, risolviTariffa, ruoloAllaData, type TariffaPeriodo, type TariffaRisolta } from './risoluzione.js';
 import { TariffaPersonalizzata, TariffaStandard } from './tariffa.schema.js';
@@ -26,7 +27,8 @@ export type Risolutore = (tipologiaId: mongoose.Types.ObjectId | string, data: D
  * Tariffe standard per ruolo e personalizzate per risorsa (fase 2, blocco C2). Solo controller.
  * Regole: importi interi in centesimi all'ora; periodi della stessa coppia (ruolo o risorsa + tipologia)
  * mai sovrapposti; ruolo, risorsa e tipologia devono esistere; una tariffa già usata da un consuntivo
- * non si cancella (si chiude il periodo e se ne apre un altro).
+ * non si cancella (si chiude il periodo e se ne apre un altro). Creazioni, modifiche e cancellazioni vanno
+ * nello storico (fase 3, blocco D5).
  */
 @Injectable()
 export class TariffeService {
@@ -40,6 +42,7 @@ export class TariffeService {
     @InjectModel(Ruolo.name) private readonly ruoli: Model<Ruolo>,
     @InjectModel(Risorsa.name) private readonly risorse: Model<Risorsa>,
     @InjectConnection() private readonly connection: Connection,
+    private readonly audit: AuditService,
   ) {
     this.standard = { model: standardModel, chiave: 'ruoloId', nome: 'standard' };
     this.personalizzate = { model: personalizzateModel as unknown as Model<TariffaStandard>, chiave: 'risorsaId', nome: 'personalizzata' };
@@ -162,6 +165,7 @@ export class TariffeService {
     return this.connection.transaction(async (session) => {
       await this.controllaSovrapposizioni(g, dati[g.chiave] as mongoose.Types.ObjectId, tipologiaId, dati.validoDal, dati.validoAl, null, session);
       const [doc] = await g.model.create([dati], { session });
+      await this.audit.registra({ collezione: g.model.collection.collectionName, documentoId: doc._id, operazione: 'creazione', dopo: dati }, session);
       return doc.toObject();
     });
   }
@@ -184,10 +188,10 @@ export class TariffeService {
     const chiave = (attuale as unknown as Record<Chiave, mongoose.Types.ObjectId>)[g.chiave];
     return this.connection.transaction(async (session) => {
       await this.controllaSovrapposizioni(g, chiave, attuale.tipologiaId, validoDal, validoAl, attuale._id, session);
-      return g.model
-        .findOneAndUpdate({ _id: attuale._id }, { $set }, { returnDocument: 'after', session })
-        .lean()
-        .exec();
+      const doc = await g.model.findOneAndUpdate({ _id: attuale._id }, { $set }, { returnDocument: 'after', session }).lean().exec();
+      const diff = differenze(attuale, $set);
+      if (diff) await this.audit.registra({ collezione: g.model.collection.collectionName, documentoId: attuale._id, operazione: 'modifica', ...diff }, session);
+      return doc;
     });
   }
 
@@ -196,7 +200,10 @@ export class TariffeService {
     if (await this.connection.collection('consuntivi').findOne({ 'righe.tariffaId': attuale._id }, { projection: { _id: 1 } })) {
       throw new ConflictException('Tariffa già usata nei consuntivi: non si cancella, chiudi il periodo con una data di fine');
     }
-    await g.model.deleteOne({ _id: attuale._id }).exec();
+    await this.connection.transaction(async (session) => {
+      await g.model.deleteOne({ _id: attuale._id }, { session }).exec();
+      await this.audit.registra({ collezione: g.model.collection.collectionName, documentoId: attuale._id, operazione: 'cancellazione', prima: attuale }, session);
+    });
   }
 
   private async trova(g: Genere, proprietario: mongoose.Types.ObjectId | null, id: string) {

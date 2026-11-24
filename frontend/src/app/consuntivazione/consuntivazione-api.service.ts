@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import type { AnteprimaChiusura, AnteprimaRicalcolo, AzioneApprovazione, DaInviare, DatiTariffa, ElencoApprovazioni, ElencoPeriodi, EsitoApprovazione, EsitoInvio, EsitoSalvataggio, Giornata, Proposta, RigaDaSalvare, RigaDaValorizzare, Tariffa, TariffeApplicabili, TipologiaCosto, TotaliRicalcolo, VoceProgetto } from './modelli';
+import type { AnteprimaChiusura, AnteprimaRicalcolo, AzioneApprovazione, CronologiaRiga, DaInviare, DatiTariffa, ElencoApprovazioni, ElencoPeriodi, EsitoApprovazione, EsitoInvio, EsitoSalvataggio, Giornata, Proposta, RigaDaSalvare, RigaDaValorizzare, Tariffa, TariffeApplicabili, TipologiaCosto, TotaliRicalcolo, VoceProgetto, VoceStorico } from './modelli';
 
 /** Accesso alle API della sezione Consuntivazione (/api/consuntivazione). */
 @Injectable({ providedIn: 'root' })
@@ -90,6 +90,16 @@ export class ConsuntivazioneApiService {
   }
   riapriMese(mese: string, motivazione: string) {
     return this.http.post<{ mese: string; nome: string; righeRiaperte: number }>(`${this.base}/periodi/${mese}/riapertura`, { motivazione });
+  }
+
+  // Storico (fase 3, blocco D5)
+  storico(filtri: Record<string, string>) {
+    let params = new HttpParams();
+    for (const [k, v] of Object.entries(filtri)) if (v) params = params.set(k, v);
+    return this.http.get<{ voci: VoceStorico[]; troncato: boolean }>(`${this.base}/storico`, { params });
+  }
+  cronologiaRiga(rigaId: string) {
+    return this.http.get<CronologiaRiga>(`${this.base}/storico/riga/${rigaId}`);
   }
 
   // Approvazioni (fase 3, blocchi D2 e D3)

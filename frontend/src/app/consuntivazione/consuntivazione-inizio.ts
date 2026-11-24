@@ -11,7 +11,7 @@ interface Voce {
 
 /**
  * Pagina iniziale della sezione Consuntivazione (fase 2, blocco C0): mostra a ciascuno le funzioni
- * che lo riguardano, comprese quelle della fase 3 (Approvazioni, Periodi).
+ * che lo riguardano, comprese quelle della fase 3 (Approvazioni, Periodi, Storico).
  */
 @Component({
   selector: 'app-consuntivazione-inizio',
@@ -79,6 +79,9 @@ export class ConsuntivazioneInizio {
     }
     if (this.sessione.puo('gestirePeriodi')) {
       voci.push({ titolo: 'Periodi', descrizione: 'Chiusura e riapertura dei mesi.', percorso: 'periodi' });
+    }
+    if (this.sessione.puo('consultareStorico')) {
+      voci.push({ titolo: 'Storico delle modifiche', descrizione: 'Chi ha cambiato consuntivi, mesi, progetti, attività, tipologie e tariffe, e quando.', percorso: 'storico' });
     }
     return voci;
   });

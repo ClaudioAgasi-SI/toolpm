@@ -4,6 +4,26 @@ import type { ClientSession, Model } from 'mongoose';
 import { utenteCorrente } from './contesto-utente.js';
 import { VoceStorico } from './voce-storico.schema.js';
 
+/** Valore confrontabile: ObjectId e date come testo. */
+const comeTesto = (v: unknown) => JSON.stringify(v ?? null);
+
+/**
+ * I soli campi cambiati tra prima e dopo (per le voci "modifica"); un campo tolto vale null.
+ * Restituisce null se non è cambiato niente.
+ */
+export function differenze(prima: object, dopo: Record<string, unknown>, tolti: string[] = []) {
+  const p: Record<string, unknown> = {};
+  const d: Record<string, unknown> = {};
+  const vecchio = prima as Record<string, unknown>;
+  for (const campo of [...Object.keys(dopo), ...tolti]) {
+    const nuovo = tolti.includes(campo) ? null : dopo[campo];
+    if (comeTesto(vecchio[campo]) === comeTesto(nuovo)) continue;
+    p[campo] = vecchio[campo] ?? null;
+    d[campo] = nuovo ?? null;
+  }
+  return Object.keys(d).length ? { prima: p, dopo: d } : null;
+}
+
 /** Dati di una voce dello storico; utente e data li aggiunge il servizio. */
 export interface NuovaVoceStorico {
   collezione: string;

@@ -8,6 +8,7 @@ import { Risorsa } from '../../comuni/schemi/risorsa.schema.js';
 import { booleano, corpo, data as leggiData, objectId } from '../../comuni/validazione.js';
 import { Consuntivo, type RigaConsuntivo } from '../consuntivi/consuntivo.schema.js';
 import { giorniTra, testoData } from '../consuntivi/regole-giornata.js';
+import { AuditService } from '../../infrastruttura/audit.service.js';
 import { PeriodiService } from '../periodi/periodi.service.js';
 import { costoCentesimi } from '../tariffe/risoluzione.js';
 import { type Risolutore, TariffeService } from '../tariffe/tariffe.service.js';
@@ -51,6 +52,7 @@ export class ValorizzazioneService {
     @InjectConnection() private readonly connection: Connection,
     private readonly tariffe: TariffeService,
     private readonly periodi: PeriodiService,
+    private readonly audit: AuditService,
   ) {}
 
   async daValorizzare(query: { da?: unknown; a?: unknown }) {
@@ -161,6 +163,24 @@ export class ValorizzazioneService {
           throw new ConflictException(`${testoData(g.data)}: la giornata è stata modificata nel frattempo; rifai l'anteprima e riprova`);
         }
       }
+      // Storico (decisione 7 della fase 3): una voce per giornata con i valori prima e dopo delle righe ricalcolate.
+      const perGiornata = new Map<string, typeof elenco>();
+      for (const x of elenco) {
+        const k = String(x.g._id);
+        if (!perGiornata.has(k)) perGiornata.set(k, []);
+        perGiornata.get(k)!.push(x);
+      }
+      await this.audit.registra(
+        [...perGiornata.values()].map((xs) => ({
+          collezione: 'consuntivi',
+          documentoId: xs[0].g._id,
+          righeIds: xs.map((x) => x.r._id),
+          operazione: 'ricalcolo',
+          prima: xs.map((x) => ({ _id: String(x.r._id), stato: x.r.stato, ...x.prima })),
+          dopo: xs.map((x) => ({ _id: String(x.r._id), ...x.dopo })),
+        })),
+        session,
+      );
     });
     return { da: testoData(da), a: testoData(a), totali, applicato: true };
   }

@@ -293,3 +293,25 @@ export interface AnteprimaChiusura {
   righe: { data: string; risorsa: string; progetto: string; stato: StatoRiga; minuti: number }[];
   troncato: boolean;
 }
+
+// ---- Storico (fase 3, blocco D5) ----
+
+export interface VoceStorico {
+  _id: string;
+  il: string;
+  collezione: string;
+  documentoId: string;
+  documento: string;
+  righeIds: string[];
+  operazione: string;
+  utente: string;
+  nomeUtente: string;
+  prima: unknown;
+  dopo: unknown;
+  motivazione: string | null;
+}
+
+export interface CronologiaRiga {
+  riga: { rigaId: string; data: string; progetto: string | null; stato: StatoRiga; minuti: number };
+  voci: { il: string; operazione: string; nomeUtente: string; prima: unknown; dopo: unknown; motivazione: string | null }[];
+}

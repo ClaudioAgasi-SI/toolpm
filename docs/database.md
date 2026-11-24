@@ -234,7 +234,7 @@ Un documento per mese (indice unico su `mese`, `AAAAMM`); un mese senza document
 
 ## Collection `audit_log`
 
-Storico delle modifiche (fase 3): una voce per azione, scritta da `AuditService` nella stessa transazione della modifica e mai cambiata. Campi: `collezione` e `documentoId` del documento modificato, `righeIds` (per i consuntivi, le righe toccate), `operazione` (es. `invio`, `approvazione`, `rifiuto`, `chiusura`), `utente`, `il`, `prima`, `dopo`, `motivazione`, più il tracciamento. Si conserva senza scadenza. Indici `{ collezione: 1, documentoId: 1, il: -1 }`, `{ righeIds: 1 }`, `{ il: -1 }`, `{ utente: 1, il: -1 }`.
+Storico delle modifiche (fase 3): una voce per azione, scritta da `AuditService` nella stessa transazione della modifica e mai cambiata. Campi: `collezione` e `documentoId` del documento modificato, `righeIds` (per i consuntivi, le righe toccate), `operazione` (es. `invio`, `approvazione`, `rifiuto`, `correzione`, `ricalcolo`, `chiusura`, `creazione`, `modifica`, `approvatori`; elenco completo in [backend.md](backend.md)), `utente`, `il`, `prima`, `dopo`, `motivazione`, più il tracciamento. Si conserva senza scadenza. Indici `{ collezione: 1, documentoId: 1, il: -1 }`, `{ righeIds: 1 }`, `{ il: -1 }`, `{ utente: 1, il: -1 }`.
 
 ## Collection `utenti`
 

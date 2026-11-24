@@ -62,6 +62,7 @@ export const PERMESSI_GLOBALI = [
   'consuntivare',
   'approvare',
   'gestirePeriodi',
+  'consultareStorico',
 ] as const;
 export type PermessoGlobale = (typeof PERMESSI_GLOBALI)[number];
 
@@ -99,6 +100,9 @@ export function permessoGlobale(s: Soggetto, permesso: PermessoGlobale): boolean
     case 'gestireTariffe':
     case 'gestirePeriodi':
       return s.ruoli.includes('controller');
+    case 'consultareStorico':
+      // Storico delle modifiche (fase 3, blocco D5): controller e PMSenior.
+      return s.ruoli.includes('controller') || ePMSenior(s);
     case 'approvare':
       // Pagina Approvazioni (fase 3): chi ha un'abilitazione; quali righe vede lo decide il progetto.
       return s.abilitazione !== null;

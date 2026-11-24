@@ -5,6 +5,7 @@ import { ComuniApiService } from '../comuni/comuni-api.service';
 import type { RisorsaAnagrafica } from '../comuni/modelli';
 import { messaggioErrore } from '../core/errori';
 import { ConsuntivazioneApiService } from './consuntivazione-api.service';
+import { CronologiaRiga } from './cronologia-riga';
 import { type Giornata, euroOra } from './modelli';
 import { etichettaGiorno, etichettaSettimana, fineSettimana, oggi, piuGiorni, settimana, totaleOre } from './ore';
 
@@ -30,7 +31,7 @@ const STATI: Record<string, string> = { bozza: 'bozza', inviata: 'inviata', appr
  */
 @Component({
   selector: 'app-consuntivi-risorse',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, CronologiaRiga],
   template: `
     <header class="testata">
       <h1>Consuntivi delle risorse</h1>
@@ -105,7 +106,7 @@ const STATI: Record<string, string> = { bozza: 'bozza', inviata: 'inviata', appr
         <h2>Dettaglio delle righe</h2>
         <table class="elenco">
           <thead>
-            <tr><th>Data</th><th>Voce</th><th>Tipologia</th><th class="numero">Ore</th><th>Stato</th><th>Tariffa usata</th><th class="numero">Costo</th><th>Nota</th></tr>
+            <tr><th>Data</th><th>Voce</th><th>Tipologia</th><th class="numero">Ore</th><th>Stato</th><th>Tariffa usata</th><th class="numero">Costo</th><th>Nota</th><th></th></tr>
           </thead>
           <tbody>
             @for (x of righe(); track x.id) {
@@ -124,7 +125,15 @@ const STATI: Record<string, string> = { bozza: 'bozza', inviata: 'inviata', appr
                 </td>
                 <td class="numero">{{ x.costo === null ? '—' : euro(x.costo) }}</td>
                 <td class="tenue">{{ x.nota }}</td>
+                <td>
+                  <button type="button" class="link" [attr.aria-expanded]="aperta() === x.id" (click)="aperta.set(aperta() === x.id ? null : x.id)">Cronologia</button>
+                </td>
               </tr>
+              @if (aperta() === x.id) {
+                <tr class="riga-cronologia">
+                  <td colspan="9"><app-cronologia-riga [rigaId]="x.id" /></td>
+                </tr>
+              }
             }
           </tbody>
         </table>
@@ -132,6 +141,8 @@ const STATI: Record<string, string> = { bozza: 'bozza', inviata: 'inviata', appr
     }
   `,
   styles: `
+    button.link { background: none; border: none; padding: 0; color: #1f6feb; cursor: pointer; font-size: 0.85rem; }
+    .riga-cronologia td { background: #fafbfc; }
     .testata .azioni { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
     .periodo { min-width: 11rem; text-align: center; }
     .numero { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -157,6 +168,8 @@ export class ConsuntiviRisorse {
   protected readonly euroOra = euroOra;
 
   protected readonly risorse = signal<RisorsaAnagrafica[]>([]);
+  /** Riga di cui si vede la cronologia (fase 3, D5). */
+  protected readonly aperta = signal<string | null>(null);
   protected readonly risorsaId = signal('');
   protected readonly data = signal(this.oggi);
   protected readonly giornate = signal<Giornata[]>([]);

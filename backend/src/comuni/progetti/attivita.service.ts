@@ -1,8 +1,9 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
+import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import type mongoose from 'mongoose';
-import type { Model } from 'mongoose';
+import type { Connection, Model } from 'mongoose';
 import type { UtenteAutenticato } from '../../auth/decoratori.js';
+import { AuditService, differenze } from '../../infrastruttura/audit.service.js';
 import { PermessiService } from '../../permessi/permessi.service.js';
 import { Attivita, STATI_ATTIVITA } from '../schemi/progetto.schema.js';
 import { Risorsa } from '../schemi/risorsa.schema.js';
@@ -35,6 +36,8 @@ export class AttivitaService {
     @InjectModel(Risorsa.name) private readonly risorse: Model<Risorsa>,
     private readonly progetti: ProgettiService,
     private readonly permessi: PermessiService,
+    private readonly audit: AuditService,
+    @InjectConnection() private readonly connection: Connection,
   ) {}
 
   async elenco(progettoId: string) {
@@ -70,7 +73,12 @@ export class AttivitaService {
     if (await this.model.exists({ progettoId: p._id, codice: dati.codice as string })) {
       throw new ConflictException(`Esiste già un'attività con codice ${String(dati.codice)} nel progetto ${p.codice}`);
     }
-    const creata = await this.model.create(dati);
+    // Storico (fase 3, blocco D5): creazione, modifica e assegnazioni delle attività.
+    const creata = await this.connection.transaction(async (session) => {
+      const [doc] = await this.model.create([dati], { session });
+      await this.audit.registra({ collezione: 'attivita', documentoId: doc._id, operazione: 'creazione', dopo: dati }, session);
+      return doc;
+    });
     return this.dettaglio(progettoId, String(creata._id));
   }
 
@@ -94,9 +102,13 @@ export class AttivitaService {
       presente(c, 'dataInizio') ? ($set.dataInizio as Date | undefined) : a.dataInizio,
       presente(c, 'dataFine') ? ($set.dataFine as Date | undefined) : a.dataFine,
     );
-    await this.model
-      .updateOne({ _id: a._id }, { $set, ...(Object.keys($unset).length ? { $unset } : {}) }, { runValidators: true })
-      .exec();
+    await this.connection.transaction(async (session) => {
+      await this.model
+        .updateOne({ _id: a._id }, { $set, ...(Object.keys($unset).length ? { $unset } : {}) }, { runValidators: true, session })
+        .exec();
+      const diff = differenze(a, $set, Object.keys($unset));
+      if (diff) await this.audit.registra({ collezione: 'attivita', documentoId: a._id, operazione: 'modifica', ...diff }, session);
+    });
     return this.dettaglio(progettoId, id);
   }
 
@@ -108,7 +120,11 @@ export class AttivitaService {
     if ((await this.risorse.countDocuments({ _id: { $in: ids } }).exec()) !== ids.length) {
       throw new NotFoundException('risorseAssegnateIds: una o più risorse inesistenti');
     }
-    await this.model.updateOne({ _id: a._id }, { $set: { risorseAssegnateIds: ids } }).exec();
+    await this.connection.transaction(async (session) => {
+      await this.model.updateOne({ _id: a._id }, { $set: { risorseAssegnateIds: ids } }, { session }).exec();
+      const diff = differenze(a, { risorseAssegnateIds: ids });
+      if (diff) await this.audit.registra({ collezione: 'attivita', documentoId: a._id, operazione: 'assegnazioni', ...diff }, session);
+    });
     return this.dettaglio(progettoId, id);
   }
 

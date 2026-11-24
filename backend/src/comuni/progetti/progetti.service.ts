@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import mongoose, { type ClientSession, type Connection, type Model } from 'mongoose';
 import type { UtenteAutenticato } from '../../auth/decoratori.js';
+import { AuditService, differenze } from '../../infrastruttura/audit.service.js';
 import { PermessiService } from '../../permessi/permessi.service.js';
 import { Anagrafiche } from '../anagrafiche.js';
 import {
@@ -53,6 +54,7 @@ export class ProgettiService {
     @InjectConnection() private readonly connection: Connection,
     private readonly permessi: PermessiService,
     private readonly anagrafiche: Anagrafiche,
+    private readonly audit: AuditService,
   ) {}
 
   /**
@@ -119,7 +121,12 @@ export class ProgettiService {
     if (utente.risorsaId && mongoose.isValidObjectId(utente.risorsaId)) {
       dati.approvatori = [{ risorsaId: new mongoose.Types.ObjectId(utente.risorsaId), profilo: utente.abilitazione === 'TL' ? 'TL' : 'PM' }];
     }
-    const creato = await this.model.create(dati);
+    // Storico (fase 3, blocco D5): creazione, modifica, stato e approvatori dei progetti.
+    const creato = await this.connection.transaction(async (session) => {
+      const [doc] = await this.model.create([dati], { session });
+      await this.audit.registra({ collezione: 'progetti', documentoId: doc._id, operazione: 'creazione', dopo: dati }, session);
+      return doc;
+    });
     return this.dettaglio(utente, String(creato._id));
   }
 
@@ -157,9 +164,13 @@ export class ProgettiService {
     if (p.stato !== 'inValutazione' && !inizio) throw new BadRequestException('dataInizio: obbligatoria per un progetto In corso o Chiuso');
     if (p.stato === 'chiuso' && !fine) throw new BadRequestException('dataFine: obbligatoria per un progetto Chiuso');
 
-    await this.model
-      .updateOne({ _id: p._id }, { $set, ...(Object.keys($unset).length ? { $unset } : {}) }, { runValidators: true })
-      .exec();
+    await this.connection.transaction(async (session) => {
+      await this.model
+        .updateOne({ _id: p._id }, { $set, ...(Object.keys($unset).length ? { $unset } : {}) }, { runValidators: true, session })
+        .exec();
+      const diff = differenze(p, $set, Object.keys($unset));
+      if (diff) await this.audit.registra({ collezione: 'progetti', documentoId: p._id, operazione: 'modifica', ...diff }, session);
+    });
     return this.dettaglio(utente, id);
   }
 
@@ -208,8 +219,11 @@ export class ProgettiService {
     }
     if (nuovo === 'chiuso' && !p.dataFine) throw new BadRequestException('Per chiudere il progetto serve la data di fine');
     // Aggiornamento condizionato allo stato letto: due passaggi contemporanei non si sovrappongono.
-    const r = await this.model.updateOne({ _id: p._id, stato: p.stato }, { $set: { stato: nuovo } }).exec();
-    if (r.matchedCount === 0) throw new ConflictException('Lo stato del progetto è cambiato nel frattempo: ricarica e riprova');
+    await this.connection.transaction(async (session) => {
+      const r = await this.model.updateOne({ _id: p._id, stato: p.stato }, { $set: { stato: nuovo } }, { session }).exec();
+      if (r.matchedCount === 0) throw new ConflictException('Lo stato del progetto è cambiato nel frattempo: ricarica e riprova');
+      await this.audit.registra({ collezione: 'progetti', documentoId: p._id, operazione: 'stato', prima: { stato: p.stato }, dopo: { stato: nuovo } }, session);
+    });
     return this.dettaglio(utente, id);
   }
 
@@ -235,7 +249,11 @@ export class ProgettiService {
     if (p.stato !== 'inValutazione' && !approvatori.some((a) => a.profilo === 'PM')) {
       throw new BadRequestException('Un progetto In corso o Chiuso deve avere almeno un approvatore PM');
     }
-    await this.model.updateOne({ _id: p._id }, { $set: { approvatori } }, { runValidators: true }).exec();
+    await this.connection.transaction(async (session) => {
+      await this.model.updateOne({ _id: p._id }, { $set: { approvatori } }, { runValidators: true, session }).exec();
+      const diff = differenze(p, { approvatori });
+      if (diff) await this.audit.registra({ collezione: 'progetti', documentoId: p._id, operazione: 'approvatori', ...diff }, session);
+    });
     return this.dettaglio(utente, id);
   }
 

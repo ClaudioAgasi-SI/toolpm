@@ -61,3 +61,7 @@ $stati: (inviata: #1f6feb, approvataTL: #8250df, approvata: #1a7f37, respinta: #
 .da-inviare button { margin-left: 0.5rem; }
 button.invia { background: #1a7f37; color: #fff; border-color: #1a7f37; }
 button.invia:disabled { background: #cfd6dd; border-color: #cfd6dd; color: #fff; }
+
+// Le celle non modificabili si selezionano lo stesso (nota e cronologia): il clic passa alla cella.
+.griglia td.ore input:disabled { pointer-events: none; }
+.cronologia-cella { margin: 0.25rem 0 0.5rem; summary { cursor: pointer; color: #1f6feb; font-size: 0.85rem; } }

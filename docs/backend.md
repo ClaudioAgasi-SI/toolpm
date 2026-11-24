@@ -143,7 +143,7 @@ Modulo `src/auth/`. Il nome utente è l'email; le password sono cifrate con **sc
 Modulo globale `src/permessi/`, con le regole decise nell'analisi. Le regole sono funzioni pure in `regole.ts`: ricevono chi agisce e i dati che servono e rispondono sì o no, senza leggere il database.
 
 - **Due livelli.** L'abilitazione generale dell'utente (TL, PM, PMSenior o nessuna) e il profilo sul singolo progetto (approvatore TL o PM, in `progetto.approvatori`), indipendenti tra loro: un utente abilitato TL può essere PM su un progetto. Se è assegnato in entrambi i modi, vale PM. I diritti da approvatore valgono solo con un'abilitazione: se l'amministratore la toglie, la persona non gestisce più i suoi progetti.
-- **Permessi globali** (non dipendono da un progetto): `gestireClienti` e `gestireCentriDiCosto` → PMSenior; `creareProgetto` → TL, PM, PMSenior; `gestireRisorse` (anagrafica, ruolo professionale, orario) e `gestireCaratteristicheTutteLeRisorse` → PM, PMSenior; `gestireParametri`, `gestireTipologieCosto` e `gestireTariffe` → ruolo `controller`; `consuntivare` → chi è collegato a una risorsa (fase 2; l'amministratore senza risorsa no); `approvare` → chi ha un'abilitazione TL, PM o PMSenior e `gestirePeriodi` → ruolo `controller` (fase 3); `gestireRuoli` (ruoli professionali) e `gestireUtenti` → ruolo `admin`. Sui controller si dichiarano con `@Permesso('gestireClienti')`; `@Permesso()` senza argomenti richiede solo l'accesso, come ogni endpoint non pubblico. `POST /api/auth/login` e `GET /api/auth/me` li restituiscono nel campo `permessi`, per il menu del frontend.
+- **Permessi globali** (non dipendono da un progetto): `gestireClienti` e `gestireCentriDiCosto` → PMSenior; `creareProgetto` → TL, PM, PMSenior; `gestireRisorse` (anagrafica, ruolo professionale, orario) e `gestireCaratteristicheTutteLeRisorse` → PM, PMSenior; `gestireParametri`, `gestireTipologieCosto` e `gestireTariffe` → ruolo `controller`; `consuntivare` → chi è collegato a una risorsa (fase 2; l'amministratore senza risorsa no); `approvare` → chi ha un'abilitazione TL, PM o PMSenior, `gestirePeriodi` → ruolo `controller` e `consultareStorico` → controller e PMSenior (fase 3); `gestireRuoli` (ruoli professionali) e `gestireUtenti` → ruolo `admin`. Sui controller si dichiarano con `@Permesso('gestireClienti')`; `@Permesso()` senza argomenti richiede solo l'accesso, come ogni endpoint non pubblico. `POST /api/auth/login` e `GET /api/auth/me` li restituiscono nel campo `permessi`, per il menu del frontend.
 - **Permessi su progetto, attività e risorsa**, controllati dai servizi con `PermessiService` (`verifica(utente, consentito, 'azione')` risponde 401 senza accesso e 403 con "Non hai il permesso di …"):
 
 | Regola | Chi può |
@@ -282,6 +282,26 @@ Chiusura e riapertura dei mesi (RF-12), servizio `PeriodiService`, collection `p
 | POST | `/periodi/:mese/riapertura` | `gestirePeriodi` | `{ motivazione }` obbligatoria; solo l'ultimo mese chiuso. Righe `chiusa` → `approvata`, versione +1, storico `riapertura` |
 
 **Mese chiuso.** `PeriodiService.chiusi()` / `verificaAperti()` li usano gli altri servizi: il salvataggio delle giornate e l'invio/ritiro rispondono 409 ("il mese di … è chiuso") già prima della convalida delle righe e di nuovo dentro la transazione; le approvazioni saltano le righe del mese chiuso ("La riga è in un mese chiuso") e l'elenco le mostra con `meseChiuso: true` e nessuna azione; il ricalcolo esclude le giornate dei mesi chiusi (decisione 7).
+
+### Storico — `/api/consuntivazione/storico` (blocco D5)
+
+Chi scrive nello storico (`AuditService.registra` nella stessa transazione della modifica, decisione 9):
+
+| Dato (`collezione`) | Operazioni |
+|---|---|
+| `consuntivi` | `invio`, `ritiro` (D1); `viaLibera`, `approvazione`, `rifiuto` (D2); `correzione` e `cancellazione` di una riga respinta (salvataggio della risorsa, con i valori prima e il rifiuto); `ricalcolo` (con fonte, tariffa e costo prima e dopo, una voce per giornata) |
+| `periodi` | `chiusura`, `riapertura` (D4) |
+| `progetti` | `creazione`, `modifica` (solo i campi cambiati), `stato`, `approvatori` |
+| `attivita` | `creazione`, `modifica`, `assegnazioni` |
+| `tipologie_costo` | `creazione`, `modifica` |
+| `tariffe_standard`, `tariffe_personalizzate` | `creazione`, `modifica`, `cancellazione` |
+
+La funzione `differenze(prima, dopo, tolti)` di `audit.service.ts` tiene i soli campi cambiati. Le percentuali di completamento hanno già il loro storico (`avanzamenti`).
+
+| Metodo | Percorso | Permesso | Note |
+|---|---|---|---|
+| GET | `/storico?collezione=&documento=&riga=&operazione=&utente=&da=&a=&limite=` | `consultareStorico` (controller e PMSenior) | Voci dalla più recente (predefinite 200, al massimo 1000; `troncato`), con `nomeUtente` e `documento` leggibile (risorsa e giorno, codice del progetto, progetto › attività, codice della tipologia, nome del mese) |
+| GET | `/storico/riga/:rigaId` | accesso | Cronologia di una riga di consuntivo, dalla più vecchia, per la risorsa, gli approvatori del progetto, controller e PMSenior; delle voci su più righe resta l'elemento della riga; i `ricalcolo` (con importi) solo a controller, PMSenior e PM del progetto. 404 se la riga non esiste, 403 per gli altri |
 
 ## Moduli
 

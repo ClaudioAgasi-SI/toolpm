@@ -1,6 +1,6 @@
 """
 Prova nel browser del Controllo (fase 3): invio e ritiro delle ore (blocco D1), approvazioni (D3),
-chiusura e riapertura dei mesi (D4).
+chiusura e riapertura dei mesi (D4), storico e cronologia delle righe (D5).
 
 Prima: database preparato con backend/scripts/e2e-prepara.mjs, backend e frontend avviati (e2e/README.md).
 Uso:  python3 e2e/controllo.py            (BASE=http://localhost:4201/toolpm, CHROME=/usr/bin/google-chrome)
@@ -173,6 +173,30 @@ with sync_playwright() as pw:
         p.get_by_role('button', name='Riapri il mese').click()
         expect(p.locator('p.ok')).to_contain_text('riaperto')
     expect(p.locator(f'tr[data-mese="{MESI[0]}"]')).to_contain_text('Correzione richiesta dal PM')
+
+    passo('controller: lo storico mostra chiusure, riaperture, rifiuti e la correzione di rita')
+    p.goto(f'{BASE}/consuntivazione/storico')
+    storico = p.locator('table.elenco tbody')
+    expect(storico).to_contain_text('Mese riaperto')
+    expect(storico).to_contain_text('Correzione richiesta dal PM')
+    p.select_option('select[name=operazione]', label='Corretta dopo il rifiuto')
+    expect(storico.locator('tr')).to_have_count(1)
+    expect(storico).to_contain_text('Rita Prova')
+    expect(storico).to_contain_text('ore: 2:00 → 1:30')
+    p.screenshot(path=f'{SCREENSHOT}/e2e-storico.png', full_page=True)
+
+    passo('risorsa: cronologia della riga dello straordinario, senza importi')
+    entra(p, 'rita')
+    p.goto(f'{BASE}/consuntivazione/settimana?vista=settimana&data={SETTIMANA}')
+    straord = p.locator('table.griglia tbody tr').filter(has=p.locator('select option:checked', has_text='Straordinaria')).filter(has_text='ALFA › SVI')
+    straord.locator('td.ore').nth(1).click()
+    p.locator('.cronologia-cella summary').click()
+    cronologia = p.locator('app-cronologia-riga li')
+    passaggio = lambda nome: cronologia.filter(has=p.locator('strong', has_text=re.compile(f'^{nome}$')))
+    expect(passaggio('Respinta')).to_contain_text('non era autorizzato')
+    expect(passaggio('Corretta dopo il rifiuto')).to_contain_text('ore: 2:00 → 1:30')
+    expect(passaggio('Approvata')).to_have_count(1)
+    assert '€' not in p.locator('app-cronologia-riga').inner_text()
 
     browser.close()
     print('Prova del Controllo superata.')

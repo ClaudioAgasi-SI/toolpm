@@ -122,6 +122,7 @@
                 [class.festivo]="fineSettimana(g)"
                 [class.selezionata]="selezionata()?.riga === r && selezionata()?.giorno === g"
                 [attr.data-stato]="statoCella(r, g) || null"
+                (click)="seleziona(r, g)"
               >
                 <input
                   [disabled]="!modificabile(r, g)"
@@ -179,6 +180,12 @@
       Nota — {{ s.riga.etichetta }}, {{ etichettaGiorno(s.giorno) }}
       <input [disabled]="!modificabile(s.riga, s.giorno)" maxlength="500" placeholder="facoltativa" [(ngModel)]="c.nota" (ngModelChange)="cambiata()" />
     </label>
+    @if (c.rigaId && c.stato !== 'bozza') {
+      <details class="cronologia-cella">
+        <summary>Cronologia della riga</summary>
+        <app-cronologia-riga [rigaId]="c.rigaId" />
+      </details>
+    }
   }
 
   <form class="nuova-riga" (ngSubmit)="aggiungiRiga()">

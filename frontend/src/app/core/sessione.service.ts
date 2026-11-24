@@ -20,7 +20,8 @@ export type PermessoGlobale =
   | 'gestireTariffe'
   | 'consuntivare'
   | 'approvare'
-  | 'gestirePeriodi';
+  | 'gestirePeriodi'
+  | 'consultareStorico';
 
 /** Utente che ha fatto l'accesso, come lo restituisce GET /api/auth/me. */
 export interface UtenteSessione {
