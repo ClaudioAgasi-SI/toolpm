@@ -11,7 +11,7 @@ interface Voce {
 
 /**
  * Pagina iniziale della sezione Consuntivazione (fase 2, blocco C0): mostra a ciascuno le funzioni
- * che lo riguardano. Le pagine della fase 3 (Approvazioni, Periodi) compaiono "in preparazione" fino ai blocchi D3 e D4.
+ * che lo riguardano, comprese quelle della fase 3 (Approvazioni, Periodi).
  */
 @Component({
   selector: 'app-consuntivazione-inizio',
@@ -73,12 +73,12 @@ export class ConsuntivazioneInizio {
         { titolo: 'Righe da valorizzare', descrizione: 'Ore senza tariffa applicabile e ricalcolo dei costi.', percorso: 'da-valorizzare' },
       );
     }
-    // Fase 3: Approvazioni (D3); Periodi in arrivo con il blocco D4.
+    // Fase 3: Approvazioni (D3) e Periodi (D4).
     if (this.sessione.puo('approvare')) {
       voci.push({ titolo: 'Approvazioni', descrizione: 'Righe inviate sui progetti di cui sei approvatore: via libera del TL, approvazione o rifiuto del PM.', percorso: 'approvazioni' });
     }
     if (this.sessione.puo('gestirePeriodi')) {
-      voci.push({ titolo: 'Periodi', descrizione: 'Chiusura e riapertura dei mesi.' });
+      voci.push({ titolo: 'Periodi', descrizione: 'Chiusura e riapertura dei mesi.', percorso: 'periodi' });
     }
     return voci;
   });

@@ -29,6 +29,9 @@ import { ContatoreApprovazioni } from './contatore-approvazioni';
         <a routerLink="consuntivi-risorse" routerLinkActive="attivo">Consuntivi delle risorse</a>
         <a routerLink="da-valorizzare" routerLinkActive="attivo">Da valorizzare</a>
       }
+      @if (sessione.puo('gestirePeriodi')) {
+        <a routerLink="periodi" routerLinkActive="attivo">Periodi</a>
+      }
     </nav>
     <router-outlet />
   `,

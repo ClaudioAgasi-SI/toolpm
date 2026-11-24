@@ -232,6 +232,7 @@ export interface RigaApprovazione {
   attivitaId: string | null;
   attivita: { codice: string; descrizione: string } | null;
   attivitaNonAssegnata: boolean;
+  meseChiuso: boolean;
   tipologiaId: string;
   tipologia: string;
   tipologiaCodice: string;
@@ -259,4 +260,36 @@ export interface EsitoApprovazione {
   fatte: number;
   saltate: number;
   esiti: { rigaId: string; esito: 'fatta' | 'saltata'; motivo?: string }[];
+}
+
+// ---- Periodi (fase 3, blocco D4) ----
+
+export type ConteggiStati = Record<StatoRiga, number>;
+
+export interface Mese {
+  mese: string;
+  nome: string;
+  stato: 'aperto' | 'chiuso';
+  conteggi: ConteggiStati;
+  nonApprovate: number;
+  chiusura: { il: string; da: string; forzata: boolean; motivazione: string | null } | null;
+  riapertura: { il: string; da: string; motivazione: string } | null;
+  chiudibile: boolean;
+  riapribile: boolean;
+}
+
+export interface ElencoPeriodi {
+  mesi: Mese[];
+  progettiSenzaPM: { _id: string; codice: string; titolo: string }[];
+}
+
+export interface AnteprimaChiusura {
+  mese: string;
+  nome: string;
+  chiuso: boolean;
+  conteggi: ConteggiStati;
+  nonApprovate: number;
+  bloccoOrdine: string | null;
+  righe: { data: string; risorsa: string; progetto: string; stato: StatoRiga; minuti: number }[];
+  troncato: boolean;
 }

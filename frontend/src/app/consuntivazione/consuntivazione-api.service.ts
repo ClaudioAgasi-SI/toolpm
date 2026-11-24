@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import type { AnteprimaRicalcolo, AzioneApprovazione, DaInviare, DatiTariffa, ElencoApprovazioni, EsitoApprovazione, EsitoInvio, EsitoSalvataggio, Giornata, Proposta, RigaDaSalvare, RigaDaValorizzare, Tariffa, TariffeApplicabili, TipologiaCosto, TotaliRicalcolo, VoceProgetto } from './modelli';
+import type { AnteprimaChiusura, AnteprimaRicalcolo, AzioneApprovazione, DaInviare, DatiTariffa, ElencoApprovazioni, ElencoPeriodi, EsitoApprovazione, EsitoInvio, EsitoSalvataggio, Giornata, Proposta, RigaDaSalvare, RigaDaValorizzare, Tariffa, TariffeApplicabili, TipologiaCosto, TotaliRicalcolo, VoceProgetto } from './modelli';
 
 /** Accesso alle API della sezione Consuntivazione (/api/consuntivazione). */
 @Injectable({ providedIn: 'root' })
@@ -73,6 +73,23 @@ export class ConsuntivazioneApiService {
   }
   daInviare() {
     return this.http.get<DaInviare>(`${this.base}/consuntivi/da-inviare`);
+  }
+
+  // Periodi (fase 3, blocco D4)
+  mesiChiusi(da: string, a: string) {
+    return this.http.get<string[]>(`${this.base}/periodi/chiusi`, { params: { da, a } });
+  }
+  periodi() {
+    return this.http.get<ElencoPeriodi>(`${this.base}/periodi`);
+  }
+  anteprimaChiusura(mese: string) {
+    return this.http.get<AnteprimaChiusura>(`${this.base}/periodi/${mese}/anteprima`);
+  }
+  chiudiMese(mese: string, forzata: boolean, motivazione?: string) {
+    return this.http.post<{ mese: string; nome: string; righeChiuse: number; nonApprovate: number }>(`${this.base}/periodi/${mese}/chiusura`, { forzata, motivazione });
+  }
+  riapriMese(mese: string, motivazione: string) {
+    return this.http.post<{ mese: string; nome: string; righeRiaperte: number }>(`${this.base}/periodi/${mese}/riapertura`, { motivazione });
   }
 
   // Approvazioni (fase 3, blocchi D2 e D3)

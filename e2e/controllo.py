@@ -1,6 +1,6 @@
 """
-Prova nel browser del Controllo (fase 3): invio e ritiro delle ore (blocco D1), approvazioni (D3);
-la chiusura dei mesi si aggiunge con il blocco D4.
+Prova nel browser del Controllo (fase 3): invio e ritiro delle ore (blocco D1), approvazioni (D3),
+chiusura e riapertura dei mesi (D4).
 
 Prima: database preparato con backend/scripts/e2e-prepara.mjs, backend e frontend avviati (e2e/README.md).
 Uso:  python3 e2e/controllo.py            (BASE=http://localhost:4201/toolpm, CHROME=/usr/bin/google-chrome)
@@ -21,6 +21,8 @@ SCREENSHOT = os.environ.get('SCREENSHOT', '/tmp')
 oggi = (datetime.now(timezone.utc) + timedelta(hours=1)).date()
 lunedi = oggi - timedelta(days=oggi.weekday() + 7)
 SETTIMANA = lunedi.isoformat()
+# Mesi (AAAAMM) dei giorni lavorati della settimana scorsa, in ordine.
+MESI = sorted({(lunedi + timedelta(days=i)).strftime('%Y%m') for i in range(5)})
 
 
 def passo(titolo):
@@ -144,6 +146,33 @@ with sync_playwright() as pw:
     p.locator('button.azione-approva').click()
     expect(p.locator('p.ok')).to_contain_text('Approvate: 1 riga')
     expect(p.locator('.sottomenu .contatore')).to_have_count(0)
+
+    passo('controller: chiude il mese (tutte le righe approvate), la risorsa non modifica più, poi riapre')
+    entra(p, 'carlo')
+    p.goto(f'{BASE}/consuntivazione/periodi')
+    for mese in MESI:
+        riga_mese = p.locator(f'tr[data-mese="{mese}"]')
+        riga_mese.get_by_role('button', name='Chiudi…').click()
+        expect(p.locator('.pannello')).to_contain_text('Tutte le righe sono approvate')
+        p.get_by_role('button', name='Chiudi il mese').click()
+        expect(p.locator('p.ok')).to_contain_text('chiuso')
+        expect(riga_mese).to_contain_text('Chiuso')
+    p.screenshot(path=f'{SCREENSHOT}/e2e-periodi.png', full_page=True)
+    entra(p, 'rita')
+    p.goto(f'{BASE}/consuntivazione/settimana?vista=settimana&data={SETTIMANA}')
+    expect(p.locator('.mese-chiuso')).to_contain_text('è chiuso')
+    expect(riga(p, 'ALFA › SVI').first.locator('td.ore[data-stato=chiusa]')).to_have_count(5)
+    # Anche le celle vuote del mese chiuso non si compilano.
+    expect(p.locator('table.griglia tbody tr').filter(has=p.locator('select option:checked', has_text='Straordinaria')).locator('td.ore input').first).to_be_disabled()
+    expect(p.locator('button.invia')).to_be_disabled()
+    entra(p, 'carlo')
+    p.goto(f'{BASE}/consuntivazione/periodi')
+    for mese in reversed(MESI):
+        p.locator(f'tr[data-mese="{mese}"]').get_by_role('button', name='Riapri…').click()
+        p.fill('textarea[name=motivazioneRiapertura]', 'Correzione richiesta dal PM')
+        p.get_by_role('button', name='Riapri il mese').click()
+        expect(p.locator('p.ok')).to_contain_text('riaperto')
+    expect(p.locator(f'tr[data-mese="{MESI[0]}"]')).to_contain_text('Correzione richiesta dal PM')
 
     browser.close()
     print('Prova del Controllo superata.')

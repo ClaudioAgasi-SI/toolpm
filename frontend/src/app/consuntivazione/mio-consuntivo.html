@@ -36,6 +36,9 @@
       <button type="button" (click)="vai({ vista: 'settimana', data: d.primaData! })">Vai a quella settimana</button>
     </p>
   }
+  @if (nomiMesiChiusi().length) {
+    <p class="avviso mese-chiuso">Il mese di {{ nomiMesiChiusi().join(', ') }} è chiuso: le ore non si modificano. Per una correzione chiedi al controller di riaprirlo.</p>
+  }
   @if (respinte().length) {
     <section class="respinte" aria-label="Righe respinte">
       <strong>Righe respinte: correggile e inviale di nuovo</strong>

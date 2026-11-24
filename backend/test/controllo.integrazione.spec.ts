@@ -3,6 +3,7 @@
  * D0: migrazione 008 (periodi, audit_log), storico delle modifiche dentro le transazioni, permessi.
  * D1: invio e ritiro delle giornate, righe non modificabili dopo l'invio, righe respinte, storico.
  * D2: approvazioni (elenco per profilo, via libera, approvazione, rifiuto, concorrenza, auto-approvazione, costi).
+ * D4: chiusura e riapertura dei mesi (ordine, righe non approvate, chiusura forzata, blocchi nel mese chiuso).
  *
  * Si esegue solo se è impostata MONGODB_URI_TEST, es.:
  *   MONGODB_URI_TEST="mongodb://localhost:27017/?directConnection=true" npm test
@@ -408,6 +409,92 @@ describe.skipIf(!URI_BASE)('Controllo (fase 3) con MongoDB vero', () => {
       expect((await come('rita').put(`${CONS}/${GIORNI[1]}`, { versione: g.versione, righe: [] })).status).toBe(409);
       const r = await come('rita').post(`${CONS}/ritiro`, { giornate: [{ data: GIORNI[1], versione: g.versione }] });
       expect(r.body.righe).toBe(0);
+    });
+  });
+
+  describe('D4 — chiusura dei mesi', () => {
+    const PER = '/api/consuntivazione/periodi';
+    const CONS = '/api/consuntivazione/consuntivi';
+    const FEB = ['2026-02-02', '2026-02-03'];
+    const giornata = async (data: string) => (await come('rita').get(`${CONS}?da=${data}&a=${data}`)).body[0];
+    const rif = async (...date: string[]) => Promise.all(date.map(async (d) => ({ data: d, versione: (await giornata(d))?.versione ?? 0 })));
+    const mese = async (m: string) => ((await come('carlo').get(PER)).body.mesi as { mese: string; stato: string; chiudibile: boolean; riapribile: boolean; nonApprovate: number; conteggi: Record<string, number> }[]).find((x) => x.mese === m)!;
+    let svi = '';
+
+    beforeAll(async () => {
+      svi = String((await db.collection('attivita').findOne({ codice: 'SVI' }))!._id);
+      for (const d of FEB) expect((await come('rita').put(`${CONS}/${d}`, { versione: 0, righe: [{ attivitaId: svi, minuti: 480 }] })).status).toBe(200);
+      expect((await come('rita').post(`${CONS}/invio`, { giornate: await rif(...FEB) })).body.righe).toBe(2);
+    });
+
+    it('solo il controller; elenco dei mesi con le righe per stato', async () => {
+      expect((await come('paola').get(PER)).status).toBe(403);
+      const feb = await mese('202602');
+      expect(feb).toMatchObject({ stato: 'aperto', chiudibile: true, nonApprovate: 2, conteggi: { inviata: 2 } });
+      expect((await mese('202603')).chiudibile).toBe(false);
+    });
+
+    it('bloccata con righe non approvate, e in ordine', async () => {
+      const r = await come('carlo').post(`${PER}/202602/chiusura`, {});
+      expect(r.status).toBe(409);
+      expect(r.body.message).toMatch(/2 righe non approvate/);
+      const anteprima = (await come('carlo').get(`${PER}/202602/anteprima`)).body;
+      expect(anteprima).toMatchObject({ nonApprovate: 2, bloccoOrdine: null });
+      expect(anteprima.righe[0]).toMatchObject({ risorsa: 'rita rita', progetto: 'PA', stato: 'inviata' });
+      const marzo = await come('carlo').post(`${PER}/202603/chiusura`, { forzata: true, motivazione: 'x' });
+      expect(marzo.status).toBe(409);
+      expect(marzo.body.message).toMatch(/Prima va chiuso febbraio 2026/);
+      expect((await come('carlo').post(`${PER}/203001/chiusura`, {})).status).toBe(400);
+    });
+
+    it('chiusura: le righe approvate diventano chiuse e il mese non accetta più modifiche', async () => {
+      const righe = (await come('paola').get('/api/consuntivazione/approvazioni?da=2026-02-01&a=2026-02-28')).body.righe as { rigaId: string }[];
+      expect((await come('paola').post('/api/consuntivazione/approvazioni', { azione: 'approva', righe: righe.map((r) => r.rigaId) })).body.fatte).toBe(2);
+      const r = await come('carlo').post(`${PER}/202602/chiusura`, {});
+      expect(r.status).toBe(200);
+      expect(r.body).toMatchObject({ righeChiuse: 2, nonApprovate: 0 });
+      expect((await giornata(FEB[0])).righe[0].stato).toBe('chiusa');
+      expect((await come('carlo').post(`${PER}/202602/chiusura`, {})).status).toBe(409);
+
+      const g = await giornata(FEB[0]);
+      const salva = await come('rita').put(`${CONS}/${FEB[0]}`, { versione: g.versione, righe: [{ _id: g.righe[0]._id, attivitaId: svi, minuti: 480 }, { attivitaId: svi, minuti: 30 }] });
+      expect(salva.status).toBe(409);
+      expect(salva.body.message).toMatch(/febbraio 2026 è chiuso/);
+      const nuova = await come('rita').put(`${CONS}/2026-02-04`, { versione: 0, righe: [{ attivitaId: svi, minuti: 60 }] });
+      expect(nuova.status).toBe(409);
+      expect((await come('rita').get(`/api/consuntivazione/periodi/chiusi?da=2026-02-01&a=2026-03-31`)).body).toEqual(['202602']);
+      const chiusa = (await come('paola').get('/api/consuntivazione/approvazioni?da=2026-02-01&a=2026-02-28&stato=chiusa')).body.righe;
+      expect(chiusa[0]).toMatchObject({ meseChiuso: true, azioni: [] });
+      const respingi = await come('paola').post('/api/consuntivazione/approvazioni', { azione: 'respingi', righe: [chiusa[0].rigaId], motivazione: 'x' });
+      expect(respingi.body.esiti[0].motivo).toMatch(/mese chiuso/);
+      expect(await db.collection('audit_log').countDocuments({ collezione: 'periodi', operazione: 'chiusura', documentoId: '202602' })).toBe(1);
+    });
+
+    it('chiusura forzata con motivazione: le righe non approvate restano ferme', async () => {
+      const marzo = await mese('202603');
+      expect(marzo.chiudibile).toBe(true);
+      expect(marzo.nonApprovate).toBeGreaterThan(0);
+      expect((await come('carlo').post(`${PER}/202603/chiusura`, { forzata: true })).status).toBe(400);
+      const r = await come('carlo').post(`${PER}/202603/chiusura`, { forzata: true, motivazione: 'Chiusura trimestrale: righe in sospeso da chiarire' });
+      expect(r.status).toBe(200);
+      expect(r.body.nonApprovate).toBe(marzo.nonApprovate);
+      expect((await mese('202603'))).toMatchObject({ stato: 'chiuso', riapribile: true });
+      const inSospeso = (await come('paola').get('/api/consuntivazione/approvazioni?da=2026-03-01&a=2026-03-31')).body.righe;
+      expect(inSospeso.length).toBeGreaterThan(0);
+      expect(inSospeso.every((x: { azioni: string[] }) => x.azioni.length === 0)).toBe(true);
+      expect((await come('rita').post(`${CONS}/invio`, { giornate: await rif('2026-03-02') })).status).toBe(409);
+    });
+
+    it('riapertura con motivazione, a partire dall\'ultimo mese chiuso', async () => {
+      expect((await come('carlo').post(`${PER}/202602/riapertura`, { motivazione: 'x' })).status).toBe(409);
+      expect((await come('carlo').post(`${PER}/202603/riapertura`, {})).status).toBe(400);
+      expect((await come('carlo').post(`${PER}/202603/riapertura`, { motivazione: 'Correzione delle ore di marzo' })).status).toBe(200);
+      const r = await come('carlo').post(`${PER}/202602/riapertura`, { motivazione: 'Correzione delle ore di febbraio' });
+      expect(r.body.righeRiaperte).toBe(2);
+      expect((await giornata(FEB[0])).righe[0].stato).toBe('approvata');
+      expect((await mese('202602'))).toMatchObject({ stato: 'aperto', chiudibile: true });
+      expect(await db.collection('audit_log').countDocuments({ collezione: 'periodi', operazione: 'riapertura' })).toBe(2);
+      expect((await come('rita').put(`${CONS}/2026-02-04`, { versione: 0, righe: [{ attivitaId: svi, minuti: 60 }] })).status).toBe(200);
     });
   });
 });

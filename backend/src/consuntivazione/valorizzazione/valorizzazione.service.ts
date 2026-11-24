@@ -8,13 +8,14 @@ import { Risorsa } from '../../comuni/schemi/risorsa.schema.js';
 import { booleano, corpo, data as leggiData, objectId } from '../../comuni/validazione.js';
 import { Consuntivo, type RigaConsuntivo } from '../consuntivi/consuntivo.schema.js';
 import { giorniTra, testoData } from '../consuntivi/regole-giornata.js';
+import { PeriodiService } from '../periodi/periodi.service.js';
 import { costoCentesimi } from '../tariffe/risoluzione.js';
 import { type Risolutore, TariffeService } from '../tariffe/tariffe.service.js';
 import { TipologiaCosto } from '../tipologie/tipologia-costo.schema.js';
 
 type Id = mongoose.Types.ObjectId;
 type RigaSalvata = RigaConsuntivo & { _id: Id };
-type GiornataDb = { _id: Id; risorsaId: Id; data: Date; versione: number; righe: RigaSalvata[] };
+type GiornataDb = { _id: Id; risorsaId: Id; data: Date; mese: string; versione: number; righe: RigaSalvata[] };
 
 /** Al massimo un anno per volta. */
 const MAX_GIORNI = 366;
@@ -49,6 +50,7 @@ export class ValorizzazioneService {
     @InjectModel(TipologiaCosto.name) private readonly tipologie: Model<TipologiaCosto>,
     @InjectConnection() private readonly connection: Connection,
     private readonly tariffe: TariffeService,
+    private readonly periodi: PeriodiService,
   ) {}
 
   async daValorizzare(query: { da?: unknown; a?: unknown }) {
@@ -85,11 +87,14 @@ export class ValorizzazioneService {
     const { da, a } = intervallo(c.da, c.a);
     const risorsaId = objectId(c.risorsaId, 'risorsaId');
     const conferma = booleano(c.conferma, 'conferma') ?? false;
-    const giornate = await this.consuntivi
+    const tutte = await this.consuntivi
       .find({ data: { $gte: da, $lte: a }, ...(risorsaId ? { risorsaId } : {}) })
       .sort({ data: 1 })
       .lean<GiornataDb[]>()
       .exec();
+    // Mai le giornate di un mese chiuso (decisione 7 della fase 3).
+    const chiusi = await this.periodi.chiusi(tutte.map((g) => g.mese));
+    const giornate = tutte.filter((g) => !chiusi.has(g.mese));
     const risolutori = await this.risolutori(giornate, da, a);
 
     // Righe il cui valore cambierebbe, per giornata.

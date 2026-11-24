@@ -269,6 +269,20 @@ Permesso `approvare` (chi ha un'abilitazione TL, PM o PMSenior). Servizio `Appro
 | GET | `/approvazioni/in-attesa` | `{ righe }`: quante aspettano un'azione dell'utente, per il contatore del menu |
 | POST | `/approvazioni` | `{ azione: 'viaLibera' \| 'approva' \| 'respingi', righe: [rigaId], motivazione? }`, fino a 1000 righe. Regole di `motivoNegatoApprovazione`; motivazione obbligatoria per respingere (max 500). In una transazione: ogni riga si aggiorna solo se è ancora nello stato letto (`$elemMatch` su `_id` e `stato`), con firma `{ da, il }` in `approvazioneTL` o `approvazionePM`, oppure `rifiuto` `{ da, il, motivazione }` (che azzera via libera e approvazione); la versione della giornata cresce, così un salvataggio della risorsa nel frattempo riceve 409; una voce di storico per giornata (`viaLibera`, `approvazione`, `rifiuto`). Risposta `{ azione, fatte, saltate, esiti: [{ rigaId, esito: 'fatta' \| 'saltata', motivo? }] }`: le righe non trovate, non permesse o cambiate nel frattempo sono "saltate" con il motivo, senza fermare le altre |
 
+### Periodi — `/api/consuntivazione/periodi` (blocco D4)
+
+Chiusura e riapertura dei mesi (RF-12), servizio `PeriodiService`, collection `periodi` (un documento per mese, creato alla prima chiusura).
+
+| Metodo | Percorso | Permesso | Note |
+|---|---|---|---|
+| GET | `/periodi` | `gestirePeriodi` | Mesi dal primo con ore a quello corrente, dal più recente: `stato`, `conteggi` delle righe per stato, `nonApprovate`, `chiusura` (`il`, `da`, `forzata`, `motivazione`), `riapertura`, `chiudibile`, `riapribile`; più `progettiSenzaPM` (righe in attesa e nessun PM tra gli approvatori: le approva solo un PMSenior) |
+| GET | `/periodi/chiusi?da=&a=` | accesso | Mesi chiusi (`AAAAMM`) nel periodo, per le pagine |
+| GET | `/periodi/:mese/anteprima` | `gestirePeriodi` | Righe per stato, righe non approvate (al massimo 200, con giorno, risorsa, progetto, stato, minuti), `bloccoOrdine` |
+| POST | `/periodi/:mese/chiusura` | `gestirePeriodi` | `{ forzata?, motivazione? }`. In ordine (decisione 5): 409 se un mese precedente con ore è aperto o uno successivo è chiuso; niente mesi futuri. Con righe non approvate (bozza, inviata, via libera, respinta) 409, salvo `forzata: true` con la motivazione (decisione 4): quelle righe restano nel loro stato. In una transazione: righe `approvata` → `chiusa` (`updateMany` con `arrayFilters`) e versione di tutte le giornate del mese +1, periodo chiuso, storico `chiusura` |
+| POST | `/periodi/:mese/riapertura` | `gestirePeriodi` | `{ motivazione }` obbligatoria; solo l'ultimo mese chiuso. Righe `chiusa` → `approvata`, versione +1, storico `riapertura` |
+
+**Mese chiuso.** `PeriodiService.chiusi()` / `verificaAperti()` li usano gli altri servizi: il salvataggio delle giornate e l'invio/ritiro rispondono 409 ("il mese di … è chiuso") già prima della convalida delle righe e di nuovo dentro la transazione; le approvazioni saltano le righe del mese chiuso ("La riga è in un mese chiuso") e l'elenco le mostra con `meseChiuso: true` e nessuna azione; il ricalcolo esclude le giornate dei mesi chiusi (decisione 7).
+
 ## Moduli
 
 ### RisorseModule — `/api/pianificatore/risorse`

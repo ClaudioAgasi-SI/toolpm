@@ -230,7 +230,7 @@ Un documento per risorsa e giornata (indice unico `{ risorsaId: 1, data: 1 }`), 
 
 ## Collection `periodi`
 
-Un documento per mese (indice unico su `mese`, `AAAAMM`); un mese senza documento è aperto (fase 3). Campi: `stato` (`aperto`, `chiuso`), `chiusoIl`, `chiusoDa`, `forzata` (chiusura con righe non approvate, decisione 4 della fase 3) con `motivazioneChiusura`, `riapertoIl`, `riapertoDa`, `motivazioneRiapertura`, più il tracciamento. Creata dalla migrazione `008-controllo`; la usa la chiusura dei mesi (blocco D4).
+Un documento per mese (indice unico su `mese`, `AAAAMM`); un mese senza documento è aperto (fase 3). Campi: `stato` (`aperto`, `chiuso`), `chiusoIl`, `chiusoDa`, `forzata` (chiusura con righe non approvate, decisione 4 della fase 3) con `motivazioneChiusura`, `riapertoIl`, `riapertoDa`, `motivazioneRiapertura`, più il tracciamento. Creata dalla migrazione `008-controllo`; la usa `PeriodiService` (blocco D4): un mese chiuso blocca salvataggi, invii, approvazioni e ricalcolo delle sue giornate; alla chiusura le righe `approvata` diventano `chiusa`, alla riapertura il contrario.
 
 ## Collection `audit_log`
 

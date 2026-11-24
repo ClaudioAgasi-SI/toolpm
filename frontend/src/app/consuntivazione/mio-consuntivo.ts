@@ -92,6 +92,14 @@ export class MioConsuntivo {
   protected readonly invio = signal(false);
   /** Righe proprie ancora da inviare nei giorni passati, in tutto il calendario. */
   protected readonly daInviare = signal<DaInviare | null>(null);
+  /** Mesi chiusi (AAAAMM) del periodo visibile (fase 3, D4). */
+  protected readonly mesiChiusi = signal<string[]>([]);
+  protected meseChiuso(g: string) {
+    return this.mesiChiusi().includes(g.slice(0, 4) + g.slice(5, 7));
+  }
+  protected readonly nomiMesiChiusi = computed(() =>
+    this.mesiChiusi().map((m) => new Date(Date.UTC(+m.slice(0, 4), +m.slice(4) - 1, 1)).toLocaleDateString('it-IT', { month: 'long', year: 'numeric', timeZone: 'UTC' })),
+  );
 
   // Nuova riga
   protected nuova = { voce: '', tipologiaId: '' };
@@ -153,6 +161,7 @@ export class MioConsuntivo {
     const c = r.celle[g];
     if (this.erroreCella(r, g)) return this.erroreCella(r, g);
     if (g > this.oggi) return 'Giorno futuro';
+    if (this.meseChiuso(g)) return 'Mese chiuso: le ore non si modificano';
     if (c?.stato === 'respinta') return `Respinta: ${c.motivazione ?? ''}`;
     if (c?.rigaId && c.stato && c.stato !== 'bozza') return `${NOMI_STATO[c.stato]}: non si modifica`;
     return '';
@@ -234,8 +243,10 @@ export class MioConsuntivo {
       voci: this.api.voci(da, a),
       tipologie: this.api.tipologie(true),
       proposte: this.api.proposte(da),
+      chiusi: this.api.mesiChiusi(da, a),
     }).subscribe({
-      next: ({ giornate, voci, tipologie, proposte }) => {
+      next: ({ giornate, voci, tipologie, proposte, chiusi }) => {
+        this.mesiChiusi.set(chiusi);
         this.voci.set(voci);
         this.tipologie.set(tipologie);
         this.nuova = { voce: '', tipologiaId: this.predefinita() };
@@ -304,7 +315,7 @@ export class MioConsuntivo {
 
   protected modificabile(r: RigaGriglia, g: string) {
     const c = r.celle[g];
-    return g <= this.oggi && (!c?.stato || MODIFICABILI.includes(c.stato));
+    return g <= this.oggi && !this.meseChiuso(g) && (!c?.stato || MODIFICABILI.includes(c.stato));
   }
 
   private minuti(c?: Cella) {
@@ -435,7 +446,7 @@ export class MioConsuntivo {
         for (const g of giornate) {
           const destinazione = piuGiorni(g.data, passo);
           const piena = this.totaliGiorno()[destinazione] > 0;
-          if (destinazione > this.oggi || piena) {
+          if (destinazione > this.oggi || piena || this.meseChiuso(destinazione)) {
             if (g.righe.length) saltati.add(etichettaGiorno(destinazione));
             continue;
           }

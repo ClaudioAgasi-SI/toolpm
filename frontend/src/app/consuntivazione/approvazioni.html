@@ -136,6 +136,9 @@
                 @if (r.attivitaNonAssegnata) {
                   <span class="segno" title="La risorsa non è tra quelle assegnate a questa attività">non assegnata</span>
                 }
+                @if (r.meseChiuso) {
+                  <span class="segno tenue" title="Il mese è chiuso: nessuna azione finché il controller non lo riapre">mese chiuso</span>
+                }
                 @if (r.progetto.stato === 'chiuso') {
                   <span class="segno tenue">progetto chiuso</span>
                 }

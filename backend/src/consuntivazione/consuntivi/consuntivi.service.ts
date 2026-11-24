@@ -6,6 +6,7 @@ import { Attivita, Progetto } from '../../comuni/schemi/progetto.schema.js';
 import { Risorsa } from '../../comuni/schemi/risorsa.schema.js';
 import { corpo, data as leggiData, numero, objectId, testo } from '../../comuni/validazione.js';
 import { AuditService } from '../../infrastruttura/audit.service.js';
+import { PeriodiService } from '../periodi/periodi.service.js';
 import { ParametriService } from '../../infrastruttura/parametri.service.js';
 import { PermessiService } from '../../permessi/permessi.service.js';
 import { costoCentesimi } from '../tariffe/risoluzione.js';
@@ -74,6 +75,7 @@ export class ConsuntiviService {
     private readonly parametri: ParametriService,
     private readonly permessi: PermessiService,
     private readonly audit: AuditService,
+    private readonly periodi: PeriodiService,
   ) {}
 
   // ---- Lettura ----
@@ -214,6 +216,8 @@ export class ConsuntiviService {
       const e = erroreDateRisorsa(g.data, risorsa.dataIngresso, risorsa.dataUscita);
       if (e) throw errore(g.testo, e);
     }
+    // Mese chiuso: lo dico subito (e lo ricontrollo nella transazione).
+    await this.periodi.verificaAperti(testi);
 
     const esistenti = new Map(
       (await this.model.find({ risorsaId, data: { $in: giornate.map((g) => g.data) } }).lean<GiornataDb[]>().exec()).map((d) => [testoData(d.data), d]),
@@ -233,6 +237,8 @@ export class ConsuntiviService {
     });
 
     await this.connection.transaction(async (session) => {
+      // Mese chiuso (fase 3, D4): nessuna riga nuova o cambiata.
+      await this.periodi.verificaAperti(giornate.map((g) => g.testo), session);
       for (const { g, vecchia, righe } of scritture) {
         if (vecchia) {
           const r = await this.model
@@ -326,6 +332,7 @@ export class ConsuntiviService {
 
     if (scritture.length) {
       await this.connection.transaction(async (session) => {
+        await this.periodi.verificaAperti(scritture.map((x) => x.giornata.data), session);
         for (const { giornata, righe } of scritture) {
           const r = await this.model
             .updateOne({ _id: giornata._id, versione: giornata.versione }, { $set: { righe, versione: giornata.versione + 1 } }, { session })

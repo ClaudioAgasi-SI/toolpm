@@ -16,7 +16,8 @@ import {
   type ProgettoPerPermessi,
 } from '../../permessi/regole.js';
 import { Consuntivo, type RigaConsuntivo, type StatoRiga } from '../consuntivi/consuntivo.schema.js';
-import { giorniTra, testoData } from '../consuntivi/regole-giornata.js';
+import { giorniTra, meseDi, testoData } from '../consuntivi/regole-giornata.js';
+import { PeriodiService } from '../periodi/periodi.service.js';
 import { TipologiaCosto } from '../tipologie/tipologia-costo.schema.js';
 
 type Id = mongoose.Types.ObjectId;
@@ -66,6 +67,7 @@ export class ApprovazioniService {
     @InjectConnection() private readonly connection: Connection,
     private readonly permessi: PermessiService,
     private readonly audit: AuditService,
+    private readonly periodi: PeriodiService,
   ) {}
 
   /** Progetti su cui l'utente approva, con il suo profilo. */
@@ -173,6 +175,7 @@ export class ApprovazioniService {
     const tip = new Map(tipologie.map((x) => [String(x._id), x]));
     const chi = (x?: { da: string; il: Date } | null) => (x ? { da: x.da, nome: nomiUtenti.get(x.da) ?? x.da, il: x.il } : null);
 
+    const chiusi = await this.periodi.chiusi(trovate.map((t) => meseDi(testoData(t.data))));
     let minuti = 0;
     let costo = 0;
     let costiVisibili = true;
@@ -180,7 +183,8 @@ export class ApprovazioniService {
       const r = t.riga;
       const voce = profili.get(String(r.progettoId))!;
       const a = r.attivitaId ? att.get(String(r.attivitaId)) : undefined;
-      const azioni = AZIONI.filter((x) => !motivoNegatoApprovazione(soggetto, voce.progetto, { risorsaId: t.risorsaId, stato: r.stato }, x));
+      const meseChiuso = chiusi.has(meseDi(testoData(t.data)));
+      const azioni = meseChiuso ? [] : AZIONI.filter((x) => !motivoNegatoApprovazione(soggetto, voce.progetto, { risorsaId: t.risorsaId, stato: r.stato }, x));
       const vedeCosti = controller || voce.profilo === 'PM';
       minuti += r.minuti;
       if (vedeCosti) costo += r.costoCentesimi ?? 0;
@@ -204,6 +208,7 @@ export class ApprovazioniService {
         nota: r.nota ?? null,
         stato: r.stato,
         profilo: voce.profilo,
+        meseChiuso,
         azioni,
         viaLiberaTL: chi(r.approvazioneTL),
         approvazionePM: chi(r.approvazionePM),
@@ -244,6 +249,7 @@ export class ApprovazioniService {
         .session(session)
         .lean<{ _id: Id; risorsaId: Id; data: Date; versione: number; righe: (RigaConsuntivo & { _id: Id })[] }[]>()
         .exec();
+      const chiusi = await this.periodi.chiusi(giornate.map((g) => meseDi(testoData(g.data))), session);
       const trovate = new Map<string, { giornata: (typeof giornate)[number]; riga: RigaConsuntivo & { _id: Id } }>();
       for (const g of giornate) for (const r of g.righe) if (ids.some((id) => id.equals(r._id))) trovate.set(String(r._id), { giornata: g, riga: r });
 
@@ -255,7 +261,9 @@ export class ApprovazioniService {
           continue;
         }
         const voce = profili.get(String(x.riga.progettoId));
-        const motivo = voce
+        const motivo = chiusi.has(meseDi(testoData(x.giornata.data)))
+          ? 'La riga è in un mese chiuso'
+          : voce
           ? motivoNegatoApprovazione(soggetto, voce.progetto, { risorsaId: x.giornata.risorsaId, stato: x.riga.stato }, azione)
           : 'Non sei approvatore del progetto';
         if (motivo) {

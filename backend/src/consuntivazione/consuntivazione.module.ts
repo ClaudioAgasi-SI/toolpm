@@ -3,6 +3,9 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Utente, UtenteSchema } from '../auth/utente.schema.js';
 import { ApprovazioniController } from './approvazioni/approvazioni.controller.js';
 import { ApprovazioniService } from './approvazioni/approvazioni.service.js';
+import { PeriodiController } from './periodi/periodi.controller.js';
+import { PeriodiService } from './periodi/periodi.service.js';
+import { Periodo, PeriodoSchema } from './periodi/periodo.schema.js';
 import { ConsuntiviController } from './consuntivi/consuntivi.controller.js';
 import { ConsuntiviService } from './consuntivi/consuntivi.service.js';
 import { Consuntivo, ConsuntivoSchema } from './consuntivi/consuntivo.schema.js';
@@ -21,7 +24,7 @@ import { TipologiaCosto, TipologiaCostoSchema } from './tipologie/tipologia-cost
  *
  * Blocchi del piano (docs/piano-fase2.md): C1 tipologie di costo, C2 tariffe standard e
  * personalizzate, C3 consuntivi giornalieri, C6 righe da valorizzare e ricalcolo; fase 3
- * (docs/piano-fase3.md): D1 invio e ritiro, D2 approvazioni.
+ * (docs/piano-fase3.md): D1 invio e ritiro, D2 approvazioni, D4 chiusura dei mesi.
  * Collection (migrazione 007-consuntivazione): tipologie_costo, tariffe_standard,
  * tariffe_personalizzate, consuntivi.
  */
@@ -33,10 +36,11 @@ import { TipologiaCosto, TipologiaCostoSchema } from './tipologie/tipologia-cost
       { name: TariffaPersonalizzata.name, schema: TariffaPersonalizzataSchema },
       { name: Consuntivo.name, schema: ConsuntivoSchema },
       { name: Utente.name, schema: UtenteSchema },
+      { name: Periodo.name, schema: PeriodoSchema },
     ]),
   ],
-  controllers: [TipologieController, TariffeController, ConsuntiviController, ValorizzazioneController, ApprovazioniController],
-  providers: [TipologieService, TariffeService, ConsuntiviService, ValorizzazioneService, ApprovazioniService],
+  controllers: [TipologieController, TariffeController, ConsuntiviController, ValorizzazioneController, ApprovazioniController, PeriodiController],
+  providers: [TipologieService, TariffeService, ConsuntiviService, ValorizzazioneService, ApprovazioniService, PeriodiService],
   exports: [TipologieService, TariffeService, ConsuntiviService],
 })
 export class ConsuntivazioneModule {}

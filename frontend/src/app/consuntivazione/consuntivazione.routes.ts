@@ -5,7 +5,7 @@ import { ConsuntivazioneLayout } from './consuntivazione-layout';
 /**
  * Rotte della sezione Consuntivazione (fase 2), montate sotto /consuntivazione.
  * Le pagine arrivano con i blocchi del piano: tipologie (C1), tariffe (C2),
- * il mio consuntivo (C5), righe da valorizzare (C6); fase 3: approvazioni (D3).
+ * il mio consuntivo (C5), righe da valorizzare (C6); fase 3: approvazioni (D3), periodi (D4).
  */
 export const CONSUNTIVAZIONE_ROUTES: Routes = [
   {
@@ -29,6 +29,12 @@ export const CONSUNTIVAZIONE_ROUTES: Routes = [
         title: 'Approvazioni · ToolPM',
         canActivate: [permessoRichiesto('approvare')],
         loadComponent: () => import('./approvazioni').then((m) => m.Approvazioni),
+      },
+      {
+        path: 'periodi',
+        title: 'Periodi · ToolPM',
+        canActivate: [permessoRichiesto('gestirePeriodi')],
+        loadComponent: () => import('./periodi').then((m) => m.Periodi),
       },
       {
         path: 'consuntivi-risorse',

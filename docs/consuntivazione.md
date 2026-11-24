@@ -13,6 +13,7 @@ Si entra da **Consuntivazione** nel menu in alto (`/toolpm/consuntivazione`). Il
 | Tariffe | controller | Costo orario standard per ruolo e personalizzato per risorsa, con i periodi di validità |
 | Approvazioni | TL, PM, PMSenior | Via libera, approvazione o rifiuto delle righe inviate sui propri progetti |
 | Consuntivi delle risorse | controller | Ore, tariffe e costi di una risorsa, settimana per settimana (sola lettura) |
+| Periodi | controller | Chiusura e riapertura dei mesi |
 | Da valorizzare | controller | Righe senza costo, con il motivo, e ricalcolo dei costi |
 
 ## Per le risorse: il mio consuntivo
@@ -43,6 +44,7 @@ Quando le ore di un giorno o della settimana sono complete e salvate, premi **In
 - **Ritira l'invio**: finché nessun approvatore le ha guardate, le righe inviate tornano in bozza per correggerle; poi le invii di nuovo.
 - Le **righe respinte** compaiono in un riquadro rosso con la motivazione: correggile (restano respinte finché non le invii) e inviale di nuovo.
 - Se nei giorni passati restano righe da inviare fuori dalla settimana che stai guardando, un avviso te lo dice e ti porta alla settimana più vecchia.
+- Quando il controller **chiude un mese**, le sue ore non si modificano più (un avviso lo dice): per una correzione chiedi di riaprirlo.
 
 **Copia la settimana precedente** (o **il giorno precedente** nella vista del giorno) riporta righe e ore nei giorni passati ancora vuoti, senza salvare:
 controlli e premi **Salva**.
@@ -109,6 +111,16 @@ In **Tariffe**:
 
 Una personalizzata, se c'è, vince sulla standard del ruolo della risorsa a quella data. I periodi della stessa tipologia non si
 sovrappongono: per cambiare una tariffa chiudi il periodo vecchio (data di fine) e apri il nuovo dal giorno dopo.
+
+### Chiudere i mesi
+
+In **Periodi** c'è un mese per riga, dal più recente, con quante righe sono in bozza, inviate, con via libera, respinte, approvate e chiuse.
+
+- I mesi si chiudono **in ordine**: **Chiudi…** compare sul primo mese aperto con ore. Si apre l'anteprima.
+- Se tutte le righe sono approvate, **Chiudi il mese**: le righe approvate diventano chiuse e il mese non accetta più modifiche, invii, approvazioni né ricalcoli.
+- Se ci sono righe non approvate, l'anteprima le elenca: falle approvare (o inviare), oppure **Chiudi comunque** scrivendo il motivo. Quelle righe restano ferme nel loro stato e fuori dai costi.
+- **Riapri…** sull'ultimo mese chiuso, con la motivazione: le righe chiuse tornano approvate. Chiusure e riaperture restano nello storico.
+- In fondo alla pagina, i progetti con righe in attesa e nessun PM tra gli approvatori: le può approvare solo un PMSenior, conviene aggiungere un PM.
 
 ### Come si calcola il costo
 
