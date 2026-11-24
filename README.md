@@ -7,7 +7,7 @@ Il prodotto è diviso in **sezioni**; ognuna ha le proprie pagine (sotto `/<sezi
 |---|---|---|---|
 | Pianificatore risorse allocate — allocazione delle persone sui progetti nel tempo, in base a skill, importanza strategica e probabilità di allocazione | `/pianificatore` | `/api/pianificatore/...` | disponibile |
 | Anagrafiche — dati comuni a tutte le sezioni: progetti con attività e approvatori, risorse, clienti, centri di costo, ruoli, utenti | `/comuni` | `/api/comuni/...`, `/api/utenti` | disponibile (fase 1) |
-| Consuntivazione costi di progetto — ore lavorate, tipologie di costo, tariffe, costo del personale per progetto | `/consuntivazione` | `/api/consuntivazione/...` | fase 2 completata ([piano-fase2.md](docs/piano-fase2.md)), fase 3 in corso ([piano-fase3.md](docs/piano-fase3.md)); guida in [consuntivazione.md](docs/consuntivazione.md), analisi in [analisi-consuntivazione.md](docs/analisi-consuntivazione.md) |
+| Consuntivazione costi di progetto — ore lavorate, tipologie di costo, tariffe, costo del personale per progetto | `/consuntivazione` | `/api/consuntivazione/...` | fasi 2 e 3 completate ([piano-fase2.md](docs/piano-fase2.md), [piano-fase3.md](docs/piano-fase3.md)): ore, costi, invio, approvazioni, chiusura dei mesi, storico; guida in [consuntivazione.md](docs/consuntivazione.md), analisi in [analisi-consuntivazione.md](docs/analisi-consuntivazione.md) |
 
 Si entra con email e password; ogni utente vede e modifica solo ciò che il suo profilo (TL, PM, PMSenior) e i suoi ruoli (risorsa, controller, admin) consentono.
 
@@ -16,7 +16,7 @@ Si entra con email e password; ogni utente vede e modifica solo ciò che il suo 
 - **db/** — dati di esempio delle collection (`skills`, `rate`, `certificazioni`, `risorse`)
 - **migrazione/** — file della migrazione dei dati del Pianificatore (esclusi da Git, vedi [migrazione-dati.md](docs/migrazione-dati.md))
 - **docker-compose.yml** — avvio di frontend e backend su Docker Desktop
-- **docs/** — documentazione tecnica: [indice](docs/README.md), [architettura](docs/architettura.md), [frontend](docs/frontend.md), [backend](docs/backend.md), [database](docs/database.md), [piano della fase 1](docs/piano-fase1.md)
+- **docs/** — documentazione tecnica: [indice](docs/README.md), [architettura](docs/architettura.md), [frontend](docs/frontend.md), [backend](docs/backend.md), [database](docs/database.md), [piani delle fasi 1](docs/piano-fase1.md), [2](docs/piano-fase2.md) e [3](docs/piano-fase3.md), [guida della Consuntivazione](docs/consuntivazione.md)
 
 ## Avvio con Docker Desktop
 
@@ -122,6 +122,10 @@ Documentazione interattiva Swagger, con la possibilità di provare le chiamate: 
 | PUT | `/api/consuntivazione/consuntivi/:data`, `/api/consuntivazione/consuntivi` | Salva una giornata o più giornate insieme (tutte o nessuna), con la versione letta |
 | GET / POST | `/api/consuntivazione/da-valorizzare?da=&a=`, `/api/consuntivazione/ricalcolo` | Righe senza costo con il motivo; ricalcolo dei costi con anteprima e conferma (solo controller) |
 | GET | `/api/consuntivazione/consuntivi/voci?da=&a=`, `/consuntivi/proposte?settimana=` | Progetti su cui si lavora e loro attività consuntivabili; righe proposte dal Pianificatore e dalla settimana precedente |
+| POST / GET | `/api/consuntivazione/consuntivi/invio`, `/consuntivi/ritiro`, `/consuntivi/da-inviare` | Invio all'approvazione e ritiro delle giornate; righe ancora da inviare (fase 3) |
+| GET / POST | `/api/consuntivazione/approvazioni`, `/approvazioni/in-attesa` | Righe da approvare dei propri progetti; via libera del TL, approvazione del PM, rifiuto motivato, in blocco (TL, PM, PMSenior; fase 3) |
+| GET / POST | `/api/consuntivazione/periodi`, `/periodi/chiusi`, `/periodi/:mese/anteprima`, `/periodi/:mese/chiusura`, `/periodi/:mese/riapertura` | Chiusura e riapertura dei mesi (controller; fase 3) |
+| GET | `/api/consuntivazione/storico`, `/storico/riga/:rigaId` | Storico delle modifiche (controller e PMSenior) e cronologia di una riga (fase 3) |
 | GET / PUT | `/api/parametri`, `/api/parametri/:chiave` | Parametri di sistema (modifica: controller) |
 | GET / PUT | `/api/pianificatore/risorse`, `/api/pianificatore/risorse/:id` | Skill, certificazioni e allocazioni delle risorse (POST e DELETE mantenuti per un rilascio) |
 | GET | `/api/pianificatore/pianificazione?da=AAAAMM&a=AAAAMM&tipoSkill=tecnico&skill=j2ee&skill=devOps` | Griglia risorse × mesi (default: 12 mesi dal mese corrente), con filtro facoltativo per una o più skill (in OR) |

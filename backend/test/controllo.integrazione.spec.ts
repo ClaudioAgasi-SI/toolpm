@@ -384,6 +384,20 @@ describe.skipIf(!URI_BASE)('Controllo (fase 3) con MongoDB vero', () => {
       expect(saltata.body.esiti[0].motivo).toMatch(/cambiata nel frattempo|Azione non ammessa/);
     });
 
+    it('approvatore e risorsa sulla stessa giornata: il salvataggio con la versione vecchia riceve 409, nessun dato perso', async () => {
+      await scrivi('rita', '2026-03-12', [{ attivitaId: svi, minuti: 480 }]);
+      await invia('rita', '2026-03-12');
+      const letta = await giornata('rita', '2026-03-12');
+      const riga = letta.righe[0]._id;
+      expect((await agisci('paola', 'approva', [riga])).body.fatte).toBe(1);
+      // La risorsa aggiunge una riga partendo dalla giornata letta prima dell'approvazione.
+      const r = await come('rita').put(`${CONS}/2026-03-12`, { versione: letta.versione, righe: [{ _id: riga, attivitaId: svi, minuti: 480 }, { attivitaId: svi, tipologiaId: straordinaria, minuti: 60 }] });
+      expect(r.status).toBe(409);
+      const dopo = await giornata('rita', '2026-03-12');
+      expect(dopo.righe).toHaveLength(1);
+      expect(dopo.righe[0].stato).toBe('approvata');
+    });
+
     it('niente auto-approvazione: le ore di paola le approva il PMSenior', async () => {
       await scrivi('paola', GIORNI[0], [{ attivitaId: svi, minuti: 120 }]);
       await invia('paola', GIORNI[0]);
@@ -574,6 +588,19 @@ describe.skipIf(!URI_BASE)('Controllo (fase 3) con MongoDB vero', () => {
       expect(perCarlo.voci[3].prima).toMatchObject({ _id: rigaId, costo: null });
       expect((await come('tito').get(`${ST}/riga/${rigaId}`)).body.voci).toHaveLength(3);
       expect((await come('carlo').get(`${ST}/riga/000000000000000000000000`)).status).toBe(404);
+    });
+
+    it('il ricalcolo non tocca un mese chiuso', async () => {
+      const PER = '/api/consuntivazione/periodi';
+      expect((await come('carlo').post(`${PER}/202602/chiusura`, { forzata: true, motivazione: 'Prova del ricalcolo' })).status).toBe(200);
+      const ord = (await db.collection('tipologie_costo').findOne({ codice: 'ORDINARIA' }))!._id;
+      expect((await come('carlo').post(`/api/consuntivazione/risorse/${risorsa.rita}/tariffe-personalizzate`, { tipologiaId: String(ord), validoDal: '2026-01-01', centesimiOra: 4000 })).status).toBe(201);
+      const anteprima = await come('carlo').post('/api/consuntivazione/ricalcolo', { da: '2026-02-01', a: '2026-02-28', risorsaId: risorsa.rita });
+      expect(anteprima.status).toBe(200);
+      expect(anteprima.body.righe).toEqual([]);
+      expect((await come('carlo').post(`${PER}/202602/riapertura`, { motivazione: 'Fine prova' })).status).toBe(200);
+      const dopo = await come('carlo').post('/api/consuntivazione/ricalcolo', { da: '2026-02-01', a: '2026-02-28', risorsaId: risorsa.rita });
+      expect(dopo.body.righe.length).toBeGreaterThan(0);
     });
   });
 });

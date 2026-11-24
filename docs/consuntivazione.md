@@ -1,8 +1,8 @@
 # Guida alla Consuntivazione
 
-Guida d'uso della sezione **Consuntivazione** (fase 2): come le risorse registrano le ore lavorate e come il controller
-gestisce tipologie di costo, tariffe e costi. Per le regole complete vedi [analisi-consuntivazione.md](analisi-consuntivazione.md),
-per le scelte della fase 2 [piano-fase2.md](piano-fase2.md).
+Guida d'uso della sezione **Consuntivazione** (fasi 2 e 3): come le risorse registrano e inviano le ore lavorate, come TL e PM le
+approvano e come il controller gestisce tipologie di costo, tariffe, costi, chiusura dei mesi e storico. Per le regole complete vedi [analisi-consuntivazione.md](analisi-consuntivazione.md),
+per le scelte delle fasi 2 e 3 [piano-fase2.md](piano-fase2.md) e [piano-fase3.md](piano-fase3.md).
 
 Si entra da **Consuntivazione** nel menu in alto (`/toolpm/consuntivazione`). Il sottomenu mostra solo le pagine del proprio profilo:
 
@@ -58,7 +58,7 @@ Nella sezione **Avanzamento delle mie attività** aggiorni la percentuale di com
 - **Giorni futuri**: si consuntiva fino a oggi; i giorni dopo sono in sola lettura.
 - **Progetti su cui non lavori**: puoi consuntivare solo sui progetti non chiusi su cui sei assegnato ad almeno un'attività, allocato nel
   Pianificatore nel mese (percentuale maggiore di zero) o approvatore. Se un progetto manca dall'elenco, chiedi al TL o al PM di assegnarti un'attività o di allocarti.
-- **Attività non assegnate a te**: si possono usare, ma compare un avviso; dalla fase 3 l'approvatore vedrà evidenziate quelle righe.
+- **Attività non assegnate a te**: si possono usare, ma compare un avviso; l'approvatore vede quelle righe segnate "non assegnata".
 - **Progetti chiusi, attività chiuse, tipologie disattivate**: non accettano righe nuove o cambiate.
 - **Date fuori dal tuo periodo** di ingresso e uscita in azienda: non si consuntivano.
 - **Ore di altri**: ognuno inserisce solo le proprie.
@@ -169,3 +169,11 @@ Le ore con il costo si vedono in **Consuntivi delle risorse**.
 **Più persone possono lavorare sulla stessa attività?** Sì, un'attività può essere assegnata a più risorse.
 
 **Chi approva le ore?** Il TL del progetto può dare un primo via libera, il PM approva in modo definitivo o respinge con una motivazione; nessuno approva le proprie ore. Vedi "Per TL e PM: approvare le ore".
+
+**Ho inviato le ore per sbaglio.** Finché nessun approvatore le ha guardate, **Ritira l'invio** le riporta in bozza. Dopo, chiedi al TL o al PM di respingerle.
+
+**Sono PM: perché non vedo le mie ore in Approvazioni?** Nessuno approva le proprie ore: le approva un altro PM del progetto o un PMSenior.
+
+**Una riga approvata è sbagliata.** Il PM la respinge con la motivazione, la risorsa la corregge e la invia di nuovo. Se il mese è già chiuso, il controller lo riapre prima.
+
+**Dove vedo chi ha cambiato una tariffa o approvato una riga?** Nello **Storico** (controller e PMSenior) o nella **Cronologia** della riga.

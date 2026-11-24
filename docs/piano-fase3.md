@@ -2,7 +2,7 @@
 
 23/11/2026 · Claudio Agasi
 
-> Piano di lavoro della fase 3, confermato il 23/11/2026. Versione di lavoro con commenti: [documento su Claude](https://claude.ai/artifact/Ha8p19r8NfxpZZEbqfV2SQ). Le decisioni da cui parte sono in [analisi-consuntivazione.md](analisi-consuntivazione.md); il modo di lavorare è quello delle fasi [1](piano-fase1.md) e [2](piano-fase2.md).
+> Piano di lavoro della fase 3, confermato il 23/11/2026 e completato il 24/11/2026: blocchi D0–D6 fatti. Versione di lavoro con commenti: [documento su Claude](https://claude.ai/artifact/Ha8p19r8NfxpZZEbqfV2SQ). Le decisioni da cui parte sono in [analisi-consuntivazione.md](analisi-consuntivazione.md); il modo di lavorare è quello delle fasi [1](piano-fase1.md) e [2](piano-fase2.md).
 
 La fase 3 porta il **controllo** sulle ore consuntivate: la risorsa invia le proprie righe, il TL dà un primo via libera facoltativo, il PM approva in modo definitivo o respinge, il controller chiude i mesi. Da qui in avanti solo le righe approvate dal PM contano come costi validi, e ogni modifica ai dati sensibili lascia una traccia nello storico. Report ed EVM restano alla fase 4.
 
@@ -16,7 +16,7 @@ La fase 3 porta il **controllo** sulle ore consuntivate: la risorsa invia le pro
 | D3 — Pagina Approvazioni | Fatto | Pagina `/consuntivazione/approvazioni` (vista "Da lavorare" o per stato, periodo, filtri per progetto, risorsa, attività non assegnate; gruppi per risorsa e settimana con totali di ore e, per PM e PMSenior, costo; selezione multipla con Via libera / Approva / Respingi e motivazione; righe saltate con il motivo), contatore delle righe in attesa nel sottomenu, voce nella pagina iniziale. `e2e-prepara.mjs` con pina PM di ALFA e BETA e tito TL di ALFA; `e2e/controllo.py` esteso con il percorso TL → PM → rifiuto → correzione → approvazione. |
 | D4 — Chiusura dei periodi | Fatto | `PeriodiService` con `GET /periodi`, `/periodi/chiusi`, `/periodi/:mese/anteprima`, `POST /periodi/:mese/chiusura` (in ordine, bloccata con righe non approvate, forzabile con motivazione, approvate → chiuse) e `/riapertura` (ultimo chiuso, motivazione); mese chiuso rispettato da salvataggio, invio, ritiro, approvazioni e ricalcolo; storico di chiusure e riaperture. Pagina Periodi del controller; "Il mio consuntivo" e Approvazioni mostrano il mese chiuso. Test: 202 backend; `e2e/controllo.py` con chiusura e riapertura. |
 | D5 — Storico delle modifiche | Fatto | Storico scritto anche da salvataggio (correzione e cancellazione di righe respinte), ricalcolo, tariffe, tipologie, progetti (creazione, modifica, stato, approvatori) e attività (creazione, modifica, assegnazioni), nella stessa transazione; `differenze()` per i soli campi cambiati. API `GET /storico` (permesso `consultareStorico`: controller e PMSenior) e `GET /storico/riga/:rigaId` (risorsa, approvatori, controller, PMSenior; ricalcoli solo a chi vede i costi). Pagina Storico, cronologia della riga in "Il mio consuntivo" e in "Consuntivi delle risorse". Test: 206 backend, 18 frontend; `e2e/controllo.py` con storico e cronologia. |
-| D6 — Test e documentazione | Da fare | |
+| D6 — Test e documentazione | Fatto | Test di integrazione aggiunti (approvazione durante una modifica della risorsa: 409, nessun dato perso; il ricalcolo non tocca un mese chiuso); criteri di completamento verificati; README (API della fase 3), indice di `docs/`, architettura, frontend e guida riletti e aggiornati, con nuove domande frequenti. Test: 208 backend, 18 frontend; prove nel browser `e2e/consuntivazione.py` e `e2e/controllo.py` superate. |
 
 ## Obiettivo e perimetro
 
@@ -116,14 +116,14 @@ Ogni blocco si chiude con codice, test, documentazione in `docs/` aggiornata e p
 
 ## Criteri di completamento
 
-- [ ] La risorsa invia uno o più giorni con un clic; le righe inviate, approvate e chiuse non si modificano né si cancellano.
-- [ ] Il TL dà il via libera o respinge solo sui progetti di cui è TL; il PM approva o respinge, con o senza via libera, solo sui propri progetti; il PMSenior su tutti.
-- [ ] Il rifiuto ha sempre una motivazione, che la risorsa vede; la riga corretta e reinviata riparte senza via libera del TL.
-- [ ] Due approvatori sulla stessa riga, o un approvatore e la risorsa sulla stessa giornata: nessun dato perso, la seconda azione riceve un esito chiaro.
-- [ ] Il TL non riceve mai tariffe né costi; il PM solo sui propri progetti.
-- [ ] Un mese chiuso non accetta modifiche, invii, approvazioni né ricalcoli; la riapertura richiede una motivazione.
-- [ ] Ogni modifica elencata in D5 compare nello storico con utente, data, valori prima e dopo.
-- [ ] Documentazione in `docs/` e Swagger aggiornati; `docker compose up` sul PC con la migrazione 008 eseguita.
+- [x] La risorsa invia uno o più giorni con un clic; le righe inviate, approvate e chiuse non si modificano né si cancellano.
+- [x] Il TL dà il via libera o respinge solo sui progetti di cui è TL; il PM approva o respinge, con o senza via libera, solo sui propri progetti; il PMSenior su tutti.
+- [x] Il rifiuto ha sempre una motivazione, che la risorsa vede; la riga corretta e reinviata riparte senza via libera del TL.
+- [x] Due approvatori sulla stessa riga, o un approvatore e la risorsa sulla stessa giornata: nessun dato perso, la seconda azione riceve un esito chiaro.
+- [x] Il TL non riceve mai tariffe né costi; il PM solo sui propri progetti.
+- [x] Un mese chiuso non accetta modifiche, invii, approvazioni né ricalcoli; la riapertura richiede una motivazione.
+- [x] Ogni modifica elencata in D5 compare nello storico con utente, data, valori prima e dopo.
+- [x] Documentazione in `docs/` e Swagger aggiornati; `docker compose up` sul PC con la migrazione 008 eseguita.
 
 ## Decisioni confermate
 

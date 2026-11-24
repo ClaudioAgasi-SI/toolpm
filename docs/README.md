@@ -2,7 +2,7 @@
 
 Tool di project management organizzato in sezioni: il **Pianificatore risorse allocate**
 (frontend `/toolpm/pianificatore`, API `/api/pianificatore`), allocazione delle risorse (persone) sui progetti mese per mese
-tenendo conto di skill, importanza strategica e probabilità di allocazione, la **Consuntivazione** (frontend `/toolpm/consuntivazione`, API `/api/consuntivazione`), ore lavorate delle risorse con tipologie di costo, tariffe e costo del personale per progetto, e le **Anagrafiche** comuni
+tenendo conto di skill, importanza strategica e probabilità di allocazione, la **Consuntivazione** (frontend `/toolpm/consuntivazione`, API `/api/consuntivazione`), ore lavorate delle risorse con tipologie di costo, tariffe e costo del personale per progetto, invio, approvazione e chiusura dei mesi, e le **Anagrafiche** comuni
 (frontend `/toolpm/comuni`, API `/api/comuni`): progetti con attività e approvatori, risorse, clienti, centri di costo, ruoli, utenti.
 Si accede con email e password; i permessi dipendono dal profilo (TL, PM, PMSenior) e dai ruoli (risorsa, controller, admin).
 
@@ -13,11 +13,11 @@ Si accede con email e password; i permessi dipendono dal profilo (TL, PM, PMSeni
 | [backend.md](backend.md) | API NestJS: infrastruttura, autenticazione, permessi, modulo Comuni, Pianificatore, endpoint, errori, Swagger, configurazione, test |
 | [database.md](database.md) | MongoDB: collection, schema dei documenti, validatori, tracciamento, migrazioni, regole sui dati, indici, import dei dati |
 | [analisi-pianificatore.md](analisi-pianificatore.md) | Sezione Pianificatore risorse allocate: analisi funzionale (requisiti, calcolo della percentuale pesata, regole, limiti attuali) e analisi tecnica di sintesi con le evoluzioni previste |
-| [analisi-consuntivazione.md](analisi-consuntivazione.md) | Sezione Consuntivazione (fase 2 realizzata; approvazioni ed EVM nelle fasi successive): analisi funzionale e tecnica, progetti (stati, stime, percentuale di completamento) e attività, indicatori EVM di tempi e costi, profili di approvazione TL, PM e PMSenior, integrazioni con altri sistemi tramite script di estrazione, modello dei dati su MongoDB |
-| [consuntivazione.md](consuntivazione.md) | Guida d'uso della Consuntivazione: il mio consuntivo, le mie competenze, preparazione dei progetti per TL e PM, tipologie, tariffe, consuntivi delle risorse, righe da valorizzare e ricalcolo per il controller, domande frequenti |
+| [analisi-consuntivazione.md](analisi-consuntivazione.md) | Sezione Consuntivazione (fasi 2 e 3 realizzate; report ed EVM nella fase 4): analisi funzionale e tecnica, progetti (stati, stime, percentuale di completamento) e attività, indicatori EVM di tempi e costi, profili di approvazione TL, PM e PMSenior, integrazioni con altri sistemi tramite script di estrazione, modello dei dati su MongoDB |
+| [consuntivazione.md](consuntivazione.md) | Guida d'uso della Consuntivazione: il mio consuntivo e l'invio delle ore, le mie competenze, approvazione delle ore e preparazione dei progetti per TL e PM, tipologie, tariffe, consuntivi delle risorse, righe da valorizzare e ricalcolo, chiusura dei mesi e storico per il controller, domande frequenti |
 | [piano-fase1.md](piano-fase1.md) | Piano della fase 1 (fondamenta): autenticazione e profili, modulo Comuni, permessi, adattamento del Pianificatore, migrazione dei dati, criteri di completamento e rischi |
 | [piano-fase2.md](piano-fase2.md) | Piano della fase 2 (consuntivazione): tipologie di costo, tariffe standard e personalizzate, consuntivo giornaliero e settimanale, calcolo dei costi, righe da valorizzare e ricalcolo; confermato e completato il 20/11/2026 |
-| [piano-fase3.md](piano-fase3.md) | Piano della fase 3 (controllo): invio delle ore, approvazione TL e PM, rifiuto motivato, chiusura dei periodi, storico delle modifiche; confermato il 23/11/2026 |
+| [piano-fase3.md](piano-fase3.md) | Piano della fase 3 (controllo): invio delle ore, approvazione TL e PM, rifiuto motivato, chiusura dei periodi, storico delle modifiche; confermato il 23/11/2026 e completato il 24/11/2026 |
 | [mongodb-replica-set.md](mongodb-replica-set.md) | Passaggio di MongoDB a replica set a un nodo (fase 1, blocco B0): backup, nuovo container, inizializzazione, stringa di connessione, verifica |
 | [migrazione-dati.md](migrazione-dati.md) | Migrazione dei dati del Pianificatore verso le anagrafiche comuni (fase 1, blocco B7): esportazione dei CSV, come compilarli, importazione in prova e definitiva, verifica |
 
@@ -29,7 +29,7 @@ Browser ──► frontend (Angular, nginx :4201) ──/api──► backend (N
 
 - **Frontend**: Angular 22, componenti standalone, signals. In Docker è servito da nginx, che inoltra `/api` al backend.
 - **Backend**: NestJS 12 su Node.js 22, Mongoose 9, documentazione OpenAPI/Swagger su `/api/docs`.
-- **Database**: MongoDB, database `toolpm`: collection del Pianificatore, comuni a tutte le sezioni e della Consuntivazione (`tipologie_costo`, `tariffe_standard`, `tariffe_personalizzate`, `consuntivi`); elenco completo in [database.md](database.md).
+- **Database**: MongoDB, database `toolpm`: collection del Pianificatore, comuni a tutte le sezioni e della Consuntivazione (`tipologie_costo`, `tariffe_standard`, `tariffe_personalizzate`, `consuntivi`, `periodi`, `audit_log`); elenco completo in [database.md](database.md).
 - **Prove nel browser**: script Playwright in [`e2e/`](../e2e/README.md) su un database di prova separato.
   Tutto ToolPM usa solo MongoDB; le integrazioni con sistemi che usano database relazionali passano da script di estrazione e trasformazione (vedi [analisi-consuntivazione.md](analisi-consuntivazione.md)).
 
