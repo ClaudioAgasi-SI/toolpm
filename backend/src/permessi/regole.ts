@@ -63,6 +63,7 @@ export const PERMESSI_GLOBALI = [
   'approvare',
   'gestirePeriodi',
   'consultareStorico',
+  'vedereReport',
 ] as const;
 export type PermessoGlobale = (typeof PERMESSI_GLOBALI)[number];
 
@@ -100,6 +101,9 @@ export function permessoGlobale(s: Soggetto, permesso: PermessoGlobale): boolean
     case 'gestireTariffe':
     case 'gestirePeriodi':
       return s.ruoli.includes('controller');
+    case 'vedereReport':
+      // Report (fase 4): chi ha un'abilitazione o il controller; quali progetti lo decide il progetto.
+      return s.abilitazione !== null || s.ruoli.includes('controller');
     case 'consultareStorico':
       // Storico delle modifiche (fase 3, blocco D5): controller e PMSenior.
       return s.ruoli.includes('controller') || ePMSenior(s);
@@ -317,3 +321,16 @@ const DESCRIZIONE_STATO: Record<StatoRigaPerPermessi, string> = {
   respinta: 'respinta',
   chiusa: 'chiusa',
 };
+
+/**
+ * Report di un progetto (fase 4, decisione 4): scheda, indicatori, report dei costi e pianificato.
+ * Lo vedono gli approvatori del progetto (TL e PM), i PMSenior e il controller.
+ */
+export function puoVedereReportProgetto(s: Soggetto, progetto: ProgettoPerPermessi): boolean {
+  return s.ruoli.includes('controller') || ePMSenior(s) || profiloDiApprovazione(s, progetto) !== null;
+}
+
+/** Euro (costi, tariffe, stime in euro) di un progetto: PM del progetto, PMSenior e controller; mai il TL. */
+export function vedeEuroProgetto(s: Soggetto, progetto: ProgettoPerPermessi): boolean {
+  return s.ruoli.includes('controller') || ePMSenior(s) || profiloDiApprovazione(s, progetto) === 'PM';
+}

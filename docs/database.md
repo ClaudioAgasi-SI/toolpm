@@ -3,7 +3,7 @@
 - **Database**: `toolpm` (stessa istanza MongoDB del vecchio database `pianificazione`)
 - **Connessione**: variabile `MONGODB_URI` del backend (default in Docker: `mongodb://host.docker.internal:27017/toolpm?directConnection=true`; default fuori da Docker: `mongodb://localhost:27017/toolpm`)
 - **Replica set**: dalla fase 1 MongoDB gira come replica set a un nodo (`rs0`), necessario per le transazioni. Procedura e verifica in [mongodb-replica-set.md](mongodb-replica-set.md); `npm run verifica-mongodb` nel backend controlla connessione, replica set e transazioni.
-- **Collection**: del Pianificatore `skills`, `rate`, `certificazioni`; comuni a tutte le sezioni (fase 1, blocco B4) `risorse`, `clienti`, `centri_costo`, `ruoli`, `progetti`, `attivita`, `avanzamenti`; della Consuntivazione (fase 2, migrazione `007-consuntivazione`) `tipologie_costo`, `tariffe_standard`, `tariffe_personalizzate`, `consuntivi`; del controllo (fase 3, migrazione `008-controllo`) `periodi`, `audit_log`; tecniche `utenti`, `parametri`, `migrazioni`
+- **Collection**: del Pianificatore `skills`, `rate`, `certificazioni`; comuni a tutte le sezioni (fase 1, blocco B4) `risorse`, `clienti`, `centri_costo`, `ruoli`, `progetti`, `attivita`, `avanzamenti`; della Consuntivazione (fase 2, migrazione `007-consuntivazione`) `tipologie_costo`, `tariffe_standard`, `tariffe_personalizzate`, `consuntivi`; del controllo (fase 3, migrazione `008-controllo`) `periodi`, `audit_log`; dei report (fase 4, migrazione `009-report`) `evm_giornalieri`, `esecuzioni_batch`; tecniche `utenti`, `parametri`, `migrazioni`
 - **Accesso**: solo tramite il backend (Mongoose). Gli schemi sono in `backend/src/comuni/schemi/` (risorse e dati comuni), `backend/src/pianificatore/anagrafiche/anagrafiche.schema.ts`, `backend/src/auth/utente.schema.ts` e `backend/src/infrastruttura/parametro.schema.ts`.
 - **Validatori**: le collection del modulo Comuni (tranne `risorse`) hanno un validatore `$jsonSchema` creato dalla migrazione `004-comuni`: anche chi scrive direttamente nel database, senza passare dal backend, non può salvare documenti con campi obbligatori mancanti o di tipo sbagliato.
 
@@ -236,6 +236,14 @@ Un documento per mese (indice unico su `mese`, `AAAAMM`); un mese senza document
 
 Storico delle modifiche (fase 3): una voce per azione, scritta da `AuditService` nella stessa transazione della modifica e mai cambiata. Campi: `collezione` e `documentoId` del documento modificato, `righeIds` (per i consuntivi, le righe toccate), `operazione` (es. `invio`, `approvazione`, `rifiuto`, `correzione`, `ricalcolo`, `chiusura`, `creazione`, `modifica`, `approvatori`; elenco completo in [backend.md](backend.md)), `utente`, `il`, `prima`, `dopo`, `motivazione`, più il tracciamento. Si conserva senza scadenza. Indici `{ collezione: 1, documentoId: 1, il: -1 }`, `{ righeIds: 1 }`, `{ il: -1 }`, `{ utente: 1, il: -1 }`.
 
+## Collection `evm_giornalieri`
+
+Indicatori EVM di un progetto in un giorno (fase 4, RF-31), salvati dalla procedura notturna: `progettoId`, `data`, `approvata` e `provvisoria` (gli indicatori nelle due viste, decisione 11; null se non calcolabili), più il tracciamento. Indice unico `{ progettoId: 1, data: 1 }`: ripetere un giorno lo sovrascrive, non lo duplica.
+
+## Collection `esecuzioni_batch`
+
+Registro delle esecuzioni delle procedure pianificate (fase 4, decisione 12): `procedura` (es. `evm`), `inizio`, `fine`, `stato` (`inCorso`, `completata`, `completataConAvvisi`, `fallita`, `interrotta`), `avviataDa` (`sistema:evm` o l'utente che ha premuto "Esegui ora"), `daGiorno`, `ultimoGiornoCompletato`, `giorniElaborati`, `avvisi`, `motivo`. La prossima esecuzione riparte dal giorno dopo l'ultimo completato; un'esecuzione `inCorso` blocca le altre.
+
 ## Collection `utenti`
 
 Utenti che accedono a ToolPM (fase 1, blocco B2). Indice unico su `email` (migrazione `003-indici-utenti`).
@@ -279,6 +287,7 @@ Registro delle migrazioni eseguite da `npm run migra`: `_id` è il nome dello sc
 | `006-allocazioni-progettoid` | Toglie i testi `cliente` e `progetto` dalle allocazioni che hanno `progettoId` (conservando `clienteTesto` e `progettoTesto`); non tocca quelle non collegate |
 | `007-consuntivazione` | Crea `tipologie_costo`, `tariffe_standard`, `tariffe_personalizzate`, `consuntivi` con i validatori `$jsonSchema` e i loro indici; aggiunge le quattro tipologie iniziali (ORDINARIA predefinita) senza toccare quelle già presenti |
 | `008-controllo` | Crea `periodi` e `audit_log` con i validatori `$jsonSchema` e i loro indici (fase 3) |
+| `009-report` | Crea `evm_giornalieri` (indice unico progetto + giorno) ed `esecuzioni_batch` con i validatori; indice `consuntivi { "righe.stato": 1, data: 1 }` per i report di periodo (fase 4) |
 
 L'importazione della migrazione dei dati del Pianificatore (blocco B7, `npm run migrazione-dati -- importa`) si registra nella stessa collection con `_id` `B7-importa` e il riepilogo dell'ultima esecuzione.
 

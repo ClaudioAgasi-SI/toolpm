@@ -4,6 +4,8 @@ import { PermessiService } from './permessi.service.js';
 import {
   filtroProgettiGestibili,
   motivoNegatoApprovazione,
+  puoVedereReportProgetto,
+  vedeEuroProgetto,
   motivoNegatoModificaRisorsa,
   permessiGlobali,
   type ProgettoPerPermessi,
@@ -182,8 +184,8 @@ describe('permessi globali', () => {
   it('per ogni profilo', () => {
     const riga = (s: Soggetto) => Object.entries(permessiGlobali(s)).filter(([, v]) => v).map(([k]) => k);
     expect(riga(RISORSA)).toEqual(['consuntivare']);
-    expect(riga(TL)).toEqual(['creareProgetto', 'consuntivare', 'approvare']);
-    expect(riga(PM)).toEqual(['creareProgetto', 'gestireRisorse', 'gestireCaratteristicheTutteLeRisorse', 'consuntivare', 'approvare']);
+    expect(riga(TL)).toEqual(['creareProgetto', 'consuntivare', 'approvare', 'vedereReport']);
+    expect(riga(PM)).toEqual(['creareProgetto', 'gestireRisorse', 'gestireCaratteristicheTutteLeRisorse', 'consuntivare', 'approvare', 'vedereReport']);
     expect(riga(PMSENIOR)).toEqual([
       'gestireClienti',
       'gestireCentriDiCosto',
@@ -193,8 +195,9 @@ describe('permessi globali', () => {
       'consuntivare',
       'approvare',
       'consultareStorico',
+      'vedereReport',
     ]);
-    expect(riga(CONTROLLER)).toEqual(['gestireParametri', 'gestireTipologieCosto', 'gestireTariffe', 'consuntivare', 'gestirePeriodi', 'consultareStorico']);
+    expect(riga(CONTROLLER)).toEqual(['gestireParametri', 'gestireTipologieCosto', 'gestireTariffe', 'consuntivare', 'gestirePeriodi', 'consultareStorico', 'vedereReport']);
     // L'amministratore senza risorsa collegata non consuntiva.
     expect(riga(ADMIN)).toEqual(['gestireRuoli', 'gestireUtenti']);
   });
@@ -271,5 +274,23 @@ describe('approvazione delle righe (fase 3)', () => {
 
   it('righe chiuse: nessuna azione', () => {
     expect(motivoNegatoApprovazione(PM, PROGETTO, di('r-rita', 'chiusa'), 'respingi')).toMatch(/mese chiuso/);
+  });
+});
+
+describe('report di un progetto (fase 4)', () => {
+  it('approvatori, PMSenior e controller li vedono; gli euro no al TL', () => {
+    expect(puoVedereReportProgetto(TL, PROGETTO)).toBe(true);
+    expect(vedeEuroProgetto(TL, PROGETTO)).toBe(false);
+    expect(puoVedereReportProgetto(PM, PROGETTO)).toBe(true);
+    expect(vedeEuroProgetto(PM, PROGETTO)).toBe(true);
+    expect(vedeEuroProgetto(TL_PM, PROGETTO)).toBe(true);
+    for (const s of [PMSENIOR, CONTROLLER]) {
+      expect(puoVedereReportProgetto(s, PROGETTO)).toBe(true);
+      expect(vedeEuroProgetto(s, PROGETTO)).toBe(true);
+    }
+    for (const s of [RISORSA, TL_ESTERNO, PM_ESTERNO, ADMIN, EX_PM]) {
+      expect(puoVedereReportProgetto(s, PROGETTO)).toBe(false);
+      expect(vedeEuroProgetto(s, PROGETTO)).toBe(false);
+    }
   });
 });

@@ -10,7 +10,7 @@ La fase 4 trasforma le ore approvate in **informazioni per decidere**: quanto co
 
 | Blocco | Stato | Note |
 | --- | --- | --- |
-| E0 — Preparazione | In corso | |
+| E0 — Preparazione | Fatto | Migrazione `009-report` (`evm_giornalieri` con indice unico progetto + giorno, `esecuzioni_batch`, indice `righe.stato + data`); `report/viste.ts` (due viste, giorni, togli euro) e `ReportService` (totali per chiavi nelle due viste, righe in attesa); permesso `vedereReport`, regole `puoVedereReportProgetto` e `vedeEuroProgetto`; voci "in preparazione" nella pagina iniziale. Test: 217 backend (nuovo `test/report.integrazione.spec.ts`), 18 frontend. Da fare sul PC: migrazione 009. |
 | E1 — Scheda costi del progetto | Da fare | |
 | E2 — Indicatori EVM | Da fare | |
 | E3 — Andamento nel tempo | Da fare | |
