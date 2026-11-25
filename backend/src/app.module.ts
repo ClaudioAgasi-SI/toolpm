@@ -1,4 +1,5 @@
 import { type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RouterModule } from '@nestjs/core';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -26,6 +27,8 @@ import { RisorseModule } from './pianificatore/risorse/risorse.module.js';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    // Procedure pianificate (fase 4, blocco E3: andamento EVM ogni notte alle 2:00).
+    ScheduleModule.forRoot(),
     MongooseModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

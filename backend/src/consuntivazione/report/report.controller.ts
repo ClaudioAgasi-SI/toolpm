@@ -1,6 +1,7 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Permesso, type UtenteAutenticato, UtenteRichiesta } from '../../auth/decoratori.js';
+import { AndamentoService } from './andamento.service.js';
 import { EvmService } from './evm.service.js';
 import { ProgettiReportService } from './progetti-report.service.js';
 
@@ -11,6 +12,7 @@ export class ReportController {
   constructor(
     private readonly progetti: ProgettiReportService,
     private readonly evm: EvmService,
+    private readonly andamento: AndamentoService,
   ) {}
 
   @Get('progetti')
@@ -53,5 +55,35 @@ export class ReportController {
   @ApiQuery({ name: 'vista', required: false })
   indicatori(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Param('id') id: string, @Query() query: Record<string, unknown>) {
     return this.evm.progetto(utente, id, query);
+  }
+
+  @Get('progetti/:id/evm/andamento')
+  @Permesso('vedereReport')
+  @ApiOperation({
+    summary: 'Andamento giornaliero degli indicatori EVM',
+    description:
+      'Serie salvata ogni notte (PV, EV, AC, SPI, CPI in giorni e, a chi può, in euro; percentuale, stati) con "aggiornatoAl" (ultimo giorno elaborato) e un avviso se ' +
+      'l\'ultima elaborazione non si è conclusa o i dati non arrivano a ieri. Periodo predefinito: l\'ultimo anno fino ad aggiornatoAl.',
+  })
+  @ApiQuery({ name: 'da', required: false })
+  @ApiQuery({ name: 'a', required: false })
+  @ApiQuery({ name: 'vista', required: false })
+  andamentoEvm(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Param('id') id: string, @Query() query: Record<string, unknown>) {
+    return this.andamento.serie(utente, id, query);
+  }
+
+  @Get('esecuzioni')
+  @Permesso('gestirePeriodi')
+  @ApiOperation({ summary: 'Esecuzioni della procedura dell\'andamento EVM', description: 'Ultima esecuzione con esito, motivo e avvisi, le dieci più recenti, giorno fino a cui arrivano i dati. Solo controller.' })
+  esecuzioni(@UtenteRichiesta() utente: UtenteAutenticato | undefined) {
+    return this.andamento.stato(utente);
+  }
+
+  @Post('esecuzioni/evm')
+  @HttpCode(202)
+  @Permesso('gestirePeriodi')
+  @ApiOperation({ summary: 'Esegui ora la procedura dell\'andamento EVM', description: 'Avvia l\'elaborazione dei giorni mancanti fino a ieri e risponde subito (202). 409 se è già in corso. Solo controller.' })
+  eseguiOra(@UtenteRichiesta() utente: UtenteAutenticato | undefined) {
+    return this.andamento.eseguiOra(utente);
   }
 }

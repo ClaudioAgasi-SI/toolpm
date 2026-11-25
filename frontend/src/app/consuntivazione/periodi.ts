@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { messaggioErrore } from '../core/errori';
 import { ConsuntivazioneApiService } from './consuntivazione-api.service';
+import { EsecuzioniAndamento } from './esecuzioni-andamento';
 import { type AnteprimaChiusura, type Mese, NOMI_STATO, type StatoRiga } from './modelli';
 import { etichettaGiorno, totaleOre } from './ore';
 
@@ -16,10 +17,11 @@ const TITOLI: Record<StatoRiga, string> = { bozza: 'In bozza', inviata: 'Inviate
  * - Un mese per riga, dal più recente, con le righe per stato; si chiude in ordine e si riapre l'ultimo chiuso.
  * - Chiudi apre l'anteprima: senza righe non approvate si conferma; altrimenti l'elenco e la chiusura forzata con motivazione.
  * - Riapri chiede la motivazione. Sotto, i progetti con righe in attesa e nessun PM tra gli approvatori.
+ * - In fondo (fase 4, blocco E3) la procedura notturna dell'andamento EVM con "Esegui ora".
  */
 @Component({
   selector: 'app-periodi',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, EsecuzioniAndamento],
   template: `
     <header class="testata">
       <h1>Periodi</h1>
@@ -145,6 +147,8 @@ const TITOLI: Record<StatoRiga, string> = { bozza: 'In bozza', inviata: 'Inviate
         </ul>
       }
     }
+
+    <app-esecuzioni-andamento />
   `,
   styles: `
     .ok { color: #1a7f37; }

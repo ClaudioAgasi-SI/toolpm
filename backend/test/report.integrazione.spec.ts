@@ -3,6 +3,7 @@
  * E0: migrazione 009 (evm_giornalieri, esecuzioni_batch), aggregazioni nelle due viste, permesso vedereReport.
  * E1: elenco dei progetti e scheda costi (totali, dettagli, ruolo alla data, viste, riservatezza degli euro).
  * E2: indicatori EVM del progetto e delle attività alla data (percentuale dallo storico, viste, TL senza euro).
+ * E3: procedura dell'andamento (ripresa dall'ultimo giorno, blocco, esecuzione scaduta), serie giornaliera, registro.
  *
  * Si esegue solo se è impostata MONGODB_URI_TEST, es.:
  *   MONGODB_URI_TEST="mongodb://localhost:27017/?directConnection=true" npm test
@@ -15,6 +16,7 @@ import { Test } from '@nestjs/testing';
 import mongoose from 'mongoose';
 import request from 'supertest';
 import { cifraPassword } from '../src/auth/password.js';
+import { AndamentoService } from '../src/consuntivazione/report/andamento.service.js';
 import { ReportService } from '../src/consuntivazione/report/report.service.js';
 
 const URI_BASE = process.env.MONGODB_URI_TEST;
@@ -194,6 +196,7 @@ describe.skipIf(!URI_BASE)('Report (fase 4) con MongoDB vero', () => {
     const come = (chi: string, url: string) => api().get(url).set('Cookie', cookie[chi]);
     const px = new mongoose.Types.ObjectId();
     const py = new mongoose.Types.ObjectId();
+    const pe = new mongoose.Types.ObjectId(); // progetto degli indicatori EVM (E2, E3)
     const ana = new mongoose.Types.ObjectId();
     const col = new mongoose.Types.ObjectId();
     const ord = new mongoose.Types.ObjectId();
@@ -317,7 +320,6 @@ describe.skipIf(!URI_BASE)('Report (fase 4) con MongoDB vero', () => {
       expect((await come('paola', `${REP}/${px.toHexString()}?da=2026-10-01&a=2026-09-01`)).status).toBe(400);
     });
       describe('E2 — indicatori EVM', () => {
-      const pe = new mongoose.Types.ObjectId();
       const a1 = new mongoose.Types.ObjectId();
       const a2 = new mongoose.Types.ObjectId();
       const EVM = () => `${REP}/${pe.toHexString()}/evm`;
@@ -395,6 +397,77 @@ describe.skipIf(!URI_BASE)('Report (fase 4) con MongoDB vero', () => {
         expect(e.cpi).toBe(0.8);
         expect(['inAnticipo', 'inLinea', 'inRitardo', 'inForteRitardo']).toContain(e.statoTempi);
         expect(lista.find((p: { codice: string }) => p.codice === 'PX').evm).toMatchObject({ calcolabile: true, statoTempi: 'nonCalcolabile' });
+      });
+    });
+    describe('E3 — andamento nel tempo', () => {
+      const d = (x: string) => new Date(`${x}T00:00:00.000Z`);
+      const esegui = async (fino: string) => (await (await app.get(AndamentoService).avvia('test', { fino: d(fino) })).completamento);
+      const ANDAMENTO = () => `${REP}/${pe.toHexString()}/evm/andamento`;
+
+      it('primo avvio dalla data di inizio più vecchia, poi riparte dal giorno dopo l\'ultimo completato', async () => {
+        const prima = await esegui('2026-01-10');
+        expect(prima).toMatchObject({ stato: 'completata', avviataDa: 'test', giorniElaborati: 10, motivo: null });
+        expect(prima.daGiorno).toEqual(d('2026-01-01'));
+        expect(prima.ultimoGiornoCompletato).toEqual(d('2026-01-10'));
+        expect(await db.collection('evm_giornalieri').countDocuments({ progettoId: pe })).toBe(10);
+        expect(await db.collection('evm_giornalieri').countDocuments({ progettoId: py })).toBe(0);
+        const doc = await db.collection('evm_giornalieri').findOne({ progettoId: pe, data: d('2026-01-05') });
+        expect(doc).toMatchObject({ creatoDa: 'sistema:evm', approvata: { percentuale: 0 } });
+
+        const seconda = await esegui('2026-07-02');
+        expect(seconda.daGiorno).toEqual(d('2026-01-11'));
+        expect(seconda.giorniElaborati).toBe(173);
+        const g = await db.collection('evm_giornalieri').findOne({ progettoId: pe, data: d('2026-07-02') });
+        expect(g!.approvata).toMatchObject({ percentuale: 20, giorni: { ac: 4, ev: 2, spi: 0.4 }, euro: { ac: 160_000 }, statoTempi: 'inForteRitardo' });
+        expect(g!.provvisoria.giorni.ac).toBe(4.5);
+        expect(await db.collection('evm_giornalieri').countDocuments({ progettoId: pe })).toBe(183);
+        // Già aggiornato: nessun giorno da fare.
+        expect(await esegui('2026-07-02')).toMatchObject({ stato: 'completata', giorniElaborati: 0 });
+      });
+
+      it('una sola esecuzione in corso: 409; oltre un\'ora si considera interrotta', async () => {
+        const bloccante = await db.collection('esecuzioni_batch').insertOne({
+          procedura: 'evm', inizio: new Date(), fine: null, stato: 'inCorso', avviataDa: 'altro', daGiorno: null, ultimoGiornoCompletato: null, giorniElaborati: 0, avvisi: [], motivo: null,
+        });
+        expect((await api().post('/api/consuntivazione/report/esecuzioni/evm').set('Cookie', cookie.carlo)).status).toBe(409);
+        const s = (await come('carlo', '/api/consuntivazione/report/esecuzioni')).body;
+        expect(s.ultima.stato).toBe('inCorso');
+        expect(s.avviso).toContain('in corso');
+        await db.collection('esecuzioni_batch').updateOne({ _id: bloccante.insertedId }, { $set: { inizio: new Date(Date.now() - 2 * 3600 * 1000) } });
+        const e = await esegui('2026-07-05');
+        expect(e).toMatchObject({ stato: 'completata', giorniElaborati: 3 });
+        expect(e.daGiorno).toEqual(d('2026-07-03'));
+        expect(await db.collection('esecuzioni_batch').findOne({ _id: bloccante.insertedId })).toMatchObject({ stato: 'interrotta', motivo: expect.stringContaining('oltre un\'ora') });
+        expect((await come('paola', '/api/consuntivazione/report/esecuzioni')).status).toBe(403);
+      });
+
+      it('esegui ora dal controller: risponde subito con l\'esecuzione in corso', async () => {
+        const r = await api().post('/api/consuntivazione/report/esecuzioni/evm').set('Cookie', cookie.carlo);
+        expect(r.status).toBe(202);
+        expect(r.body).toMatchObject({ stato: 'inCorso', avviataDa: expect.any(String) });
+        // Attende la fine (fino a ieri: pochi mesi di giorni) prima dei test successivi.
+        for (let i = 0; i < 200; i++) {
+          const e = await db.collection('esecuzioni_batch').findOne({ _id: new mongoose.Types.ObjectId(r.body._id as string) });
+          if (e!.stato !== 'inCorso') {
+            expect(e!.stato).toBe('completata');
+            break;
+          }
+          await new Promise((ok) => setTimeout(ok, 100));
+        }
+      }, 60_000);
+
+      it('serie: aggiornata al, euro solo a chi li vede, vista provvisoria, permessi', async () => {
+        const r = await come('paola', `${ANDAMENTO()}?da=2026-06-30&a=2026-07-02`);
+        expect(r.status).toBe(200);
+        expect(r.body.serie).toHaveLength(3);
+        expect(r.body.serie[2]).toMatchObject({ percentuale: 20, giorni: { ac: 4, spi: 0.4 }, euro: { ac: 160_000 }, statoTempi: 'inForteRitardo' });
+        expect(r.body.aggiornatoAl).toBeTruthy();
+        expect(r.body.soglie).toMatchObject({ anticipo: 1.05 });
+        const tl = (await come('tito', `${ANDAMENTO()}?da=2026-06-30&a=2026-07-02`)).body;
+        expect(JSON.stringify(tl)).not.toMatch(/"euro"/);
+        expect((await come('paola', `${ANDAMENTO()}?da=2026-07-02&a=2026-07-02&vista=provvisoria`)).body.serie[0].giorni.ac).toBe(4.5);
+        expect((await come('piero', ANDAMENTO())).status).toBe(403);
+        expect((await come('carlo', `${ANDAMENTO()}?da=2026-07-02&a=2026-07-01`)).status).toBe(400);
       });
     });
   });

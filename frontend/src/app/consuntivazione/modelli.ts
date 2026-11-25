@@ -469,3 +469,55 @@ export interface StatiEvmElenco {
   spi: number | null;
   cpi: number | null;
 }
+
+// ---- Andamento EVM (fase 4, blocco E3) ----
+
+export interface PuntoEvm {
+  pv: number | null;
+  ev: number;
+  ac: number;
+  spi: number | null;
+  cpi: number | null;
+}
+
+export interface AndamentoEvm {
+  vista: VistaReport;
+  vedeEuro: boolean;
+  periodo: { da: string; a: string };
+  /** Ultimo giorno elaborato dalla procedura notturna. */
+  aggiornatoAl: string | null;
+  avviso: string | null;
+  soglie: { anticipo: number; ritardo: number; fortementeInRitardo: number };
+  serie: {
+    data: string;
+    percentuale: number;
+    trascorso: number | null;
+    statoTempi: StatoTempi;
+    statoCosti: StatoCosti;
+    giorni: PuntoEvm | null;
+    euro?: PuntoEvm | null;
+  }[];
+}
+
+export type StatoEsecuzione = 'inCorso' | 'completata' | 'completataConAvvisi' | 'fallita' | 'interrotta';
+
+export interface EsecuzioneBatch {
+  _id: string;
+  procedura: string;
+  inizio: string;
+  fine: string | null;
+  stato: StatoEsecuzione;
+  avviataDa: string;
+  daGiorno: string | null;
+  ultimoGiornoCompletato: string | null;
+  giorniElaborati: number;
+  avvisi: string[];
+  motivo: string | null;
+}
+
+export interface StatoEsecuzioni {
+  aggiornatoAl: string | null;
+  ultima: EsecuzioneBatch | null;
+  recenti: EsecuzioneBatch[];
+  avviso: string | null;
+}

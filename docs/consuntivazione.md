@@ -121,6 +121,18 @@ Nella scheda, il riquadro **Tempi e costi** dice se il progetto è in linea alla
 - nell'elenco dei progetti le colonne **Tempi** e **Costi** mostrano lo stato a oggi;
 - gli indicatori ci sono solo per i progetti In corso e Chiusi che hanno una stima. Il TL vede giorni, indici e stati, non gli euro.
 
+### Andamento nel tempo
+
+Sotto gli indicatori, due grafici mostrano come sono cambiati giorno per giorno: il primo il valore pianificato (PV), il lavoro fatto (EV) e il costo (AC); il secondo gli indici SPI e CPI sulle fasce colorate degli stati. Passando con il mouse si leggono i valori di un giorno; "Vedi i dati in tabella" li elenca.
+
+- I punti li calcola il sistema ogni notte alle 2:00 per i progetti In corso; la pagina dice fino a quale giorno arrivano ("Andamento aggiornato al …") e avvisa se l'ultima elaborazione non si è conclusa.
+- Ogni punto usa la percentuale di completamento di quel giorno e le stime di quando è stato calcolato.
+- Con "Includi le ore non ancora approvate" si vede l'andamento provvisorio.
+
+### Per il controller: la procedura notturna
+
+In **Periodi**, in fondo, il riquadro **Andamento degli indicatori** mostra fino a quale giorno sono aggiornati i dati e l'ultima esecuzione: esito (completata, con avvisi, fallita, interrotta), orari, giorni elaborati, motivo e avvisi. **Esegui ora** elabora subito i giorni mancanti fino a ieri. Se un'elaborazione si ferma (per esempio il sistema viene spento), la successiva riparte dal primo giorno non concluso, senza buchi né doppioni.
+
 ## Per il controller
 
 ### Tipologie di costo

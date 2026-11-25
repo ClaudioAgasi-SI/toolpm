@@ -238,11 +238,11 @@ Storico delle modifiche (fase 3): una voce per azione, scritta da `AuditService`
 
 ## Collection `evm_giornalieri`
 
-Indicatori EVM di un progetto in un giorno (fase 4, RF-31), salvati dalla procedura notturna: `progettoId`, `data`, `approvata` e `provvisoria` (gli indicatori nelle due viste, decisione 11; null se non calcolabili), più il tracciamento. Indice unico `{ progettoId: 1, data: 1 }`: ripetere un giorno lo sovrascrive, non lo duplica.
+Indicatori EVM di un progetto in un giorno (fase 4, RF-31), salvati dalla procedura notturna: `progettoId`, `data`, `approvata` e `provvisoria` (gli indicatori nelle due viste, decisione 11: `percentuale`, `trascorso`, `euro` e `giorni` con PV, EV, AC, SV, CV, SPI, CPI, EAC, ETC, VAC, TCPI, fonti del budget, `statoTempi`, `statoCosti`, `costiDa`, `daValorizzare`; null se non calcolabili), più il tracciamento (`sistema:evm`). Si salvano solo i progetti In corso con almeno una stima, dal giorno della data di inizio; le stime sono quelle del momento del calcolo, la percentuale quella del giorno (dallo storico `avanzamenti`). Indice unico `{ progettoId: 1, data: 1 }`: ripetere un giorno lo sovrascrive, non lo duplica.
 
 ## Collection `esecuzioni_batch`
 
-Registro delle esecuzioni delle procedure pianificate (fase 4, decisione 12): `procedura` (es. `evm`), `inizio`, `fine`, `stato` (`inCorso`, `completata`, `completataConAvvisi`, `fallita`, `interrotta`), `avviataDa` (`sistema:evm` o l'utente che ha premuto "Esegui ora"), `daGiorno`, `ultimoGiornoCompletato`, `giorniElaborati`, `avvisi`, `motivo`. La prossima esecuzione riparte dal giorno dopo l'ultimo completato; un'esecuzione `inCorso` blocca le altre.
+Registro delle esecuzioni delle procedure pianificate (fase 4, decisione 12): `procedura` (es. `evm`), `inizio`, `fine`, `stato` (`inCorso`, `completata`, `completataConAvvisi`, `fallita`, `interrotta`), `avviataDa` (`notturna`, `avvio` o l'id dell'utente che ha premuto "Esegui ora"), `daGiorno`, `ultimoGiornoCompletato`, `giorniElaborati`, `avvisi`, `motivo`. La prossima esecuzione riparte dal giorno dopo l'ultimo completato; ogni giorno si salva in una transazione insieme all'avanzamento di `ultimoGiornoCompletato` e `giorniElaborati`. Un'esecuzione `inCorso` blocca le altre (indice unico parziale `una_in_corso_per_procedura` su `procedura` con `stato: inCorso`, migrazione 010); se resta in corso oltre un'ora la successiva la segna `interrotta`. `avvisi`: al massimo 100.
 
 ## Collection `utenti`
 
@@ -287,6 +287,7 @@ Registro delle migrazioni eseguite da `npm run migra`: `_id` è il nome dello sc
 | `006-allocazioni-progettoid` | Toglie i testi `cliente` e `progetto` dalle allocazioni che hanno `progettoId` (conservando `clienteTesto` e `progettoTesto`); non tocca quelle non collegate |
 | `007-consuntivazione` | Crea `tipologie_costo`, `tariffe_standard`, `tariffe_personalizzate`, `consuntivi` con i validatori `$jsonSchema` e i loro indici; aggiunge le quattro tipologie iniziali (ORDINARIA predefinita) senza toccare quelle già presenti |
 | `008-controllo` | Crea `periodi` e `audit_log` con i validatori `$jsonSchema` e i loro indici (fase 3) |
+| `010-blocco-batch` | Indice unico parziale `una_in_corso_per_procedura` su `esecuzioni_batch` (una sola esecuzione `inCorso` per procedura); le eventuali esecuzioni rimaste in corso diventano `interrotta` (fase 4, blocco E3) |
 | `009-report` | Crea `evm_giornalieri` (indice unico progetto + giorno) ed `esecuzioni_batch` con i validatori; indice `consuntivi { "righe.stato": 1, data: 1 }` per i report di periodo (fase 4) |
 
 L'importazione della migrazione dei dati del Pianificatore (blocco B7, `npm run migrazione-dati -- importa`) si registra nella stessa collection con `_id` `B7-importa` e il riepilogo dell'ultima esecuzione.

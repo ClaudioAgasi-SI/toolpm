@@ -80,6 +80,9 @@
   </section>
 
   <app-evm-progetto [id]="s.progetto._id" [vista]="s.vista" />
+  @if (s.progetto.stato !== 'inValutazione') {
+    <app-andamento-evm [id]="s.progetto._id" [vista]="s.vista" />
+  }
 
   <section class="blocco" aria-label="Per attività">
     <h2>Per attività</h2>
