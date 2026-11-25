@@ -4,6 +4,7 @@ import type mongoose from 'mongoose';
 import type { Model } from 'mongoose';
 import { ParametriService } from '../../infrastruttura/parametri.service.js';
 import { Consuntivo } from '../consuntivi/consuntivo.schema.js';
+import { SOGLIE_PREDEFINITE, type SoglieEvm, soglieValide } from './evm.js';
 import { GRUPPO_TOTALI, STATI_IN_ATTESA, STATI_VISTA, type Totali, totaliVuoti, type Vista } from './viste.js';
 
 /** Campi di riga per cui si può raggruppare. */
@@ -42,6 +43,11 @@ export class ReportService {
 
   oreGiorno(): Promise<number> {
     return this.parametri.leggi('oreGiorno', 8);
+  }
+
+  /** Soglie degli stati EVM (parametro soglieEvm), con quelle predefinite se non valide. */
+  async soglieEvm(): Promise<SoglieEvm> {
+    return soglieValide(await this.parametri.leggi<unknown>('soglieEvm', SOGLIE_PREDEFINITE));
   }
 
   /** Totali per gruppo nella vista; chiavi vuote = un solo gruppo. */

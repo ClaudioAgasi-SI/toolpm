@@ -4,17 +4,18 @@ import { RouterLink } from '@angular/router';
 import { etichettaStato } from '../comuni/modelli';
 import { messaggioErrore } from '../core/errori';
 import { ConsuntivazioneApiService } from './consuntivazione-api.service';
+import { EvmProgettoComponent } from './evm-progetto';
 import type { SchedaProgetto as Scheda, TotaliReport, VistaReport } from './modelli';
 import { oggi, totaleOre } from './ore';
 import { avvisoValorizzare, calcolato, euro, gg, nomeMese, quota } from './report-testi';
 
 /**
- * Scheda costi del progetto (fase 4, blocco E1; RF-14, RF-22, RF-24, RF-25): stime contro consuntivato
- * dall'inizio, dettaglio nel periodo per attività, risorsa, ruolo, tipologia e mese. Il TL vede solo ore e giorni.
+ * Scheda costi del progetto (fase 4, blocchi E1 ed E2; RF-14, RF-22, RF-24, RF-25, RF-29–32): stime contro consuntivato
+ * dall'inizio, indicatori EVM, dettaglio nel periodo per attività, risorsa, ruolo, tipologia e mese. Il TL vede solo ore e giorni.
  */
 @Component({
   selector: 'app-scheda-progetto',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, EvmProgettoComponent],
   templateUrl: './scheda-progetto.html',
   styleUrl: './scheda-progetto.scss',
 })

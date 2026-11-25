@@ -1,10 +1,15 @@
 import type { TotaliReport } from './modelli';
 
 /** Formati comuni delle pagine dei report (fase 4). */
-export const euro = (c: number | null | undefined) =>
-  c === null || c === undefined ? '—' : `${(c / 100).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+/** Numero all'italiana con il punto delle migliaia anche a quattro cifre (4.000, non 4000). */
+function numero(n: number, decimali: { min: number; max: number }) {
+  const [intera, dec] = n.toLocaleString('it-IT', { minimumFractionDigits: decimali.min, maximumFractionDigits: decimali.max, useGrouping: false }).split(',');
+  return intera.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (dec ? `,${dec}` : '');
+}
 
-export const gg = (g: number | null | undefined) => (g === null || g === undefined ? '—' : g.toLocaleString('it-IT', { maximumFractionDigits: 2 }));
+export const euro = (c: number | null | undefined) => (c === null || c === undefined ? '—' : `${numero(c / 100, { min: 2, max: 2 })} €`);
+
+export const gg = (g: number | null | undefined) => (g === null || g === undefined ? '—' : numero(g, { min: 0, max: 2 }));
 
 /** Quota del consuntivato sulla stima, in percentuale intera; null senza stima. */
 export const quota = (fatto: number | null | undefined, stima: number | null | undefined) =>

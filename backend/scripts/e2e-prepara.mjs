@@ -76,7 +76,8 @@ const progetto = async (codice, titolo, stato = 'inCorso', approvatori = [], sti
       centroCostoId: cdc,
       stato,
       dataInizio: inizioAnno,
-      ...(stato === 'chiuso' ? { dataFine: inizioAnno } : {}),
+      // ALFA ha anche la data di fine (fine dell'anno corrente) per gli indicatori EVM dei tempi (fase 4, E2).
+      ...(stato === 'chiuso' ? { dataFine: inizioAnno } : codice === 'ALFA' ? { dataFine: new Date(Date.UTC(inizioAnno.getUTCFullYear() + 1, 11, 31)) } : {}),
       approvatori,
       percentualeCompletamento: stato === 'chiuso' ? 100 : 25,
       soloSuAttivita: false,

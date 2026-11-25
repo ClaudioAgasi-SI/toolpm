@@ -80,3 +80,11 @@ section.blocco > h2 { margin: 0.25rem 0 0.5rem; }
 .stato.chiuso { background: #e9ecef; color: #495057; }
 .barra-percentuale { display: inline-block; width: 70px; height: 8px; background: #e9ecef; border-radius: 4px; vertical-align: middle; margin-right: 6px; overflow: hidden; }
 .barra-percentuale span { display: block; height: 100%; background: var(--accento); }
+
+/* Stati EVM di tempi e costi (fase 4, blocco E2): colore per tono, pallino compatto. */
+[data-tono='bene'] { background: #e6f7ea; border-color: #b2e2bd; color: #1f7a35; }
+[data-tono='linea'] { background: #e7f1fb; border-color: #b9d7f3; color: #1c5d99; }
+[data-tono='attenzione'] { background: #fff3e0; border-color: #f5cf95; color: #9a5b00; }
+[data-tono='male'] { background: #fdeaea; border-color: #f2b8b8; color: #b42318; }
+[data-tono='nessuno'] { background: #f1f3f5; border-color: #dee2e6; color: #5a6478; }
+.pallino { display: inline-block; border-radius: 10px; padding: 1px 8px; font-size: 0.8rem; font-weight: 600; border: 1px solid; white-space: nowrap; }

@@ -1,13 +1,17 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Permesso, type UtenteAutenticato, UtenteRichiesta } from '../../auth/decoratori.js';
+import { EvmService } from './evm.service.js';
 import { ProgettiReportService } from './progetti-report.service.js';
 
 /** Report della Consuntivazione (fase 4). */
 @ApiTags('consuntivazione')
 @Controller('report')
 export class ReportController {
-  constructor(private readonly progetti: ProgettiReportService) {}
+  constructor(
+    private readonly progetti: ProgettiReportService,
+    private readonly evm: EvmService,
+  ) {}
 
   @Get('progetti')
   @Permesso('vedereReport')
@@ -35,5 +39,19 @@ export class ReportController {
   @ApiQuery({ name: 'vista', required: false })
   scheda(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Param('id') id: string, @Query() query: Record<string, unknown>) {
     return this.progetti.scheda(utente, id, query);
+  }
+
+  @Get('progetti/:id/evm')
+  @Permesso('vedereReport')
+  @ApiOperation({
+    summary: 'Indicatori EVM del progetto e delle attività alla data',
+    description:
+      'PV, EV, AC, SV, CV, SPI, CPI, EAC, ETC, VAC, TCPI in euro e in giorni con lo stato di tempi e costi; per le attività con stima in giorni EV, AC, CPI e, con le date, SPI. ' +
+      'Solo progetti In corso e Chiusi (In valutazione: motivo). Al TL senza euro.',
+  })
+  @ApiQuery({ name: 'al', required: false, description: 'AAAA-MM-GG, predefinito oggi, non oltre oggi' })
+  @ApiQuery({ name: 'vista', required: false })
+  indicatori(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Param('id') id: string, @Query() query: Record<string, unknown>) {
+    return this.evm.progetto(utente, id, query);
   }
 }

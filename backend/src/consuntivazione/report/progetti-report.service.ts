@@ -11,6 +11,7 @@ import { ePMSenior, type ProgettoPerPermessi, puoVedereReportProgetto, vedeEuroP
 import { giorniTra, oggiInItalia } from '../consuntivi/regole-giornata.js';
 import { ruoloAllaData } from '../tariffe/risoluzione.js';
 import { TipologiaCosto } from '../tipologie/tipologia-costo.schema.js';
+import { evmProgetto, type SoglieEvm } from './evm.js';
 import { type Chiave, ReportService } from './report.service.js';
 import { giorni, leggiVista, type Totali, totaliVuoti, type Vista } from './viste.js';
 
@@ -71,13 +72,15 @@ export class ProgettiReportService {
     }
     const progetti = await this.progetti.find(filtro).sort({ codice: 1 }).lean<ProgettoLetto[]>().exec();
     const ids = progetti.map((p) => p._id);
-    const [totali, attese, clienti, centri, oreGiorno] = await Promise.all([
+    const [totali, attese, clienti, centri, oreGiorno, soglie] = await Promise.all([
       ids.length ? this.report.totali({ progettoIds: ids }, vista, ['progettoId']) : [],
       ids.length ? this.report.inAttesa({ progettoIds: ids }, ['progettoId']) : [],
       this.clienti.find({ _id: { $in: progetti.map((p) => p.clienteId).filter(Boolean) } }, { codice: 1, ragioneSociale: 1 }).lean().exec(),
       this.centri.find({ _id: { $in: progetti.map((p) => p.centroCostoId) } }, { codice: 1, descrizione: 1 }).lean().exec(),
       this.report.oreGiorno(),
+      this.report.soglieEvm(),
     ]);
+    const al = leggiData(oggiInItalia(), 'al', true)!;
     const perProgetto = (gruppi: ({ chiave: Partial<Record<Chiave, unknown>> } & Totali)[]) => new Map(gruppi.map((g) => [String(g.chiave.progettoId), g]));
     const tot = perProgetto(totali);
     const att = perProgetto(attese);
@@ -104,6 +107,7 @@ export class ProgettiReportService {
           stime: this.stime(p, euro),
           consuntivato: this.totaliPresentati(t, oreGiorno, euro),
           inAttesa: { righe: a?.righe ?? 0, minuti: a?.minuti ?? 0, giorni: giorni(a?.minuti ?? 0, oreGiorno) },
+          evm: this.statiEvm(p, t, al, oreGiorno, soglie),
         };
       }),
     };
@@ -234,6 +238,13 @@ export class ProgettiReportService {
         .sort((x, y) => x.ordine - y.ordine),
       perMese: perMese.map((g) => ({ mese: String(g.chiave.mese), ...presenta(g) })).sort((x, y) => x.mese.localeCompare(y.mese)),
     };
+  }
+
+  /** Stati di tempi e costi a oggi per l'elenco (blocco E2), con gli indici da cui vengono. */
+  private statiEvm(p: ProgettoLetto, t: Totali, al: Date, oreGiorno: number, soglie: SoglieEvm) {
+    const e = evmProgetto(p, { percentuale: p.percentualeCompletamento ?? 0, al, ...t, oreGiorno }, soglie);
+    const cpi = e.costiDa === 'euro' ? e.euro!.cpi : (e.giorni?.cpi ?? null);
+    return { calcolabile: e.calcolabile, motivo: e.motivo, statoTempi: e.statoTempi, statoCosti: e.statoCosti, spi: (e.euro ?? e.giorni)?.spi ?? null, cpi };
   }
 
   /** Totali con i giorni; il costo solo a chi vede gli euro. */

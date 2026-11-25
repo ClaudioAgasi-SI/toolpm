@@ -351,6 +351,7 @@ export interface ProgettoReport {
   stime: StimeReport;
   consuntivato: TotaliReport;
   inAttesa: { righe: number; minuti: number; giorni: number };
+  evm: StatiEvmElenco;
 }
 
 export interface ElencoProgettiReport {
@@ -396,4 +397,75 @@ export interface SchedaProgetto {
   perRuolo: (TotaliReport & { ruoloId: string | null; ruolo: string })[];
   perTipologia: (TotaliReport & { tipologiaId: string; tipologia: string })[];
   perMese: (TotaliReport & { mese: string })[];
+}
+
+// ---- Indicatori EVM (fase 4, blocco E2) ----
+
+export type StatoTempi = 'inAnticipo' | 'inLinea' | 'inRitardo' | 'inForteRitardo' | 'nonCalcolabile';
+export type StatoCosti = 'sottoBudget' | 'inLinea' | 'sopraBudget' | 'fortementeSopraBudget' | 'nonCalcolabile';
+
+/** Indicatori di una grandezza: centesimi di euro oppure giorni. */
+export interface IndicatoriEvm {
+  bac: number;
+  pv: number | null;
+  ev: number;
+  ac: number;
+  sv: number | null;
+  cv: number;
+  spi: number | null;
+  cpi: number | null;
+  eac: number | null;
+  etc: number | null;
+  vac: number | null;
+  tcpi: number | null;
+}
+
+export interface EvmProgetto {
+  calcolabile: boolean;
+  motivo: 'inValutazione' | 'senzaStima' | null;
+  percentuale: number;
+  trascorso: number | null;
+  /** Solo a chi vede gli euro. */
+  euro?: IndicatoriEvm | null;
+  giorni: IndicatoriEvm | null;
+  fonteBacEuro?: 'definitiva' | 'manageriale' | null;
+  fonteBacGiorni: 'definitiva' | 'manageriale' | null;
+  statoTempi: StatoTempi;
+  statoCosti: StatoCosti;
+  costiDa: 'euro' | 'giorni' | null;
+  daValorizzare: { righe: number; minuti: number };
+}
+
+export interface EvmScheda {
+  vista: VistaReport;
+  calcolatoIl: string;
+  al: string;
+  vedeEuro: boolean;
+  oreGiorno: number;
+  soglie: { anticipo: number; ritardo: number; fortementeInRitardo: number };
+  progetto: { _id: string; codice: string; titolo: string; stato: string; dataInizio: string | null; dataFine: string | null };
+  evm: EvmProgetto;
+  attivita: {
+    attivitaId: string;
+    codice: string;
+    descrizione: string;
+    stato: string;
+    stimaGiorni: number | null;
+    dataInizio: string | null;
+    dataFine: string | null;
+    percentuale: number;
+    giorni: IndicatoriEvm | null;
+    statoTempi: StatoTempi;
+    statoCosti: StatoCosti;
+  }[];
+}
+
+/** Stati di tempi e costi a oggi, nell'elenco dei progetti. */
+export interface StatiEvmElenco {
+  calcolabile: boolean;
+  motivo: 'inValutazione' | 'senzaStima' | null;
+  statoTempi: StatoTempi;
+  statoCosti: StatoCosti;
+  spi: number | null;
+  cpi: number | null;
 }

@@ -108,6 +108,19 @@ Da **Consuntivazione › Progetti** (o dal dettaglio del progetto in Anagrafiche
 - un avviso dice quante righe sono ancora in attesa e quante sono senza costo (da valorizzare: il totale in euro è incompleto);
 - il TL vede ore e giorni, mai gli euro.
 
+### Tempi e costi (Earned Value)
+
+Nella scheda, il riquadro **Tempi e costi** dice se il progetto è in linea alla data scelta (di default oggi):
+
+- **stato dei tempi** (In anticipo, In linea, In ritardo, In forte ritardo): confronta la percentuale di completamento del progetto con la parte della durata già trascorsa tra data di inizio e data di fine; senza le due date non è calcolabile;
+- **stato dei costi** (Sotto budget, In linea, Sopra budget, Fortemente sopra budget): confronta il lavoro fatto (stima × percentuale) con quanto è stato consuntivato;
+- una frase spiega il risultato, per esempio "al ritmo attuale costerà 200.000 €, 24.000 € oltre la stima; per rientrare nel budget il lavoro restante dovrebbe rendere il 10% in più";
+- il budget è la stima definitiva o, se manca, la manageriale; la percentuale è quella che il progetto aveva alla data (si tiene la storia dei cambi);
+- se nessuna riga ha ancora un costo in euro, lo stato dei costi si calcola sui giorni;
+- per le attività con stima in giorni la tabella mostra lavoro fatto, consuntivato e indici (lo stato dei tempi solo con date di inizio e fine);
+- nell'elenco dei progetti le colonne **Tempi** e **Costi** mostrano lo stato a oggi;
+- gli indicatori ci sono solo per i progetti In corso e Chiusi che hanno una stima. Il TL vede giorni, indici e stati, non gli euro.
+
 ## Per il controller
 
 ### Tipologie di costo

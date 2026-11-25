@@ -2,6 +2,7 @@
  * Test di integrazione della fase 4 (Report) contro un MongoDB vero (replica set).
  * E0: migrazione 009 (evm_giornalieri, esecuzioni_batch), aggregazioni nelle due viste, permesso vedereReport.
  * E1: elenco dei progetti e scheda costi (totali, dettagli, ruolo alla data, viste, riservatezza degli euro).
+ * E2: indicatori EVM del progetto e delle attività alla data (percentuale dallo storico, viste, TL senza euro).
  *
  * Si esegue solo se è impostata MONGODB_URI_TEST, es.:
  *   MONGODB_URI_TEST="mongodb://localhost:27017/?directConnection=true" npm test
@@ -314,6 +315,87 @@ describe.skipIf(!URI_BASE)('Report (fase 4) con MongoDB vero', () => {
       expect((await come('carlo', `${REP}/${px.toHexString()}`)).body.vedeEuro).toBe(true);
       expect((await come('carlo', `${REP}/${new mongoose.Types.ObjectId().toHexString()}`)).status).toBe(404);
       expect((await come('paola', `${REP}/${px.toHexString()}?da=2026-10-01&a=2026-09-01`)).status).toBe(400);
+    });
+      describe('E2 — indicatori EVM', () => {
+      const pe = new mongoose.Types.ObjectId();
+      const a1 = new mongoose.Types.ObjectId();
+      const a2 = new mongoose.Types.ObjectId();
+      const EVM = () => `${REP}/${pe.toHexString()}/evm`;
+
+      beforeAll(async () => {
+        await db.collection('progetti').insertOne({
+          _id: pe,
+          codice: 'PE',
+          titolo: 'Progetto EVM',
+          centroCostoId: cdc,
+          stato: 'inCorso',
+          dataInizio: new Date('2026-01-01'),
+          dataFine: new Date('2026-12-31'),
+          approvatori: [{ risorsaId: risorsa.paola, profilo: 'PM' }, { risorsaId: risorsa.tito, profilo: 'TL' }],
+          percentualeCompletamento: 40,
+          soloSuAttivita: false,
+          stime: { managerialeGiorni: 8, definitivaGiorni: 10, definitivaCentesimi: 400_000 },
+        });
+        await db.collection('attivita').insertMany([
+          { _id: a1, progettoId: pe, codice: 'A1', descrizione: 'Con date', stato: 'attiva', stimaGiorni: 4, percentualeCompletamento: 50, dataInizio: new Date('2026-01-01'), dataFine: new Date('2026-06-30'), risorseAssegnateIds: [] },
+          { _id: a2, progettoId: pe, codice: 'A2', descrizione: 'Senza date', stato: 'attiva', stimaGiorni: 6, percentualeCompletamento: 0, risorseAssegnateIds: [] },
+        ]);
+        const cambio = (attivitaId: mongoose.Types.ObjectId | undefined, il: string, prima: number, dopo: number) => ({
+          progettoId: pe,
+          ...(attivitaId ? { attivitaId } : {}),
+          valorePrecedente: prima,
+          valoreNuovo: dopo,
+          il: new Date(il),
+          da: 'sistema:test',
+        });
+        await db.collection('avanzamenti').insertMany([
+          cambio(undefined, '2026-03-01T10:00:00Z', 0, 20),
+          cambio(undefined, '2026-08-01T10:00:00Z', 20, 40),
+          cambio(a1, '2026-05-01T10:00:00Z', 0, 50),
+        ]);
+        await db.collection('consuntivi').insertMany([
+          ...['2026-06-08', '2026-06-09', '2026-06-10', '2026-06-12'].map((g) => giornata('rita', g, [riga(pe, a1, ord, 'approvata', 480, 40_000)])),
+          giornata('rita', '2026-06-11', [riga(pe, a1, ord, 'inviata', 240, 20_000)]),
+          giornata('rita', '2026-08-05', [riga(pe, a1, ord, 'approvata', 480, 40_000)]),
+        ]);
+      });
+
+      it('progetto alla data: percentuale dallo storico, AC fino alla data, stati', async () => {
+        const r = await come('paola', `${EVM()}?al=2026-07-02`);
+        expect(r.status).toBe(200);
+        const e = r.body.evm;
+        expect(e).toMatchObject({ calcolabile: true, percentuale: 20, trascorso: 50, fonteBacEuro: 'definitiva', fonteBacGiorni: 'definitiva' });
+        expect(e.euro).toMatchObject({ bac: 400_000, pv: 200_000, ev: 80_000, ac: 160_000, spi: 0.4, cpi: 0.5, eac: 800_000, vac: -400_000 });
+        expect(e.giorni).toMatchObject({ bac: 10, pv: 5, ev: 2, ac: 4, eac: 20 });
+        expect(e).toMatchObject({ statoTempi: 'inForteRitardo', statoCosti: 'fortementeSopraBudget' });
+        const att = Object.fromEntries(r.body.attivita.map((a: { codice: string }) => [a.codice, a]));
+        expect(att.A1).toMatchObject({ percentuale: 50, giorni: { ev: 2, ac: 4, cpi: 0.5, spi: 0.5 }, statoTempi: 'inForteRitardo' });
+        expect(att.A2).toMatchObject({ percentuale: 0, giorni: { ev: 0, ac: 0, cpi: null, spi: null }, statoTempi: 'nonCalcolabile', statoCosti: 'nonCalcolabile' });
+      });
+
+      it('vista provvisoria, TL senza euro, In valutazione, data futura, permessi', async () => {
+        expect((await come('paola', `${EVM()}?al=2026-07-02&vista=provvisoria`)).body.evm.giorni.ac).toBe(4.5);
+        const t = (await come('tito', `${EVM()}?al=2026-07-02`)).body;
+        expect(t.vedeEuro).toBe(false);
+        expect(t.evm).not.toHaveProperty('euro');
+        expect(JSON.stringify(t)).not.toMatch(/Centesimi/);
+        expect(t.evm).toMatchObject({ statoTempi: 'inForteRitardo', giorni: { cpi: 0.5 } });
+        const y = (await come('carlo', `${REP}/${py.toHexString()}/evm`)).body;
+        expect(y.evm).toMatchObject({ calcolabile: false, motivo: 'inValutazione' });
+        expect(y.attivita).toEqual([]);
+        expect((await come('paola', `${EVM()}?al=2999-01-01`)).status).toBe(400);
+        expect((await come('piero', EVM())).status).toBe(403);
+        expect((await come('carlo', `${REP}/${new mongoose.Types.ObjectId().toHexString()}/evm`)).status).toBe(404);
+      });
+
+      it('elenco: stati di tempi e costi a oggi', async () => {
+        const lista = (await come('paola', REP)).body.progetti;
+        const e = lista.find((p: { codice: string }) => p.codice === 'PE').evm;
+        expect(e.calcolabile).toBe(true);
+        expect(e.cpi).toBe(0.8);
+        expect(['inAnticipo', 'inLinea', 'inRitardo', 'inForteRitardo']).toContain(e.statoTempi);
+        expect(lista.find((p: { codice: string }) => p.codice === 'PX').evm).toMatchObject({ calcolabile: true, statoTempi: 'nonCalcolabile' });
+      });
     });
   });
 });

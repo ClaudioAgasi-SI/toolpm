@@ -6,10 +6,11 @@ import { messaggioErrore } from '../core/errori';
 import { ConsuntivazioneApiService } from './consuntivazione-api.service';
 import type { ProgettoReport, VistaReport } from './modelli';
 import { totaleOre } from './ore';
+import { ETICHETTA_COSTI, ETICHETTA_TEMPI, indice, toneStato } from './evm-testi';
 import { calcolato, euro, gg, quota } from './report-testi';
 
 /**
- * Progetti: costi e avanzamento (fase 4, blocco E1). Elenco dei progetti visibili all'utente con stime,
+ * Progetti: costi e avanzamento (fase 4, blocchi E1 ed E2). Elenco dei progetti visibili all'utente con stime,
  * consuntivato dall'inizio e ore in attesa; porta alla scheda. Due viste (decisione 11).
  */
 @Component({
@@ -52,6 +53,8 @@ import { calcolato, euro, gg, quota } from './report-testi';
             <th>Progetto</th>
             <th>Stato</th>
             <th class="numero">Completato</th>
+            <th>Tempi</th>
+            <th>Costi</th>
             <th class="numero">Stima (gg)</th>
             <th class="numero">Consuntivato (gg)</th>
             <th class="numero">Della stima</th>
@@ -71,6 +74,16 @@ import { calcolato, euro, gg, quota } from './report-testi';
               </td>
               <td><span class="stato" [class]="p.stato">{{ etichettaStato(p.stato) }}</span></td>
               <td class="numero">{{ p.percentualeCompletamento }}%</td>
+              <td>
+                @if (p.evm.calcolabile) {
+                  <span class="pallino" [attr.data-tono]="toneStato(p.evm.statoTempi)" [title]="'SPI ' + indice(p.evm.spi)">{{ ETICHETTA_TEMPI[p.evm.statoTempi] }}</span>
+                }
+              </td>
+              <td>
+                @if (p.evm.calcolabile) {
+                  <span class="pallino" [attr.data-tono]="toneStato(p.evm.statoCosti)" [title]="'CPI ' + indice(p.evm.cpi)">{{ ETICHETTA_COSTI[p.evm.statoCosti] }}</span>
+                }
+              </td>
               <td class="numero">{{ gg(stimaGiorni(p)) }}</td>
               <td class="numero">{{ gg(p.consuntivato.giorni) }}</td>
               <td class="numero" [class.oltre]="(quota(p.consuntivato.giorni, stimaGiorni(p)) ?? 0) > 100">{{ percento(quota(p.consuntivato.giorni, stimaGiorni(p))) }}</td>
@@ -89,7 +102,7 @@ import { calcolato, euro, gg, quota } from './report-testi';
         </tbody>
       </table>
       <p class="tenue piccolo">
-        Stima: la definitiva, altrimenti la manageriale. "In attesa": ore inserite ma non ancora approvate dal PM. * righe senza costo (da valorizzare).
+        Tempi e costi: stato a oggi dagli indici SPI e CPI (passa sopra per vederli). Stima: la definitiva, altrimenti la manageriale. "In attesa": ore inserite ma non ancora approvate dal PM. * righe senza costo (da valorizzare).
         Calcolato il {{ calcolatoIl() }}.
       </p>
     }
@@ -111,6 +124,10 @@ export class ProgettiReport {
   protected readonly stati = STATI_PROGETTO;
   protected readonly etichettaStato = etichettaStato;
   protected readonly euro = euro;
+  protected readonly ETICHETTA_TEMPI = ETICHETTA_TEMPI;
+  protected readonly ETICHETTA_COSTI = ETICHETTA_COSTI;
+  protected readonly toneStato = toneStato;
+  protected readonly indice = indice;
   protected readonly gg = gg;
   protected readonly quota = quota;
   protected readonly totaleOre = totaleOre;

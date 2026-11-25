@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import type { AnteprimaChiusura, AnteprimaRicalcolo, AzioneApprovazione, CronologiaRiga, DaInviare, DatiTariffa, ElencoApprovazioni, ElencoPeriodi, ElencoProgettiReport, EsitoApprovazione, EsitoInvio, EsitoSalvataggio, Giornata, Proposta, RigaDaSalvare, RigaDaValorizzare, SchedaProgetto, Tariffa, TariffeApplicabili, TipologiaCosto, TotaliRicalcolo, VistaReport, VoceProgetto, VoceStorico } from './modelli';
+import type { AnteprimaChiusura, AnteprimaRicalcolo, AzioneApprovazione, CronologiaRiga, DaInviare, DatiTariffa, ElencoApprovazioni, ElencoPeriodi, ElencoProgettiReport, EvmScheda, EsitoApprovazione, EsitoInvio, EsitoSalvataggio, Giornata, Proposta, RigaDaSalvare, RigaDaValorizzare, SchedaProgetto, Tariffa, TariffeApplicabili, TipologiaCosto, TotaliRicalcolo, VistaReport, VoceProgetto, VoceStorico } from './modelli';
 
 /** Accesso alle API della sezione Consuntivazione (/api/consuntivazione). */
 @Injectable({ providedIn: 'root' })
@@ -102,6 +102,11 @@ export class ConsuntivazioneApiService {
     let params = new HttpParams();
     for (const [k, v] of Object.entries(filtri)) if (v) params = params.set(k, v);
     return this.http.get<SchedaProgetto>(`${this.base}/report/progetti/${id}`, { params });
+  }
+  evmProgetto(id: string, filtri: { vista?: VistaReport; al?: string }) {
+    let params = new HttpParams();
+    for (const [k, v] of Object.entries(filtri)) if (v) params = params.set(k, v);
+    return this.http.get<EvmScheda>(`${this.base}/report/progetti/${id}/evm`, { params });
   }
 
   // Storico (fase 3, blocco D5)
