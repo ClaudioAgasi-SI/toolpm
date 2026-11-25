@@ -80,9 +80,9 @@ export class ConsuntivazioneInizio {
     if (this.sessione.puo('gestirePeriodi')) {
       voci.push({ titolo: 'Periodi', descrizione: 'Chiusura e riapertura dei mesi.', percorso: 'periodi' });
     }
-    // Fase 4: report in preparazione (blocchi E1–E6).
+    // Fase 4: Progetti (E1); Report in preparazione (E4–E6).
     if (this.sessione.puo('vedereReport')) {
-      voci.push({ titolo: 'Progetti: costi e avanzamento', descrizione: 'Stime e consuntivato, indicatori di tempi e costi, andamento nel tempo dei tuoi progetti.' });
+      voci.push({ titolo: 'Progetti: costi e avanzamento', descrizione: 'Stime e consuntivato, dettaglio per attività, risorsa, ruolo, tipologia e mese dei tuoi progetti.', percorso: 'progetti' });
       voci.push({ titolo: 'Report', descrizione: 'Costi per centro di costo, progetto e attività; pianificato contro consuntivato; esportazioni in Excel e CSV.' });
     }
     if (this.sessione.puo('consultareStorico')) {

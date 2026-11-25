@@ -21,6 +21,9 @@ import { ContatoreApprovazioni } from './contatore-approvazioni';
           }
         </a>
       }
+      @if (sessione.puo('vedereReport')) {
+        <a routerLink="progetti" routerLinkActive="attivo">Progetti</a>
+      }
       @if (sessione.puo('gestireTipologieCosto')) {
         <a routerLink="tipologie" routerLinkActive="attivo">Tipologie di costo</a>
       }

@@ -5,7 +5,7 @@ import { ConsuntivazioneLayout } from './consuntivazione-layout';
 /**
  * Rotte della sezione Consuntivazione (fase 2), montate sotto /consuntivazione.
  * Le pagine arrivano con i blocchi del piano: tipologie (C1), tariffe (C2),
- * il mio consuntivo (C5), righe da valorizzare (C6); fase 3: approvazioni (D3), periodi (D4), storico (D5).
+ * il mio consuntivo (C5), righe da valorizzare (C6); fase 3: approvazioni (D3), periodi (D4), storico (D5); fase 4: progetti e scheda (E1).
  */
 export const CONSUNTIVAZIONE_ROUTES: Routes = [
   {
@@ -41,6 +41,18 @@ export const CONSUNTIVAZIONE_ROUTES: Routes = [
         title: 'Storico delle modifiche · ToolPM',
         canActivate: [permessoRichiesto('consultareStorico')],
         loadComponent: () => import('./storico').then((m) => m.Storico),
+      },
+      {
+        path: 'progetti',
+        title: 'Progetti: costi e avanzamento · ToolPM',
+        canActivate: [permessoRichiesto('vedereReport')],
+        loadComponent: () => import('./progetti-report').then((m) => m.ProgettiReport),
+      },
+      {
+        path: 'progetti/:id',
+        title: 'Scheda del progetto · ToolPM',
+        canActivate: [permessoRichiesto('vedereReport')],
+        loadComponent: () => import('./scheda-progetto').then((m) => m.SchedaProgetto),
       },
       {
         path: 'consuntivi-risorse',

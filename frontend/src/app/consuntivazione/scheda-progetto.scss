@@ -1,0 +1,17 @@
+.filtri { display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap; margin: 0.5rem 0;
+  label { display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.85rem; color: #5a6478; }
+  label.spunta { flex-direction: row; align-items: center; gap: 0.4rem; }
+}
+.numero { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.piccolo { font-size: 0.8rem; }
+.provvisori { background: #fff8e6; border: 1px solid #f3dca8; color: #8a5a00; border-radius: 6px; padding: 4px 10px; }
+.avviso { color: #9a5b00; background: #fff8e6; border: 1px solid #f3dca8; border-radius: 6px; padding: 4px 10px; margin: 0.35rem 0; }
+.blocco { margin-top: 1rem; h2 { font-size: 1.05rem; margin: 0 0 0.35rem; } }
+.confronto th { text-align: left; }
+.barra { display: inline-block; vertical-align: middle; width: 8rem; height: 0.6rem; background: #e8ecf2; border-radius: 4px; overflow: hidden; margin-right: 0.35rem;
+  span { display: block; height: 100%; background: #1c7ed6; }
+  &.oltre span { background: #d1242f; }
+  &.piccola { width: 5rem; }
+}
+tr.senza td { background: #fafbfc; }
+.griglia-dettagli { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 1rem; }

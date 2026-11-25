@@ -305,11 +305,19 @@ La funzione `differenze(prima, dopo, tolti)` di `audit.service.ts` tiene i soli 
 
 ## Modulo Consuntivazione: report (fase 4)
 
-Piano in [piano-fase4.md](piano-fase4.md). Blocco E0: basi comuni dei report.
+Piano in [piano-fase4.md](piano-fase4.md). Blocco E0: basi comuni dei report; blocco E1: scheda costi del progetto.
 
 - **Due viste** (`report/viste.ts`, decisione 11): `approvata` (predefinita, ufficiale: righe `approvata` e `chiusa`) e `provvisoria` (anche `bozza`, `inviata`, `approvataTL`; mai `respinta`); `leggiVista()` per il parametro `vista` delle API; `STATI_IN_ATTESA` per le righe da segnalare a parte; `giorni(minuti, oreGiorno)` (un giorno = parametro `oreGiorno`, decisione 9); `senzaEuro()` per togliere i costi a chi non li vede.
 - **Aggregazioni** (`ReportService`): `totali(filtro, vista, chiavi)` somma righe, minuti, costo (fotografato, mai ricalcolato) e righe da valorizzare per una o più chiavi (`progettoId`, `attivitaId`, `centroCostoId`, `tipologiaId`, `risorsaId`, `mese`); filtro per periodo, progetti, centri di costo, risorse. Ogni riga si conta una volta per gruppo (RF-21). `inAttesa(filtro, chiavi)` conta le righe non approvate.
 - **Permessi**: `vedereReport` (globale: abilitazione TL, PM, PMSenior o controller) per il menu; per ogni progetto `puoVedereReportProgetto` (approvatori del progetto, PMSenior, controller) e `vedeEuroProgetto` (PM del progetto, PMSenior, controller; mai il TL, decisione 4).
+- **Progetti** (`ProgettiReportService`, blocco E1): elenco e scheda costi. Le chiavi di `ReportService` comprendono anche `data` (per il ruolo alla data).
+
+### Report dei progetti — `/api/consuntivazione/report/progetti` (blocco E1)
+
+| Metodo | Percorso | Permesso | Note |
+|---|---|---|---|
+| GET | `/report/progetti?vista=&stato=&testo=` | `vedereReport` | Progetti visibili (controller e PMSenior: tutti; TL e PM: quelli di cui sono approvatori), ciascuno con `stime`, `consuntivato` dall'inizio e `inAttesa` (righe non approvate), `vedeEuro`. Gli euro (`managerialeCentesimi`, `definitivaCentesimi`, `costoCentesimi`) solo a chi li vede. Risposta `{ vista, calcolatoIl, progetti }` |
+| GET | `/report/progetti/:id?da=&a=&vista=` | `vedereReport` + approvatore del progetto, PMSenior o controller | Scheda: `periodo` (predefinito dal 1° gennaio a oggi, al massimo 5 anni; 400 se `a` < `da`), `progetto` (con `percentualeAttivitaPesata`, media delle attività pesata sulla stima), `stime`, `dallInizio`, `nelPeriodo`, `inAttesa { dallInizio, nelPeriodo }`, `perAttivita` (con "Senza attività", `attivitaId` null), `perRisorsa`, `perRuolo` (ruolo della risorsa alla data di ogni riga), `perTipologia`, `perMese`; `oreGiorno`, `vedeEuro`, `vista`, `calcolatoIl`. 403 se non si vede il progetto, 404 se non esiste |
 
 ## Moduli
 

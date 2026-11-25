@@ -97,6 +97,17 @@ Perché le risorse possano consuntivare:
   il **codice** dell'attività è un codice breve che la identifica dentro il progetto (per esempio `SVI`, `TEST`);
 - le risorse che non hanno attività devono essere **allocate** sul progetto nel Pianificatore per il mese.
 
+## Per TL e PM: costi e avanzamento dei progetti
+
+Da **Consuntivazione › Progetti** (o dal dettaglio del progetto in Anagrafiche, **Costi e avanzamento →**):
+
+- l'**elenco** mostra i progetti di cui si è approvatori (al controller e al PMSenior tutti): percentuale di completamento, stima e consuntivato in giorni, quanto della stima è già consumato e, al PM, gli euro;
+- la **scheda** del progetto confronta le stime (manageriale e definitiva) con il consuntivato dall'inizio e mostra il dettaglio nel periodo scelto (predefinito: l'anno in corso) per attività, risorsa, ruolo, tipologia e mese;
+- un giorno vale 8 ore; il costo è quello calcolato quando le ore sono state salvate;
+- di norma si contano solo le ore **approvate dal PM** (e quelle dei mesi chiusi). Con **Includi le ore non ancora approvate** si vedono anche quelle in bozza, inviate o con il via libera del TL: la pagina lo segnala con "Dati provvisori". Le respinte non si contano mai;
+- un avviso dice quante righe sono ancora in attesa e quante sono senza costo (da valorizzare: il totale in euro è incompleto);
+- il TL vede ore e giorni, mai gli euro.
+
 ## Per il controller
 
 ### Tipologie di costo

@@ -315,3 +315,85 @@ export interface CronologiaRiga {
   riga: { rigaId: string; data: string; progetto: string | null; stato: StatoRiga; minuti: number };
   voci: { il: string; operazione: string; nomeUtente: string; prima: unknown; dopo: unknown; motivazione: string | null }[];
 }
+
+// ---- Report (fase 4) ----
+
+export type VistaReport = 'approvata' | 'provvisoria';
+
+/** Totali di un gruppo di righe; il costo solo a chi vede gli euro. */
+export interface TotaliReport {
+  righe: number;
+  minuti: number;
+  giorni: number;
+  daValorizzare: number;
+  minutiDaValorizzare: number;
+  costoCentesimi?: number;
+}
+
+export interface StimeReport {
+  managerialeGiorni: number | null;
+  definitivaGiorni: number | null;
+  managerialeCentesimi?: number | null;
+  definitivaCentesimi?: number | null;
+}
+
+export interface ProgettoReport {
+  _id: string;
+  codice: string;
+  titolo: string;
+  cliente: string | null;
+  centroCosto: string | null;
+  stato: string;
+  dataInizio: string | null;
+  dataFine: string | null;
+  percentualeCompletamento: number;
+  vedeEuro: boolean;
+  stime: StimeReport;
+  consuntivato: TotaliReport;
+  inAttesa: { righe: number; minuti: number; giorni: number };
+}
+
+export interface ElencoProgettiReport {
+  vista: VistaReport;
+  calcolatoIl: string;
+  progetti: ProgettoReport[];
+}
+
+export interface SchedaProgetto {
+  vista: VistaReport;
+  calcolatoIl: string;
+  vedeEuro: boolean;
+  oreGiorno: number;
+  periodo: { da: string; a: string };
+  progetto: {
+    _id: string;
+    codice: string;
+    titolo: string;
+    descrizione: string | null;
+    cliente: string | null;
+    centroCosto: string | null;
+    stato: string;
+    dataInizio: string | null;
+    dataFine: string | null;
+    percentualeCompletamento: number;
+    percentualeAttivitaPesata: number | null;
+  };
+  stime: StimeReport;
+  dallInizio: TotaliReport;
+  nelPeriodo: TotaliReport;
+  inAttesa: { dallInizio: { righe: number; minuti: number; giorni: number }; nelPeriodo: { righe: number; minuti: number; giorni: number } };
+  perAttivita: {
+    attivitaId: string | null;
+    codice: string;
+    descrizione: string;
+    stato: string;
+    stimaGiorni: number | null;
+    percentualeCompletamento: number;
+    dallInizio: TotaliReport;
+    nelPeriodo: TotaliReport;
+  }[];
+  perRisorsa: (TotaliReport & { risorsaId: string; risorsa: string })[];
+  perRuolo: (TotaliReport & { ruoloId: string | null; ruolo: string })[];
+  perTipologia: (TotaliReport & { tipologiaId: string; tipologia: string })[];
+  perMese: (TotaliReport & { mese: string })[];
+}

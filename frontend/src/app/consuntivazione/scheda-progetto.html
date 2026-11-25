@@ -1,0 +1,188 @@
+<p><a routerLink="..">← Progetti: costi e avanzamento</a></p>
+
+@if (errore()) {
+  <p class="errore">{{ errore() }}</p>
+}
+
+@if (scheda(); as s) {
+  <header class="testata">
+    <h1>
+      {{ s.progetto.codice }} — {{ s.progetto.titolo }}
+      <span class="stato" [class]="s.progetto.stato">{{ etichettaStato(s.progetto.stato) }}</span>
+    </h1>
+    <div class="azioni"><a [routerLink]="['/comuni/progetti', s.progetto._id]">Dati del progetto</a></div>
+  </header>
+  <p class="tenue">
+    {{ s.progetto.cliente ?? 'Progetto interno' }} · centro di costo {{ s.progetto.centroCosto }} · dal {{ data(s.progetto.dataInizio) }} al {{ data(s.progetto.dataFine) }} ·
+    completato al {{ s.progetto.percentualeCompletamento }}%
+    @if (s.progetto.percentualeAttivitaPesata !== null) {
+      (media delle attività pesata sulla stima: {{ s.progetto.percentualeAttivitaPesata }}%)
+    }
+  </p>
+
+  <div class="filtri">
+    <label>dal <input type="date" name="da" [(ngModel)]="da" /></label>
+    <label>al <input type="date" name="a" [(ngModel)]="a" /></label>
+    <button type="button" (click)="carica()">Aggiorna</button>
+    <label class="spunta">
+      <input type="checkbox" name="provvisoria" [(ngModel)]="provvisoria" (ngModelChange)="carica()" />
+      Includi le ore non ancora approvate
+    </label>
+  </div>
+  @if (s.vista === 'provvisoria') {
+    <p class="provvisori">Dati provvisori: comprendono le ore in bozza, inviate e con il via libera del TL, non ancora approvate dal PM.</p>
+  } @else if (s.inAttesa.dallInizio.righe) {
+    <p class="avviso">
+      Ci sono {{ s.inAttesa.dallInizio.righe === 1 ? '1 riga' : s.inAttesa.dallInizio.righe + ' righe' }} ({{ totaleOre(s.inAttesa.dallInizio.minuti) }} h) non ancora approvate:
+      non sono nei totali. Spunta "Includi le ore non ancora approvate" per vederle.
+    </p>
+  }
+  @if (avvisoValorizzare(s.dallInizio); as av) {
+    @if (s.vedeEuro) {
+      <p class="avviso">Costo incompleto: {{ av }}.</p>
+    }
+  }
+
+  <section class="blocco" aria-label="Stime e consuntivato">
+    <h2>Stime e consuntivato dall'inizio</h2>
+    <table class="elenco confronto">
+      <thead>
+        <tr><th></th><th class="numero">Stima manageriale</th><th class="numero">Stima definitiva</th><th class="numero">Consuntivato</th><th>Della stima definitiva</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>Giorni</th>
+          <td class="numero">{{ gg(s.stime.managerialeGiorni) }}</td>
+          <td class="numero">{{ gg(s.stime.definitivaGiorni) }}</td>
+          <td class="numero"><strong>{{ gg(s.dallInizio.giorni) }}</strong></td>
+          <td>
+            <span class="barra" [class.oltre]="(quota(s.dallInizio.giorni, s.stime.definitivaGiorni) ?? 0) > 100"><span [style.width.%]="barra(s.dallInizio.giorni, s.stime.definitivaGiorni)"></span></span>
+            {{ percento(quota(s.dallInizio.giorni, s.stime.definitivaGiorni)) }}
+          </td>
+        </tr>
+        @if (s.vedeEuro) {
+          <tr>
+            <th>Euro</th>
+            <td class="numero">{{ euro(s.stime.managerialeCentesimi) }}</td>
+            <td class="numero">{{ euro(s.stime.definitivaCentesimi) }}</td>
+            <td class="numero"><strong>{{ costo(s.dallInizio) }}</strong></td>
+            <td>
+              <span class="barra" [class.oltre]="(quota(s.dallInizio.costoCentesimi, s.stime.definitivaCentesimi) ?? 0) > 100"><span [style.width.%]="barra(s.dallInizio.costoCentesimi, s.stime.definitivaCentesimi)"></span></span>
+              {{ percento(quota(s.dallInizio.costoCentesimi, s.stime.definitivaCentesimi)) }}
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    <p class="tenue piccolo">
+      Un giorno vale {{ s.oreGiorno }} ore. Nel periodo dal {{ data(s.periodo.da) }} al {{ data(s.periodo.a) }}: {{ totaleOre(s.nelPeriodo.minuti) }} h ({{ gg(s.nelPeriodo.giorni) }} gg){{ s.vedeEuro ? ', ' + costo(s.nelPeriodo) : '' }}.
+    </p>
+  </section>
+
+  <section class="blocco" aria-label="Per attività">
+    <h2>Per attività</h2>
+    <table class="elenco">
+      <thead>
+        <tr>
+          <th>Attività</th>
+          <th class="numero">Stima (gg)</th>
+          <th class="numero">Dall'inizio (gg)</th>
+          <th>Della stima</th>
+          <th class="numero">Completato</th>
+          <th class="numero">Nel periodo (h)</th>
+          @if (s.vedeEuro) {
+            <th class="numero">Costo nel periodo</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (x of s.perAttivita; track x.attivitaId) {
+          <tr [class.senza]="!x.attivitaId">
+            <td>
+              @if (x.attivitaId) {
+                <strong>{{ x.codice }}</strong> — {{ x.descrizione }}
+                @if (x.stato === 'chiusa') {
+                  <span class="tenue piccolo">(chiusa)</span>
+                }
+              } @else {
+                <em>Senza attività</em> <span class="tenue piccolo">(ore sul progetto)</span>
+              }
+            </td>
+            <td class="numero">{{ gg(x.stimaGiorni) }}</td>
+            <td class="numero">{{ gg(x.dallInizio.giorni) }}</td>
+            <td>
+              @if (x.stimaGiorni) {
+                <span class="barra piccola" [class.oltre]="(quota(x.dallInizio.giorni, x.stimaGiorni) ?? 0) > 100"><span [style.width.%]="barra(x.dallInizio.giorni, x.stimaGiorni)"></span></span>
+                {{ percento(quota(x.dallInizio.giorni, x.stimaGiorni)) }}
+              }
+            </td>
+            <td class="numero">{{ x.attivitaId ? x.percentualeCompletamento + '%' : '' }}</td>
+            <td class="numero">{{ x.nelPeriodo.minuti ? totaleOre(x.nelPeriodo.minuti) : '' }}</td>
+            @if (s.vedeEuro) {
+              <td class="numero">{{ x.nelPeriodo.minuti ? costo(x.nelPeriodo) : '' }}</td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </section>
+
+  <div class="griglia-dettagli">
+    @for (d of [{ titolo: 'Per risorsa', righe: s.perRisorsa, nome: 'risorsa' }, { titolo: 'Per ruolo', righe: s.perRuolo, nome: 'ruolo' }, { titolo: 'Per tipologia', righe: s.perTipologia, nome: 'tipologia' }]; track d.titolo) {
+      <section class="blocco" [attr.aria-label]="d.titolo">
+        <h2>{{ d.titolo }} <span class="tenue piccolo">nel periodo</span></h2>
+        @if (!d.righe.length) {
+          <p class="tenue">Nessuna ora nel periodo.</p>
+        } @else {
+          <table class="elenco">
+            <thead><tr><th></th><th class="numero">Ore</th><th class="numero">Giorni</th>@if (s.vedeEuro) {<th class="numero">Costo</th>}</tr></thead>
+            <tbody>
+              @for (r of d.righe; track $index) {
+                <tr>
+                  <td>{{ $any(r)[d.nome] }}</td>
+                  <td class="numero">{{ totaleOre(r.minuti) }}</td>
+                  <td class="numero">{{ gg(r.giorni) }}</td>
+                  @if (s.vedeEuro) {
+                    <td class="numero">{{ costo(r) }}</td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </section>
+    }
+  </div>
+
+  <section class="blocco" aria-label="Per mese">
+    <h2>Per mese</h2>
+    @if (!s.perMese.length) {
+      <p class="tenue">Nessuna ora nel periodo.</p>
+    } @else {
+      <table class="elenco">
+        <thead><tr><th>Mese</th><th class="numero">Ore</th><th class="numero">Giorni</th>@if (s.vedeEuro) {<th class="numero">Costo</th>}</tr></thead>
+        <tbody>
+          @for (m of s.perMese; track m.mese) {
+            <tr>
+              <td>{{ nomeMese(m.mese) }}</td>
+              <td class="numero">{{ totaleOre(m.minuti) }}</td>
+              <td class="numero">{{ gg(m.giorni) }}</td>
+              @if (s.vedeEuro) {
+                <td class="numero">{{ costo(m) }}</td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </section>
+
+  <p class="tenue piccolo">
+    {{ s.vista === 'provvisoria' ? 'Dati provvisori' : 'Dati approvati dal PM (e dei mesi chiusi)' }}, calcolati il {{ calcolato(s) }}.
+    @if (!s.vedeEuro) {
+      Gli importi in euro li vedono il PM del progetto, i PMSenior e il controller.
+    }
+  </p>
+} @else if (caricamento()) {
+  <p class="tenue">Caricamento…</p>
+}

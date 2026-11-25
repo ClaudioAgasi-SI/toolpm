@@ -9,6 +9,8 @@ import { Periodo, PeriodoSchema } from './periodi/periodo.schema.js';
 import { StoricoController } from './storico/storico.controller.js';
 import { StoricoService } from './storico/storico.service.js';
 import { ReportService } from './report/report.service.js';
+import { ProgettiReportService } from './report/progetti-report.service.js';
+import { ReportController } from './report/report.controller.js';
 import { VoceStorico, VoceStoricoSchema } from '../infrastruttura/voce-storico.schema.js';
 import { ConsuntiviController } from './consuntivi/consuntivi.controller.js';
 import { ConsuntiviService } from './consuntivi/consuntivi.service.js';
@@ -28,7 +30,7 @@ import { TipologiaCosto, TipologiaCostoSchema } from './tipologie/tipologia-cost
  *
  * Blocchi del piano (docs/piano-fase2.md): C1 tipologie di costo, C2 tariffe standard e
  * personalizzate, C3 consuntivi giornalieri, C6 righe da valorizzare e ricalcolo; fase 3
- * (docs/piano-fase3.md): D1 invio e ritiro, D2 approvazioni, D4 chiusura dei mesi, D5 storico; fase 4 (docs/piano-fase4.md): E0 aggregazioni dei report.
+ * (docs/piano-fase3.md): D1 invio e ritiro, D2 approvazioni, D4 chiusura dei mesi, D5 storico; fase 4 (docs/piano-fase4.md): E0 aggregazioni dei report, E1 scheda del progetto.
  * Collection (migrazione 007-consuntivazione): tipologie_costo, tariffe_standard,
  * tariffe_personalizzate, consuntivi.
  */
@@ -44,8 +46,8 @@ import { TipologiaCosto, TipologiaCostoSchema } from './tipologie/tipologia-cost
       { name: VoceStorico.name, schema: VoceStoricoSchema },
     ]),
   ],
-  controllers: [TipologieController, TariffeController, ConsuntiviController, ValorizzazioneController, ApprovazioniController, PeriodiController, StoricoController],
-  providers: [TipologieService, TariffeService, ConsuntiviService, ValorizzazioneService, ApprovazioniService, PeriodiService, StoricoService, ReportService],
+  controllers: [TipologieController, TariffeController, ConsuntiviController, ValorizzazioneController, ApprovazioniController, PeriodiController, StoricoController, ReportController],
+  providers: [TipologieService, TariffeService, ConsuntiviService, ValorizzazioneService, ApprovazioniService, PeriodiService, StoricoService, ReportService, ProgettiReportService],
   exports: [TipologieService, TariffeService, ConsuntiviService],
 })
 export class ConsuntivazioneModule {}

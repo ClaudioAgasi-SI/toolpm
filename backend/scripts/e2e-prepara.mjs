@@ -68,7 +68,7 @@ for (const [nome, ruoli, conRuolo, abilitazione = null] of [
   });
 }
 
-const progetto = async (codice, titolo, stato = 'inCorso', approvatori = []) =>
+const progetto = async (codice, titolo, stato = 'inCorso', approvatori = [], stime = {}) =>
   (
     await db.collection('progetti').insertOne({
       codice,
@@ -78,25 +78,27 @@ const progetto = async (codice, titolo, stato = 'inCorso', approvatori = []) =>
       dataInizio: inizioAnno,
       ...(stato === 'chiuso' ? { dataFine: inizioAnno } : {}),
       approvatori,
-      percentualeCompletamento: 0,
+      percentualeCompletamento: stato === 'chiuso' ? 100 : 25,
       soloSuAttivita: false,
+      stime,
     })
   ).insertedId;
 const alfa = await progetto('ALFA', 'Portale clienti', 'inCorso', [
   { risorsaId: persone.pina, profilo: 'PM' },
   { risorsaId: persone.tito, profilo: 'TL' },
-]);
+], { managerialeGiorni: 50, managerialeCentesimi: 1_800_000, definitivaGiorni: 40, definitivaCentesimi: 1_600_000 });
 const beta = await progetto('BETA', 'Manutenzione evolutiva', 'inCorso', [{ risorsaId: persone.pina, profilo: 'PM' }]);
 await progetto('GAMMA', 'Progetto chiuso', 'chiuso');
-const attivita = (codice, descrizione, assegnate) => ({
+const attivita = (codice, descrizione, assegnate, stimaGiorni) => ({
   progettoId: alfa,
   codice,
   descrizione,
   stato: 'attiva',
   percentualeCompletamento: 20,
   risorseAssegnateIds: assegnate,
+  stimaGiorni,
 });
-await db.collection('attivita').insertMany([attivita('SVI', 'Sviluppo front end', [persone.rita]), attivita('TEST', 'Collaudo', [])]);
+await db.collection('attivita').insertMany([attivita('SVI', 'Sviluppo front end', [persone.rita], 25), attivita('TEST', 'Collaudo', [], 10)]);
 // rita e luca allocati su BETA nei mesi della settimana scorsa.
 for (const nome of ['rita', 'luca']) {
   await db.collection('risorse').updateOne(

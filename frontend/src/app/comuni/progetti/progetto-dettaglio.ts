@@ -52,6 +52,7 @@ interface RigaAttivita {
   imports: [FormsModule, RouterLink],
   templateUrl: './progetto-dettaglio.html',
   styles: `
+    .navigazione { display: flex; justify-content: space-between; }
     .scelta-risorse { max-height: 12rem; overflow-y: auto; border: 1px solid var(--bordo); border-radius: 6px; padding: 0.3rem 0.5rem; margin: 0.3rem 0; display: flex; flex-direction: column; }
     form.blocco { border: 1px solid var(--bordo); border-radius: 8px; padding: 0.75rem 1rem 1rem; margin: 1rem 0; }
     form.blocco > h2 { margin: 0.25rem 0 0.5rem; }

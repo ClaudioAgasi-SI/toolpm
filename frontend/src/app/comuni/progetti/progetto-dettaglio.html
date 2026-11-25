@@ -1,4 +1,11 @@
-<p><a routerLink="/comuni/progetti">← Tutti i progetti</a></p>
+<p class="navigazione">
+  <a routerLink="/comuni/progetti">← Tutti i progetti</a>
+  @if (progetto(); as p) {
+    @if (sessione.puo('vedereReport')) {
+      <a class="costi" [routerLink]="['/consuntivazione/progetti', p._id]">Costi e avanzamento →</a>
+    }
+  }
+</p>
 
 @if (errore()) {
   <p class="errore">{{ errore() }}</p>

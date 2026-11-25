@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import type { AnteprimaChiusura, AnteprimaRicalcolo, AzioneApprovazione, CronologiaRiga, DaInviare, DatiTariffa, ElencoApprovazioni, ElencoPeriodi, EsitoApprovazione, EsitoInvio, EsitoSalvataggio, Giornata, Proposta, RigaDaSalvare, RigaDaValorizzare, Tariffa, TariffeApplicabili, TipologiaCosto, TotaliRicalcolo, VoceProgetto, VoceStorico } from './modelli';
+import type { AnteprimaChiusura, AnteprimaRicalcolo, AzioneApprovazione, CronologiaRiga, DaInviare, DatiTariffa, ElencoApprovazioni, ElencoPeriodi, ElencoProgettiReport, EsitoApprovazione, EsitoInvio, EsitoSalvataggio, Giornata, Proposta, RigaDaSalvare, RigaDaValorizzare, SchedaProgetto, Tariffa, TariffeApplicabili, TipologiaCosto, TotaliRicalcolo, VistaReport, VoceProgetto, VoceStorico } from './modelli';
 
 /** Accesso alle API della sezione Consuntivazione (/api/consuntivazione). */
 @Injectable({ providedIn: 'root' })
@@ -90,6 +90,18 @@ export class ConsuntivazioneApiService {
   }
   riapriMese(mese: string, motivazione: string) {
     return this.http.post<{ mese: string; nome: string; righeRiaperte: number }>(`${this.base}/periodi/${mese}/riapertura`, { motivazione });
+  }
+
+  // Report (fase 4)
+  progettiReport(filtri: { vista?: VistaReport; stato?: string; testo?: string }) {
+    let params = new HttpParams();
+    for (const [k, v] of Object.entries(filtri)) if (v) params = params.set(k, v);
+    return this.http.get<ElencoProgettiReport>(`${this.base}/report/progetti`, { params });
+  }
+  schedaProgetto(id: string, filtri: { vista?: VistaReport; da?: string; a?: string }) {
+    let params = new HttpParams();
+    for (const [k, v] of Object.entries(filtri)) if (v) params = params.set(k, v);
+    return this.http.get<SchedaProgetto>(`${this.base}/report/progetti/${id}`, { params });
   }
 
   // Storico (fase 3, blocco D5)

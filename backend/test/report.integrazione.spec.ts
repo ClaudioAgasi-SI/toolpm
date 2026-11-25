@@ -1,6 +1,7 @@
 /**
  * Test di integrazione della fase 4 (Report) contro un MongoDB vero (replica set).
  * E0: migrazione 009 (evm_giornalieri, esecuzioni_batch), aggregazioni nelle due viste, permesso vedereReport.
+ * E1: elenco dei progetti e scheda costi (totali, dettagli, ruolo alla data, viste, riservatezza degli euro).
  *
  * Si esegue solo se è impostata MONGODB_URI_TEST, es.:
  *   MONGODB_URI_TEST="mongodb://localhost:27017/?directConnection=true" npm test
@@ -32,6 +33,7 @@ describe.skipIf(!URI_BASE)('Report (fase 4) con MongoDB vero', () => {
     { nome: 'rita', abilitazione: null, ruoli: ['risorsa'] },
     { nome: 'carlo', abilitazione: null, ruoli: ['risorsa', 'controller'] },
     { nome: 'tito', abilitazione: 'TL', ruoli: ['risorsa'] },
+    { nome: 'piero', abilitazione: 'PM', ruoli: ['risorsa'] },
   ];
   const api = () => request(app.getHttpServer());
 
@@ -183,6 +185,135 @@ describe.skipIf(!URI_BASE)('Report (fase 4) con MongoDB vero', () => {
       expect((await permessi('tito')).vedereReport).toBe(true);
       expect((await permessi('carlo')).vedereReport).toBe(true);
       expect((await permessi('rita')).vedereReport).toBe(false);
+    });
+  });
+
+  describe('E1 — elenco dei progetti e scheda costi', () => {
+    const REP = '/api/consuntivazione/report/progetti';
+    const come = (chi: string, url: string) => api().get(url).set('Cookie', cookie[chi]);
+    const px = new mongoose.Types.ObjectId();
+    const py = new mongoose.Types.ObjectId();
+    const ana = new mongoose.Types.ObjectId();
+    const col = new mongoose.Types.ObjectId();
+    const ord = new mongoose.Types.ObjectId();
+    const str = new mongoose.Types.ObjectId();
+    const cdc = new mongoose.Types.ObjectId();
+    const junior = new mongoose.Types.ObjectId();
+    const senior = new mongoose.Types.ObjectId();
+    let n = 0;
+    const riga = (progettoId: mongoose.Types.ObjectId, attivitaId: mongoose.Types.ObjectId | null, tipologiaId: mongoose.Types.ObjectId, stato: string, minuti: number, costoCentesimi: number | null) => ({
+      _id: new mongoose.Types.ObjectId(),
+      progettoId,
+      attivitaId,
+      centroCostoId: cdc,
+      tipologiaId,
+      tipologiaCodice: String(++n),
+      minuti,
+      nota: null,
+      stato,
+      fonteTariffa: null,
+      tariffaId: null,
+      tariffaCentesimiOra: null,
+      costoCentesimi,
+      approvazioneTL: null,
+      approvazionePM: null,
+      modificatoIl: new Date(),
+      modificatoDa: 'sistema:test',
+    });
+    const giornata = (chi: string, data: string, righe: object[]) => ({ risorsaId: risorsa[chi], data: new Date(data), mese: data.slice(0, 7).replace('-', ''), versione: 1, righe });
+
+    beforeAll(async () => {
+      await db.collection('centri_costo').insertOne({ _id: cdc, codice: 'CDC-SVI', descrizione: 'Sviluppo', attivo: true });
+      await db.collection('ruoli').insertMany([
+        { _id: junior, codice: 'SVJ', descrizione: 'Sviluppatore junior', attivo: true },
+        { _id: senior, codice: 'SVS', descrizione: 'Sviluppatore senior', attivo: true },
+      ]);
+      await db.collection('tipologie_costo').insertMany([
+        { _id: ord, codice: 'ORD-X', descrizione: 'Ordinaria X', categoria: 'ordinaria', ordine: 1, attiva: true, predefinita: false },
+        { _id: str, codice: 'STR-X', descrizione: 'Straordinaria X', categoria: 'straordinaria', ordine: 2, attiva: true, predefinita: false },
+      ]);
+      // rita: junior fino al 14 settembre, senior dal 15.
+      await db.collection('risorse').updateOne({ _id: risorsa.rita }, { $set: { storicoRuoli: [{ ruoloId: junior, dal: new Date('2026-01-01') }, { ruoloId: senior, dal: new Date('2026-09-15') }] } });
+      await db.collection('progetti').insertMany([
+        {
+          _id: px,
+          codice: 'PX',
+          titolo: 'Portale X',
+          centroCostoId: cdc,
+          stato: 'inCorso',
+          dataInizio: new Date('2026-01-01'),
+          approvatori: [{ risorsaId: risorsa.paola, profilo: 'PM' }, { risorsaId: risorsa.tito, profilo: 'TL' }],
+          percentualeCompletamento: 30,
+          soloSuAttivita: false,
+          stime: { managerialeGiorni: 100, managerialeCentesimi: 4_000_000, definitivaGiorni: 120, definitivaCentesimi: 4_800_000 },
+        },
+        { _id: py, codice: 'PY', titolo: 'Interno Y', centroCostoId: cdc, stato: 'inValutazione', approvatori: [], percentualeCompletamento: 0, soloSuAttivita: false, stime: {} },
+      ]);
+      await db.collection('attivita').insertMany([
+        { _id: ana, progettoId: px, codice: 'ANA', descrizione: 'Analisi', stato: 'attiva', stimaGiorni: 10, percentualeCompletamento: 100, risorseAssegnateIds: [] },
+        { _id: col, progettoId: px, codice: 'COL', descrizione: 'Collaudo', stato: 'attiva', stimaGiorni: 30, percentualeCompletamento: 0, risorseAssegnateIds: [] },
+      ]);
+      await db.collection('consuntivi').insertMany([
+        giornata('rita', '2025-12-15', [riga(px, ana, ord, 'chiusa', 480, 20000)]),
+        giornata('rita', '2026-09-10', [riga(px, ana, ord, 'approvata', 480, 20000), riga(px, null, str, 'approvata', 120, 6000)]),
+        giornata('rita', '2026-09-16', [riga(px, col, ord, 'approvata', 480, 24000), riga(px, col, ord, 'inviata', 60, 3000)]),
+        giornata('tito', '2026-09-16', [riga(px, col, ord, 'approvata', 240, null), riga(px, null, ord, 'bozza', 120, 5000)]),
+        giornata('rita', '2026-09-17', [riga(py, null, ord, 'approvata', 480, 24000)]),
+      ]);
+    });
+
+    it('elenco: progetti propri per PM e TL, tutti per il controller; euro solo a chi li vede', async () => {
+      expect((await come('rita', REP)).status).toBe(403);
+      const perPaola = (await come('paola', REP)).body;
+      expect(perPaola.vista).toBe('approvata');
+      const x = perPaola.progetti.find((p: { codice: string }) => p.codice === 'PX');
+      expect(perPaola.progetti.some((p: { codice: string }) => p.codice === 'PY')).toBe(false);
+      expect(x).toMatchObject({ vedeEuro: true, centroCosto: 'CDC-SVI', stime: { definitivaGiorni: 120, definitivaCentesimi: 4_800_000 } });
+      expect(x.consuntivato).toMatchObject({ minuti: 1800, giorni: 3.75, costoCentesimi: 70000, daValorizzare: 1 });
+      expect(x.inAttesa).toMatchObject({ righe: 2, minuti: 180 });
+      const perTito = (await come('tito', REP)).body.progetti.find((p: { codice: string }) => p.codice === 'PX');
+      expect(perTito.vedeEuro).toBe(false);
+      expect(JSON.stringify(perTito)).not.toMatch(/Centesimi/);
+      const perCarlo = (await come('carlo', `${REP}?stato=inValutazione`)).body.progetti;
+      expect(perCarlo.map((p: { codice: string }) => p.codice)).toEqual(['PY']);
+      expect((await come('carlo', `${REP}?testo=portale`)).body.progetti.map((p: { codice: string }) => p.codice)).toEqual(['PX']);
+    });
+
+    it('scheda: dall\'inizio e nel periodo, per attività (con Senza attività), risorsa, ruolo alla data, tipologia, mese', async () => {
+      const r = await come('paola', `${REP}/${px.toHexString()}?da=2026-09-01&a=2026-09-30`);
+      expect(r.status).toBe(200);
+      const s = r.body;
+      expect(s.progetto).toMatchObject({ codice: 'PX', percentualeCompletamento: 30, percentualeAttivitaPesata: 25 });
+      expect(s.dallInizio).toMatchObject({ minuti: 1800, costoCentesimi: 70000 });
+      expect(s.nelPeriodo).toMatchObject({ minuti: 1320, costoCentesimi: 50000, daValorizzare: 1, minutiDaValorizzare: 240 });
+      expect(s.inAttesa.nelPeriodo).toMatchObject({ righe: 2, minuti: 180 });
+      const att = Object.fromEntries(s.perAttivita.map((a: { codice: string }) => [a.codice || 'senza', a]));
+      expect(att.ANA).toMatchObject({ stimaGiorni: 10, dallInizio: { minuti: 960 }, nelPeriodo: { minuti: 480 } });
+      expect(att.COL.nelPeriodo.minuti).toBe(720);
+      expect(att.senza).toMatchObject({ descrizione: 'Senza attività', nelPeriodo: { minuti: 120 } });
+      expect(s.perRisorsa.map((x: { risorsa: string; minuti: number }) => [x.risorsa, x.minuti])).toEqual([['rita rita', 1080], ['tito tito', 240]]);
+      const ruoli = Object.fromEntries(s.perRuolo.map((x: { ruolo: string; minuti: number }) => [x.ruolo, x.minuti]));
+      expect(ruoli).toEqual({ 'Sviluppatore junior': 600, 'Sviluppatore senior': 480, 'Senza ruolo': 240 });
+      expect(s.perTipologia.map((x: { tipologia: string }) => x.tipologia)).toEqual(['Ordinaria X', 'Straordinaria X']);
+      expect(s.perMese).toEqual([expect.objectContaining({ mese: '202609', minuti: 1320 })]);
+    });
+
+    it('vista provvisoria: anche bozza e inviate, mai le respinte', async () => {
+      const s = (await come('paola', `${REP}/${px.toHexString()}?da=2026-09-01&a=2026-09-30&vista=provvisoria`)).body;
+      expect(s.vista).toBe('provvisoria');
+      expect(s.nelPeriodo.minuti).toBe(1500);
+    });
+
+    it('TL senza euro, PM non approvatore e risorse escluse, progetto inesistente', async () => {
+      const s = (await come('tito', `${REP}/${px.toHexString()}`)).body;
+      expect(s.vedeEuro).toBe(false);
+      expect(JSON.stringify(s)).not.toMatch(/Centesimi/);
+      expect(s.stime).toEqual({ managerialeGiorni: 100, definitivaGiorni: 120 });
+      expect((await come('piero', `${REP}/${px.toHexString()}`)).status).toBe(403);
+      expect((await come('rita', `${REP}/${px.toHexString()}`)).status).toBe(403);
+      expect((await come('carlo', `${REP}/${px.toHexString()}`)).body.vedeEuro).toBe(true);
+      expect((await come('carlo', `${REP}/${new mongoose.Types.ObjectId().toHexString()}`)).status).toBe(404);
+      expect((await come('paola', `${REP}/${px.toHexString()}?da=2026-10-01&a=2026-09-01`)).status).toBe(400);
     });
   });
 });

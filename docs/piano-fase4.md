@@ -11,7 +11,7 @@ La fase 4 trasforma le ore approvate in **informazioni per decidere**: quanto co
 | Blocco | Stato | Note |
 | --- | --- | --- |
 | E0 — Preparazione | Fatto | Migrazione `009-report` (`evm_giornalieri` con indice unico progetto + giorno, `esecuzioni_batch`, indice `righe.stato + data`); `report/viste.ts` (due viste, giorni, togli euro) e `ReportService` (totali per chiavi nelle due viste, righe in attesa); permesso `vedereReport`, regole `puoVedereReportProgetto` e `vedeEuroProgetto`; voci "in preparazione" nella pagina iniziale. Test: 217 backend (nuovo `test/report.integrazione.spec.ts`), 18 frontend. Da fare sul PC: migrazione 009. |
-| E1 — Scheda costi del progetto | Da fare | |
+| E1 — Scheda costi del progetto | Fatto | `ProgettiReportService` e `ReportController`: `GET /report/progetti` (elenco con stime, consuntivato dall'inizio, righe in attesa; filtri stato e testo — cliente e centro di costo rimandati a E4) e `GET /report/progetti/:id` (scheda: stime contro consuntivato dall'inizio e nel periodo, in attesa, per attività con "Senza attività", risorsa, ruolo alla data, tipologia, mese; euro solo a chi li vede). Pagine Progetti e scheda con interruttore della vista, "Dati provvisori" e "Calcolato il"; collegamento dalle Anagrafiche. Test: 221 backend (10 nel file dei report), 18 frontend. Sul PC: nessuna migrazione. |
 | E2 — Indicatori EVM | Da fare | |
 | E3 — Andamento nel tempo | Da fare | |
 | E4 — Report dei costi | Da fare | |

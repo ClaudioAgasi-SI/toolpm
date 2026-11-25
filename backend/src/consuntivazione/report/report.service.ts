@@ -7,7 +7,7 @@ import { Consuntivo } from '../consuntivi/consuntivo.schema.js';
 import { GRUPPO_TOTALI, STATI_IN_ATTESA, STATI_VISTA, type Totali, totaliVuoti, type Vista } from './viste.js';
 
 /** Campi di riga per cui si può raggruppare. */
-export type Chiave = 'progettoId' | 'attivitaId' | 'centroCostoId' | 'tipologiaId' | 'risorsaId' | 'mese';
+export type Chiave = 'progettoId' | 'attivitaId' | 'centroCostoId' | 'tipologiaId' | 'risorsaId' | 'mese' | 'data';
 
 const CAMPO: Record<Chiave, string> = {
   progettoId: '$righe.progettoId',
@@ -16,6 +16,7 @@ const CAMPO: Record<Chiave, string> = {
   tipologiaId: '$righe.tipologiaId',
   risorsaId: '$risorsaId',
   mese: '$mese',
+  data: '$data',
 };
 
 export interface Filtro {
