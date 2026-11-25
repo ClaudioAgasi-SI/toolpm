@@ -2,7 +2,7 @@
 
 25/11/2026 · Claudio Agasi
 
-> Piano di lavoro della fase 4, **in attesa di conferma**: nessun codice ancora scritto. Versione di lavoro con commenti: [documento su Claude](https://claude.ai/artifact/4S4oqSmfAKxDCETE85qP4v). Le regole da cui parte sono in [analisi-consuntivazione.md](analisi-consuntivazione.md) (requisiti RF-14…17, RF-21, RF-22, RF-24, RF-25, RF-29…32, "Calcolo dell'avanzamento (EVM)", "Aggregazione dei costi"); il modo di lavorare è quello delle fasi [2](piano-fase2.md) e [3](piano-fase3.md).
+> Piano di lavoro della fase 4: decisioni confermate il 25/11/2026, due rischi in revisione; nessun codice ancora scritto. Versione di lavoro con commenti: [documento su Claude](https://claude.ai/artifact/4S4oqSmfAKxDCETE85qP4v). Le regole da cui parte sono in [analisi-consuntivazione.md](analisi-consuntivazione.md) (requisiti RF-14…17, RF-21, RF-22, RF-24, RF-25, RF-29…32, "Calcolo dell'avanzamento (EVM)", "Aggregazione dei costi"); il modo di lavorare è quello delle fasi [2](piano-fase2.md) e [3](piano-fase3.md).
 
 La fase 4 trasforma le ore approvate in **informazioni per decidere**: quanto costa ogni progetto e ogni centro di costo, come stanno andando tempi e costi rispetto alle stime (indicatori Earned Value), quanto del pianificato è stato davvero lavorato, con le esportazioni in Excel e CSV. Non cambia come si inseriscono o approvano le ore.
 
@@ -137,20 +137,20 @@ Ogni blocco si chiude con codice, test, documentazione in `docs/` aggiornata e p
 - [ ] Report annuale su tutte le risorse in pochi secondi.
 - [ ] Documentazione in `docs/` e Swagger aggiornati; `docker compose up` sul PC con la migrazione 009 eseguita.
 
-## Decisioni da confermare
+## Decisioni confermate
 
-Punti che l'analisi lascia aperti o che conviene fissare prima di scrivere il codice; per ognuno la proposta.
+Confermate il 25/11/2026, tutte come proposte. Colmano punti che l'analisi lascia aperti o li precisano.
 
-1. **Quali righe contano.** Costi, EVM e report sommano solo le righe approvate dal PM e quelle dei mesi chiusi, come dice l'analisi. Le righe in attesa (bozza, inviate, con via libera, respinte) e quelle approvate ma da valorizzare compaiono a parte, come numero e ore, per sapere quanto manca. *Proposta: sì.*
-2. **Ore pianificate.** Percentuale di allocazione × giorni lavorativi del mese (lunedì–venerdì meno le festività nazionali italiane, Pasquetta compresa) × ore contrattuali giornaliere della risorsa (se mancano, il parametro `oreGiorno`), limitate alle date di ingresso e uscita. Le ferie non si conoscono: non si tolgono. *Proposta: sì.*
-3. **Consuntivato nel confronto con il pianificato.** Si confrontano le ore approvate; le ore ancora in attesa compaiono in una colonna a parte, così il confronto è utile anche a metà mese. *Proposta: sì.*
-4. **Chi vede cosa.** Scheda e indicatori: approvatori del progetto, PMSenior, controller. Report dei costi e pianificato: controller e PMSenior tutto, PM e TL i propri progetti. Il TL vede ore, giorni, indici e stati, mai euro (anche nelle esportazioni). *Proposta: sì.*
-5. **Andamento notturno nel backend.** La procedura gira dentro il backend (pianificata con `@nestjs/schedule`) e recupera da sola i giorni mancanti degli ultimi 31 giorni all'avvio, così non serve un servizio a parte sul PC. Per i giorni recuperati la percentuale viene dallo storico; le stime sono quelle attuali. *Proposta: sì.*
-6. **Dove si vede lo stato dei progetti.** In una nuova pagina **Progetti** della Consuntivazione (elenco con consuntivato, stime e stati) che porta alla scheda; nelle Anagrafiche resta solo un collegamento "Costi e avanzamento" dal dettaglio del progetto. *Proposta: sì, per non appesantire le Anagrafiche.*
-7. **Formati delle esportazioni.** Excel (.xlsx) e CSV (separatore `;`, decimali con la virgola, codifica UTF-8 con BOM), generati dal backend con le stesse regole delle pagine. Le righe di dettaglio sono solo quelle approvate e chiuse, al massimo un anno per esportazione. *Proposta: sì.*
-8. **Periodo predefinito.** La scheda mostra sempre i totali dall'inizio del progetto e, per il dettaglio, l'anno in corso, modificabile; i report partono dal mese corrente. *Proposta: sì.*
-9. **Giorni dai minuti.** Nei report e nell'EVM un giorno vale `oreGiorno` ore (8), come le stime; le ore contrattuali della risorsa servono solo al pianificato. *Proposta: sì, come nell'analisi.*
-10. **Nessun dato precalcolato oltre all'andamento.** Report e indicatori si calcolano al momento dalla collection dei consuntivi; si salvano solo gli indicatori giornalieri per i grafici. *Proposta: sì; se le prove di prestazione lo richiedessero, si aggiungerebbe un riepilogo mensile.*
+1. **Quali righe contano.** Costi, EVM e report sommano solo le righe approvate dal PM e quelle dei mesi chiusi, come dice l'analisi. Le righe in attesa (bozza, inviate, con via libera, respinte) e quelle approvate ma da valorizzare compaiono a parte, come numero e ore, per sapere quanto manca.
+2. **Ore pianificate.** Percentuale di allocazione × giorni lavorativi del mese (lunedì–venerdì meno le festività nazionali italiane, Pasquetta compresa) × ore contrattuali giornaliere della risorsa (se mancano, il parametro `oreGiorno`), limitate alle date di ingresso e uscita. Le ferie non si conoscono: non si tolgono.
+3. **Consuntivato nel confronto con il pianificato.** Si confrontano le ore approvate; le ore ancora in attesa compaiono in una colonna a parte, così il confronto è utile anche a metà mese.
+4. **Chi vede cosa.** Scheda e indicatori: approvatori del progetto, PMSenior, controller. Report dei costi e pianificato: controller e PMSenior tutto, PM e TL i propri progetti. Il TL vede ore, giorni, indici e stati, mai euro (anche nelle esportazioni).
+5. **Andamento notturno nel backend.** La procedura gira dentro il backend (pianificata con `@nestjs/schedule`) e recupera da sola i giorni mancanti degli ultimi 31 giorni all'avvio, così non serve un servizio a parte sul PC. Per i giorni recuperati la percentuale viene dallo storico; le stime sono quelle attuali.
+6. **Dove si vede lo stato dei progetti.** In una nuova pagina **Progetti** della Consuntivazione (elenco con consuntivato, stime e stati) che porta alla scheda; nelle Anagrafiche resta solo un collegamento "Costi e avanzamento" dal dettaglio del progetto. Così le Anagrafiche restano leggere.
+7. **Formati delle esportazioni.** Excel (.xlsx) e CSV (separatore `;`, decimali con la virgola, codifica UTF-8 con BOM), generati dal backend con le stesse regole delle pagine. Le righe di dettaglio sono solo quelle approvate e chiuse, al massimo un anno per esportazione.
+8. **Periodo predefinito.** La scheda mostra sempre i totali dall'inizio del progetto e, per il dettaglio, l'anno in corso, modificabile; i report partono dal mese corrente.
+9. **Giorni dai minuti.** Nei report e nell'EVM un giorno vale `oreGiorno` ore (8), come le stime; le ore contrattuali della risorsa servono solo al pianificato. Come nell'analisi.
+10. **Nessun dato precalcolato oltre all'andamento.** Report e indicatori si calcolano al momento dalla collection dei consuntivi; si salvano solo gli indicatori giornalieri per i grafici. Se le prove di prestazione lo richiedessero, si aggiungerebbe un riepilogo mensile.
 
 ## Rischi
 
