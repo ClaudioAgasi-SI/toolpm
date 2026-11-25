@@ -23,6 +23,7 @@ import { ContatoreApprovazioni } from './contatore-approvazioni';
       }
       @if (sessione.puo('vedereReport')) {
         <a routerLink="progetti" routerLinkActive="attivo">Progetti</a>
+        <a routerLink="report/costi" routerLinkActive="attivo">Report</a>
       }
       @if (sessione.puo('gestireTipologieCosto')) {
         <a routerLink="tipologie" routerLinkActive="attivo">Tipologie di costo</a>

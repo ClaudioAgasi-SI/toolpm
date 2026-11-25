@@ -121,6 +121,16 @@ Nella scheda, il riquadro **Tempi e costi** dice se il progetto è in linea alla
 - nell'elenco dei progetti le colonne **Tempi** e **Costi** mostrano lo stato a oggi;
 - gli indicatori ci sono solo per i progetti In corso e Chiusi che hanno una stima. Il TL vede giorni, indici e stati, non gli euro.
 
+### Report dei costi
+
+Da **Consuntivazione › Report** si vedono ore, giorni e costi di un periodo (di default il mese corrente) raggruppati come serve: per esempio centro di costo › progetto › attività, progetto › risorsa, ruolo › risorsa, mese › tipologia di costo, oppure fino a quattro livelli a scelta con **Personalizzato**.
+
+- Ogni voce mostra il totale del suo livello; con ▸ si apre il dettaglio, con **Espandi tutto** si apre tutto. Le ore di un'attività sono contate nel suo progetto e nel centro di costo del progetto, una volta sola.
+- Si filtra per centro di costo, cliente e progetto; dal nome di un progetto si va alla sua scheda.
+- Controller e PMSenior vedono tutti i progetti; TL e PM quelli di cui sono approvatori. Gli euro compaiono solo se li vedi su tutti i progetti del report: se ci sono anche progetti dove sei TL, scegli un progetto di cui sei PM.
+- Come nelle schede, di norma contano le ore approvate dal PM; "Includi le ore non ancora approvate" mostra i dati provvisori.
+- Nell'elenco **Progetti** si filtra anche per centro di costo e cliente.
+
 ### Andamento nel tempo
 
 Sotto gli indicatori, due grafici mostrano come sono cambiati giorno per giorno: il primo il valore pianificato (PV), il lavoro fatto (EV) e il costo (AC); il secondo gli indici SPI e CPI sulle fasce colorate degli stati. Passando con il mouse si leggono i valori di un giorno; "Vedi i dati in tabella" li elenca.

@@ -2,6 +2,7 @@ import { Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Permesso, type UtenteAutenticato, UtenteRichiesta } from '../../auth/decoratori.js';
 import { AndamentoService } from './andamento.service.js';
+import { CostiReportService } from './costi-report.service.js';
 import { EvmService } from './evm.service.js';
 import { ProgettiReportService } from './progetti-report.service.js';
 
@@ -13,6 +14,7 @@ export class ReportController {
     private readonly progetti: ProgettiReportService,
     private readonly evm: EvmService,
     private readonly andamento: AndamentoService,
+    private readonly costiReport: CostiReportService,
   ) {}
 
   @Get('progetti')
@@ -24,6 +26,8 @@ export class ReportController {
   @ApiQuery({ name: 'vista', required: false, description: 'approvata (predefinita) oppure provvisoria' })
   @ApiQuery({ name: 'stato', required: false, description: 'inValutazione, inCorso, chiuso' })
   @ApiQuery({ name: 'testo', required: false, description: 'Codice o titolo' })
+  @ApiQuery({ name: 'cliente', required: false, description: 'Id del cliente' })
+  @ApiQuery({ name: 'centroCosto', required: false, description: 'Id del centro di costo' })
   elenco(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Query() query: Record<string, unknown>) {
     return this.progetti.elenco(utente, query);
   }
@@ -85,5 +89,25 @@ export class ReportController {
   @ApiOperation({ summary: 'Esegui ora la procedura dell\'andamento EVM', description: 'Avvia l\'elaborazione dei giorni mancanti fino a ieri e risponde subito (202). 409 se è già in corso. Solo controller.' })
   eseguiOra(@UtenteRichiesta() utente: UtenteAutenticato | undefined) {
     return this.andamento.eseguiOra(utente);
+  }
+
+  @Get('costi')
+  @Permesso('vedereReport')
+  @ApiOperation({
+    summary: 'Report dei costi annidato per i livelli scelti',
+    description:
+      'Ore, giorni e costi del periodo (predefinito: il mese corrente) raggruppati da 1 a 4 livelli tra cdc, progetto, attivita, risorsa, ruolo, tipologia, mese, ' +
+      'con i totali di ogni livello e le righe da valorizzare; ogni riga conta una volta per livello (RF-21). Controller e PMSenior: tutti i progetti; TL e PM: i propri. ' +
+      'Euro solo se l\'utente li vede su tutti i progetti compresi. In "opzioni" i valori dei filtri.',
+  })
+  @ApiQuery({ name: 'da', required: false })
+  @ApiQuery({ name: 'a', required: false })
+  @ApiQuery({ name: 'raggruppa', required: false, description: 'es. cdc,progetto,attivita (predefinito cdc,progetto)' })
+  @ApiQuery({ name: 'centroCosto', required: false, description: 'Id separati da virgola' })
+  @ApiQuery({ name: 'cliente', required: false, description: 'Id separati da virgola' })
+  @ApiQuery({ name: 'progetto', required: false, description: 'Id separati da virgola' })
+  @ApiQuery({ name: 'vista', required: false })
+  costi(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Query() query: Record<string, unknown>) {
+    return this.costiReport.costi(utente, query);
   }
 }

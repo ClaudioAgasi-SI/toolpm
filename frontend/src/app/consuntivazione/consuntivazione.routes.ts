@@ -55,6 +55,12 @@ export const CONSUNTIVAZIONE_ROUTES: Routes = [
         loadComponent: () => import('./scheda-progetto').then((m) => m.SchedaProgetto),
       },
       {
+        path: 'report/costi',
+        title: 'Report dei costi · ToolPM',
+        canActivate: [permessoRichiesto('vedereReport')],
+        loadComponent: () => import('./report-costi').then((m) => m.ReportCosti),
+      },
+      {
         path: 'consuntivi-risorse',
         title: 'Consuntivi delle risorse · ToolPM',
         canActivate: [permessoRichiesto('gestireTariffe')],

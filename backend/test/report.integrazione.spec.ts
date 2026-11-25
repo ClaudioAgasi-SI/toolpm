@@ -3,6 +3,7 @@
  * E0: migrazione 009 (evm_giornalieri, esecuzioni_batch), aggregazioni nelle due viste, permesso vedereReport.
  * E1: elenco dei progetti e scheda costi (totali, dettagli, ruolo alla data, viste, riservatezza degli euro).
  * E2: indicatori EVM del progetto e delle attività alla data (percentuale dallo storico, viste, TL senza euro).
+ * E4: report dei costi annidato (livelli, ruolo alla data, filtri, visibilità ed euro).
  * E3: procedura dell'andamento (ripresa dall'ultimo giorno, blocco, esecuzione scaduta), serie giornaliera, registro.
  *
  * Si esegue solo se è impostata MONGODB_URI_TEST, es.:
@@ -399,6 +400,65 @@ describe.skipIf(!URI_BASE)('Report (fase 4) con MongoDB vero', () => {
         expect(lista.find((p: { codice: string }) => p.codice === 'PX').evm).toMatchObject({ calcolabile: true, statoTempi: 'nonCalcolabile' });
       });
     });
+    describe('E4 — report dei costi', () => {
+      const COSTI = '/api/consuntivazione/report/costi';
+      const SET = 'da=2026-09-01&a=2026-09-30';
+      type NodoT = { etichetta: string; minuti: number; figli: NodoT[]; costoCentesimi?: number; progettoId?: string };
+      const piatto = (ns: NodoT[]) => ns.map((n) => [n.etichetta, n.minuti]);
+
+      it('centro di costo › progetto › attività: totali di ogni livello, senza attività in fondo, in attesa a parte', async () => {
+        const r = await come('carlo', `${COSTI}?${SET}&raggruppa=cdc,progetto,attivita`);
+        expect(r.status).toBe(200);
+        const b = r.body;
+        expect(b).toMatchObject({ livelli: ['cdc', 'progetto', 'attivita'], vedeEuro: true });
+        expect(b.totali).toMatchObject({ minuti: 1800, costoCentesimi: 74000, daValorizzare: 1, giorni: 3.75 });
+        expect(b.inAttesa).toMatchObject({ righe: 2, minuti: 180 });
+        expect(piatto(b.righe)).toEqual([['CDC-SVI — Sviluppo', 1800]]);
+        const [nx, ny] = b.righe[0].figli as NodoT[];
+        expect([nx.etichetta, nx.minuti, nx.costoCentesimi, ny.etichetta, ny.minuti]).toEqual(['PX — Portale X', 1320, 50000, 'PY — Interno Y', 480]);
+        expect(nx.progettoId).toBe(px.toHexString());
+        expect(piatto(nx.figli)).toEqual([['ANA — Analisi', 480], ['COL — Collaudo', 720], ['Senza attività (ore sul progetto)', 120]]);
+        expect(b.opzioni.progetti.map((p: { etichetta: string }) => p.etichetta)).toContain('PY — Interno Y');
+      });
+
+      it('livelli in altro ordine, ruolo alla data, filtri', async () => {
+        const att = (await come('carlo', `${COSTI}?${SET}&raggruppa=attivita&progetto=${px.toHexString()}`)).body;
+        expect(piatto(att.righe)).toEqual([['PX › ANA — Analisi', 480], ['PX › COL — Collaudo', 720], ['PX › senza attività', 120]]);
+        const ruoli = (await come('carlo', `${COSTI}?${SET}&raggruppa=ruolo,risorsa&progetto=${px.toHexString()}`)).body;
+        expect(piatto(ruoli.righe)).toEqual([['Sviluppatore junior', 600], ['Sviluppatore senior', 480], ['Senza ruolo', 240]]);
+        expect(piatto(ruoli.righe[0].figli)).toEqual([['rita rita', 600]]);
+        const mesi = (await come('carlo', `${COSTI}?da=2026-06-01&a=2026-09-30&raggruppa=mese,tipologia`)).body;
+        expect(piatto(mesi.righe)).toEqual([['Giugno 2026', 1920], ['Agosto 2026', 480], ['Settembre 2026', 1800]]);
+        expect(piatto(mesi.righe[2].figli)).toEqual([['Ordinaria X', 1680], ['Straordinaria X', 120]]);
+        expect((await come('carlo', `${COSTI}?${SET}&progetto=${py.toHexString()}`)).body.totali.minuti).toBe(480);
+        expect((await come('carlo', `${COSTI}?${SET}&centroCosto=${new mongoose.Types.ObjectId().toHexString()}`)).body).toMatchObject({ righe: [], totali: { minuti: 0 } });
+        expect((await come('carlo', `${COSTI}?${SET}&raggruppa=progetto,cliente`)).status).toBe(400);
+        expect((await come('carlo', `${COSTI}?da=2026-09-30&a=2026-09-01`)).status).toBe(400);
+      });
+
+      it('visibilità: PM i propri progetti con gli euro, TL senza euro, altri nulla', async () => {
+        const pm = (await come('paola', `${COSTI}?${SET}&raggruppa=progetto`)).body;
+        expect(pm.vedeEuro).toBe(true);
+        expect(piatto(pm.righe)).toEqual([['PX — Portale X', 1320]]);
+        expect(pm.opzioni.progetti.map((p: { etichetta: string }) => p.etichetta)).toEqual(['PE — Progetto EVM', 'PX — Portale X']);
+        const tl = (await come('tito', `${COSTI}?${SET}&raggruppa=progetto`)).body;
+        expect(tl.vedeEuro).toBe(false);
+        expect(JSON.stringify(tl)).not.toMatch(/Centesimi/);
+        expect(tl.totali.minuti).toBe(1320);
+        expect((await come('piero', COSTI)).body).toMatchObject({ righe: [], vedeEuro: false });
+        expect((await come('rita', COSTI)).status).toBe(403);
+        // Predefinito: il mese corrente.
+        expect((await come('carlo', COSTI)).body.periodo.da).toMatch(/-01T00:00:00/);
+      });
+
+      it('elenco dei progetti: filtri per centro di costo e cliente, con i valori possibili', async () => {
+        const e = (await come('carlo', `${REP}?centroCosto=${cdc.toHexString()}`)).body;
+        expect(e.progetti.map((p: { codice: string }) => p.codice)).toEqual(['PE', 'PX', 'PY']);
+        expect(e.opzioni.centriCosto).toEqual([{ _id: cdc.toHexString(), etichetta: 'CDC-SVI — Sviluppo' }]);
+        expect((await come('carlo', `${REP}?cliente=${new mongoose.Types.ObjectId().toHexString()}`)).body.progetti).toEqual([]);
+      });
+    });
+
     describe('E3 — andamento nel tempo', () => {
       const d = (x: string) => new Date(`${x}T00:00:00.000Z`);
       const esegui = async (fino: string) => (await (await app.get(AndamentoService).avvia('test', { fino: d(fino) })).completamento);

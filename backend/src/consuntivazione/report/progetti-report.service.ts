@@ -5,7 +5,7 @@ import type { UtenteAutenticato } from '../../auth/decoratori.js';
 import { CentroCosto, Cliente, Ruolo } from '../../comuni/schemi/anagrafiche.schema.js';
 import { Attivita, Progetto } from '../../comuni/schemi/progetto.schema.js';
 import { Risorsa } from '../../comuni/schemi/risorsa.schema.js';
-import { data as leggiData, idRotta } from '../../comuni/validazione.js';
+import { data as leggiData, idRotta, objectId } from '../../comuni/validazione.js';
 import { PermessiService } from '../../permessi/permessi.service.js';
 import { ePMSenior, type ProgettoPerPermessi, puoVedereReportProgetto, vedeEuroProgetto } from '../../permessi/regole.js';
 import { giorniTra, oggiInItalia } from '../consuntivi/regole-giornata.js';
@@ -66,11 +66,16 @@ export class ProgettiReportService {
       if (!utente.risorsaId) return this.vuoto(vista);
       filtro['approvatori.risorsaId'] = new mongoose.Types.ObjectId(utente.risorsaId);
     }
+    for (const [parametro, campo] of [['cliente', 'clienteId'], ['centroCosto', 'centroCostoId']] as const) {
+      const id = objectId(query[parametro], parametro);
+      if (id) filtro[campo] = id;
+    }
     if (typeof query.testo === 'string' && query.testo.trim()) {
       const re = new RegExp(query.testo.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
       filtro.$or = [{ codice: re }, { titolo: re }];
     }
     const progetti = await this.progetti.find(filtro).sort({ codice: 1 }).lean<ProgettoLetto[]>().exec();
+    const opzioni = await this.opzioni(utente);
     const ids = progetti.map((p) => p._id);
     const [totali, attese, clienti, centri, oreGiorno, soglie] = await Promise.all([
       ids.length ? this.report.totali({ progettoIds: ids }, vista, ['progettoId']) : [],
@@ -89,6 +94,7 @@ export class ProgettiReportService {
     return {
       vista,
       calcolatoIl: new Date(),
+      opzioni,
       progetti: progetti.map((p) => {
         const euro = vedeEuroProgetto(utente, p);
         const t = tot.get(String(p._id)) ?? totaliVuoti();
@@ -270,7 +276,22 @@ export class ProgettiReportService {
   }
 
   private vuoto(vista: Vista) {
-    return { vista, calcolatoIl: new Date(), progetti: [] };
+    return { vista, calcolatoIl: new Date(), opzioni: { centriCosto: [], clienti: [] }, progetti: [] };
+  }
+
+  /** Valori dei filtri cliente e centro di costo, tra i progetti visibili (blocco E4). */
+  private async opzioni(utente: UtenteAutenticato) {
+    const visibili: Record<string, unknown> = {};
+    if (!utente.ruoli.includes('controller') && !ePMSenior(utente)) visibili['approvatori.risorsaId'] = new mongoose.Types.ObjectId(utente.risorsaId);
+    const [cdc, cli] = await Promise.all([this.progetti.distinct('centroCostoId', visibili).exec(), this.progetti.distinct('clienteId', visibili).exec()]);
+    const [centri, clienti] = await Promise.all([
+      this.centri.find({ _id: { $in: cdc } }, { codice: 1, descrizione: 1 }).sort({ codice: 1 }).lean().exec(),
+      this.clienti.find({ _id: { $in: cli.filter(Boolean) } }, { ragioneSociale: 1 }).sort({ ragioneSociale: 1 }).lean().exec(),
+    ]);
+    return {
+      centriCosto: centri.map((c) => ({ _id: String(c._id), etichetta: `${c.codice} — ${c.descrizione}` })),
+      clienti: clienti.map((c) => ({ _id: String(c._id), etichetta: c.ragioneSociale })),
+    };
   }
 }
 

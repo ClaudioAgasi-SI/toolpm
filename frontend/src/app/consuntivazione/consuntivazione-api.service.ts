@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import type { AndamentoEvm, EsecuzioneBatch, StatoEsecuzioni, AnteprimaChiusura, AnteprimaRicalcolo, AzioneApprovazione, CronologiaRiga, DaInviare, DatiTariffa, ElencoApprovazioni, ElencoPeriodi, ElencoProgettiReport, EvmScheda, EsitoApprovazione, EsitoInvio, EsitoSalvataggio, Giornata, Proposta, RigaDaSalvare, RigaDaValorizzare, SchedaProgetto, Tariffa, TariffeApplicabili, TipologiaCosto, TotaliRicalcolo, VistaReport, VoceProgetto, VoceStorico } from './modelli';
+import type { ReportCosti, AndamentoEvm, EsecuzioneBatch, StatoEsecuzioni, AnteprimaChiusura, AnteprimaRicalcolo, AzioneApprovazione, CronologiaRiga, DaInviare, DatiTariffa, ElencoApprovazioni, ElencoPeriodi, ElencoProgettiReport, EvmScheda, EsitoApprovazione, EsitoInvio, EsitoSalvataggio, Giornata, Proposta, RigaDaSalvare, RigaDaValorizzare, SchedaProgetto, Tariffa, TariffeApplicabili, TipologiaCosto, TotaliRicalcolo, VistaReport, VoceProgetto, VoceStorico } from './modelli';
 
 /** Accesso alle API della sezione Consuntivazione (/api/consuntivazione). */
 @Injectable({ providedIn: 'root' })
@@ -93,7 +93,7 @@ export class ConsuntivazioneApiService {
   }
 
   // Report (fase 4)
-  progettiReport(filtri: { vista?: VistaReport; stato?: string; testo?: string }) {
+  progettiReport(filtri: { vista?: VistaReport; stato?: string; testo?: string; cliente?: string; centroCosto?: string }) {
     let params = new HttpParams();
     for (const [k, v] of Object.entries(filtri)) if (v) params = params.set(k, v);
     return this.http.get<ElencoProgettiReport>(`${this.base}/report/progetti`, { params });
@@ -112,6 +112,11 @@ export class ConsuntivazioneApiService {
     let params = new HttpParams();
     for (const [k, v] of Object.entries(filtri)) if (v) params = params.set(k, v);
     return this.http.get<AndamentoEvm>(`${this.base}/report/progetti/${id}/evm/andamento`, { params });
+  }
+  reportCosti(filtri: { vista?: VistaReport; da?: string; a?: string; raggruppa?: string; centroCosto?: string; cliente?: string; progetto?: string }) {
+    let params = new HttpParams();
+    for (const [k, v] of Object.entries(filtri)) if (v) params = params.set(k, v);
+    return this.http.get<ReportCosti>(`${this.base}/report/costi`, { params });
   }
   esecuzioniBatch() {
     return this.http.get<StatoEsecuzioni>(`${this.base}/report/esecuzioni`);

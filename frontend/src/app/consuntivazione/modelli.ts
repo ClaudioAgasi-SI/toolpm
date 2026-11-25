@@ -357,6 +357,7 @@ export interface ProgettoReport {
 export interface ElencoProgettiReport {
   vista: VistaReport;
   calcolatoIl: string;
+  opzioni: { centriCosto: OpzioneFiltro[]; clienti: OpzioneFiltro[] };
   progetti: ProgettoReport[];
 }
 
@@ -520,4 +521,36 @@ export interface StatoEsecuzioni {
   ultima: EsecuzioneBatch | null;
   recenti: EsecuzioneBatch[];
   avviso: string | null;
+}
+
+// ---- Report dei costi (fase 4, blocco E4) ----
+
+export type LivelloCosti = 'cdc' | 'progetto' | 'attivita' | 'risorsa' | 'ruolo' | 'tipologia' | 'mese';
+
+export interface OpzioneFiltro {
+  _id: string;
+  etichetta: string;
+}
+
+export interface NodoCosti extends TotaliReport {
+  livello: LivelloCosti;
+  chiave: string;
+  etichetta: string;
+  progettoId?: string;
+  figli: NodoCosti[];
+}
+
+export interface ReportCosti {
+  vista: VistaReport;
+  calcolatoIl: string;
+  periodo: { da: string; a: string };
+  livelli: LivelloCosti[];
+  vedeEuro: boolean;
+  /** Euro nascosti perché tra i progetti compresi ce n'è qualcuno di cui l'utente non li vede. */
+  euroNascostiInParte: boolean;
+  oreGiorno: number;
+  opzioni: { centriCosto: OpzioneFiltro[]; clienti: OpzioneFiltro[]; progetti: (OpzioneFiltro & { stato: string })[] };
+  totali: TotaliReport;
+  inAttesa: { righe: number; minuti: number; giorni: number };
+  righe: NodoCosti[];
 }

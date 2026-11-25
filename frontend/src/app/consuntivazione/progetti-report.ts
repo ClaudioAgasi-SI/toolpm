@@ -4,7 +4,7 @@ import { RouterLink } from '@angular/router';
 import { etichettaStato, STATI_PROGETTO } from '../comuni/modelli';
 import { messaggioErrore } from '../core/errori';
 import { ConsuntivazioneApiService } from './consuntivazione-api.service';
-import type { ProgettoReport, VistaReport } from './modelli';
+import type { ElencoProgettiReport, ProgettoReport, VistaReport } from './modelli';
 import { totaleOre } from './ore';
 import { ETICHETTA_COSTI, ETICHETTA_TEMPI, indice, toneStato } from './evm-testi';
 import { calcolato, euro, gg, quota } from './report-testi';
@@ -29,6 +29,30 @@ import { calcolato, euro, gg, quota } from './report-testi';
             }
           </select>
         </label>
+        @if (opzioni(); as o) {
+          @if (o.centriCosto.length > 1) {
+            <label>
+              Centro di costo
+              <select name="centroCosto" [(ngModel)]="centroCosto" (ngModelChange)="carica()">
+                <option value="">tutti</option>
+                @for (c of o.centriCosto; track c._id) {
+                  <option [value]="c._id">{{ c.etichetta }}</option>
+                }
+              </select>
+            </label>
+          }
+          @if (o.clienti.length) {
+            <label>
+              Cliente
+              <select name="cliente" [(ngModel)]="cliente" (ngModelChange)="carica()">
+                <option value="">tutti</option>
+                @for (c of o.clienti; track c._id) {
+                  <option [value]="c._id">{{ c.etichetta }}</option>
+                }
+              </select>
+            </label>
+          }
+        }
         <label>Cerca <input name="testo" placeholder="codice o titolo" [(ngModel)]="testo" (keyup.enter)="carica()" /></label>
         <label class="spunta">
           <input type="checkbox" name="provvisoria" [(ngModel)]="provvisoria" (ngModelChange)="carica()" />
@@ -133,6 +157,9 @@ export class ProgettiReport {
   protected readonly totaleOre = totaleOre;
 
   protected stato = '';
+  protected cliente = '';
+  protected centroCosto = '';
+  protected readonly opzioni = signal<ElencoProgettiReport['opzioni'] | null>(null);
   protected testo = '';
   protected provvisoria = false;
   protected readonly progetti = signal<ProgettoReport[]>([]);
@@ -149,9 +176,10 @@ export class ProgettiReport {
     this.caricamento.set(true);
     this.errore.set('');
     const vista: VistaReport = this.provvisoria ? 'provvisoria' : 'approvata';
-    this.api.progettiReport({ vista, stato: this.stato, testo: this.testo.trim() }).subscribe({
+    this.api.progettiReport({ vista, stato: this.stato, testo: this.testo.trim(), cliente: this.cliente, centroCosto: this.centroCosto }).subscribe({
       next: (e) => {
         this.progetti.set(e.progetti);
+        this.opzioni.set(e.opzioni);
         this.conEuro.set(e.progetti.some((p) => p.vedeEuro));
         this.calcolatoIl.set(calcolato(e.calcolatoIl));
         this.caricamento.set(false);

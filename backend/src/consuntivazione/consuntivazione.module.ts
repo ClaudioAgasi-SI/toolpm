@@ -9,6 +9,7 @@ import { Periodo, PeriodoSchema } from './periodi/periodo.schema.js';
 import { StoricoController } from './storico/storico.controller.js';
 import { StoricoService } from './storico/storico.service.js';
 import { AndamentoService } from './report/andamento.service.js';
+import { CostiReportService } from './report/costi-report.service.js';
 import { EvmService } from './report/evm.service.js';
 import { ReportService } from './report/report.service.js';
 import { ProgettiReportService } from './report/progetti-report.service.js';
@@ -32,7 +33,7 @@ import { TipologiaCosto, TipologiaCostoSchema } from './tipologie/tipologia-cost
  *
  * Blocchi del piano (docs/piano-fase2.md): C1 tipologie di costo, C2 tariffe standard e
  * personalizzate, C3 consuntivi giornalieri, C6 righe da valorizzare e ricalcolo; fase 3
- * (docs/piano-fase3.md): D1 invio e ritiro, D2 approvazioni, D4 chiusura dei mesi, D5 storico; fase 4 (docs/piano-fase4.md): E0 aggregazioni dei report, E1 scheda del progetto, E2 indicatori EVM, E3 andamento (procedura notturna).
+ * (docs/piano-fase3.md): D1 invio e ritiro, D2 approvazioni, D4 chiusura dei mesi, D5 storico; fase 4 (docs/piano-fase4.md): E0 aggregazioni dei report, E1 scheda del progetto, E2 indicatori EVM, E3 andamento (procedura notturna), E4 report dei costi.
  * Collection (migrazione 007-consuntivazione): tipologie_costo, tariffe_standard,
  * tariffe_personalizzate, consuntivi.
  */
@@ -49,7 +50,7 @@ import { TipologiaCosto, TipologiaCostoSchema } from './tipologie/tipologia-cost
     ]),
   ],
   controllers: [TipologieController, TariffeController, ConsuntiviController, ValorizzazioneController, ApprovazioniController, PeriodiController, StoricoController, ReportController],
-  providers: [TipologieService, TariffeService, ConsuntiviService, ValorizzazioneService, ApprovazioniService, PeriodiService, StoricoService, ReportService, ProgettiReportService, EvmService, AndamentoService],
+  providers: [TipologieService, TariffeService, ConsuntiviService, ValorizzazioneService, ApprovazioniService, PeriodiService, StoricoService, ReportService, ProgettiReportService, EvmService, AndamentoService, CostiReportService],
   exports: [TipologieService, TariffeService, ConsuntiviService],
 })
 export class ConsuntivazioneModule {}
