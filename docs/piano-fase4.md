@@ -2,7 +2,7 @@
 
 25/11/2026 · Claudio Agasi
 
-> Piano di lavoro della fase 4: decisioni confermate il 25/11/2026, due rischi in revisione; nessun codice ancora scritto. Versione di lavoro con commenti: [documento su Claude](https://claude.ai/artifact/4S4oqSmfAKxDCETE85qP4v). Le regole da cui parte sono in [analisi-consuntivazione.md](analisi-consuntivazione.md) (requisiti RF-14…17, RF-21, RF-22, RF-24, RF-25, RF-29…32, "Calcolo dell'avanzamento (EVM)", "Aggregazione dei costi"); il modo di lavorare è quello delle fasi [2](piano-fase2.md) e [3](piano-fase3.md).
+> Piano di lavoro della fase 4, confermato il 25/11/2026 (decisioni 1–10 e, dalla revisione dei rischi, 11–13). Versione di lavoro con commenti: [documento su Claude](https://claude.ai/artifact/4S4oqSmfAKxDCETE85qP4v). Le regole da cui parte sono in [analisi-consuntivazione.md](analisi-consuntivazione.md) (requisiti RF-14…17, RF-21, RF-22, RF-24, RF-25, RF-29…32, "Calcolo dell'avanzamento (EVM)", "Aggregazione dei costi"); il modo di lavorare è quello delle fasi [2](piano-fase2.md) e [3](piano-fase3.md).
 
 La fase 4 trasforma le ore approvate in **informazioni per decidere**: quanto costa ogni progetto e ogni centro di costo, come stanno andando tempi e costi rispetto alle stime (indicatori Earned Value), quanto del pianificato è stato davvero lavorato, con le esportazioni in Excel e CSV. Non cambia come si inseriscono o approvano le ore.
 
@@ -10,7 +10,7 @@ La fase 4 trasforma le ore approvate in **informazioni per decidere**: quanto co
 
 | Blocco | Stato | Note |
 | --- | --- | --- |
-| E0 — Preparazione | Da fare | |
+| E0 — Preparazione | In corso | |
 | E1 — Scheda costi del progetto | Da fare | |
 | E2 — Indicatori EVM | Da fare | |
 | E3 — Andamento nel tempo | Da fare | |
@@ -74,16 +74,17 @@ Ogni blocco si chiude con codice, test, documentazione in `docs/` aggiornata e p
 
 ### E0 — Preparazione
 
-- Migrazione `009-report`: collection `evm_giornalieri` con validatore e indice unico `{ progettoId: 1, data: 1 }`; indice `consuntivi { "righe.stato": 1, data: 1 }` per i report di periodo.
-- Modulo `src/consuntivazione/report/` con le funzioni di aggregazione comuni (solo righe `approvata` e `chiusa`; minuti, giorni, costo, righe da valorizzare).
+- Migrazione `009-report`: collection `evm_giornalieri` (indicatori del giorno nelle due viste, approvata e provvisoria) con validatore e indice unico `{ progettoId: 1, data: 1 }`; collection `esecuzioni_batch` (registro delle esecuzioni delle procedure pianificate: procedura, inizio, fine, giorni elaborati, ultimo giorno completato, esito, avvisi, motivo); indice `consuntivi { "righe.stato": 1, data: 1 }` per i report di periodo.
+- Modulo `src/consuntivazione/report/` con le funzioni di aggregazione comuni, nelle due viste (decisione 11): **approvata** (righe `approvata` e `chiusa`) e **provvisoria** (anche `bozza`, `inviata`, `approvataTL`; mai le `respinta`); minuti, giorni, costo, righe da valorizzare.
 - Regole dei permessi: `puoVedereReportProgetto` (approvatori del progetto, PMSenior, controller) e `vedeEuroProgetto` (PM del progetto, PMSenior, controller; mai il TL); permesso globale `vedereReport` (abilitazione TL, PM, PMSenior o controller) per il menu.
 - Pagina iniziale e sottomenu: voce **Progetti** (elenco e scheda) e **Report** (costi, pianificato).
 
 ### E1 — Scheda costi del progetto
 
 - `GET /api/consuntivazione/report/progetti` — elenco dei progetti visibili all'utente (filtri: stato, cliente, centro di costo, testo): stime, consuntivato dall'inizio (giorni e, a chi può, euro), percentuale; dal blocco E2 anche gli stati di tempi e costi.
+- Tutte le API dei report accettano `vista=approvata|provvisoria` (predefinita: approvata); la risposta dice la vista usata e l'ora del calcolo.
 - `GET /api/consuntivazione/report/progetti/:id?da=&a=` — scheda: stime contro consuntivato dall'inizio e nel periodo (giorni ed euro), righe ancora in attesa o da valorizzare (numero e ore, a parte), dettaglio per attività con la sua stima in giorni (più "senza attività"), per risorsa, ruolo, tipologia e mese.
-- Pagine `/toolpm/consuntivazione/progetti` (elenco) e `/progetti/:id` (scheda), con collegamento dal dettaglio del progetto nelle Anagrafiche.
+- Pagine `/toolpm/consuntivazione/progetti` (elenco) e `/progetti/:id` (scheda), con collegamento dal dettaglio del progetto nelle Anagrafiche; interruttore **Includi le ore non ancora approvate** e, nella vista provvisoria, un'etichetta "Dati provvisori" ben visibile.
 
 ### E2 — Indicatori EVM
 
@@ -94,9 +95,13 @@ Ogni blocco si chiude con codice, test, documentazione in `docs/` aggiornata e p
 
 ### E3 — Andamento nel tempo
 
-- Procedura notturna nel backend (alle 2:00, ora italiana) con l'utente tecnico `sistema:evm`: salva in `evm_giornalieri` gli indicatori del giorno prima per ogni progetto In corso. All'avvio recupera i giorni mancanti degli ultimi 31, ricalcolandoli alla loro data (percentuale presa dallo storico `avanzamenti`).
-- `GET /api/consuntivazione/report/progetti/:id/evm/andamento?da=&a=` — serie giornaliera.
-- Nella scheda: grafico di PV, EV e AC nel tempo e grafico di SPI e CPI con le fasce delle soglie (al TL in giorni).
+- Procedura notturna nel backend (alle 2:00, ora italiana) con l'utente tecnico `sistema:evm`, che **riparte da dove era arrivata** (decisione 12): legge in `esecuzioni_batch` l'ultimo giorno completato ed elabora i giorni successivi fino a ieri, uno alla volta, salvando per ogni progetto In corso gli indicatori del giorno nelle due viste (percentuale presa dallo storico `avanzamenti`, stime attuali).
+- Ogni giorno si chiude in una transazione insieme all'avanzamento del registro: dopo un fermo si riparte dal primo giorno non concluso, senza buchi né doppioni (indice unico su progetto e giorno).
+- Registro di ogni esecuzione: inizio, fine, giorni elaborati, esito (completata, completata con avvisi, fallita) con il motivo; un progetto con dati non validi produce un avviso e non ferma gli altri. Un'esecuzione "in corso" fa da blocco contro esecuzioni contemporanee (notturna e all'avvio); se resta in corso oltre un'ora si considera interrotta.
+- Primo avvio: dalla data di inizio più vecchia tra i progetti In corso, al massimo un anno indietro. All'avvio del backend la procedura recupera i giorni mancanti.
+- `GET /api/consuntivazione/report/progetti/:id/evm/andamento?da=&a=&vista=` — serie giornaliera, con **"dati aggiornati al"** (ultimo giorno completato) ed eventuale avviso se l'ultima esecuzione non si è conclusa (decisione 13).
+- Nella pagina Periodi, per il controller: ultima esecuzione con esito e motivo, giorni elaborati, pulsante **Esegui ora**.
+- Nella scheda: grafico di PV, EV e AC nel tempo e grafico di SPI e CPI con le fasce delle soglie (al TL in giorni), nella vista scelta, con la dicitura "Andamento aggiornato al …".
 
 ### E4 — Report dei costi
 
@@ -114,7 +119,7 @@ Ogni blocco si chiude con codice, test, documentazione in `docs/` aggiornata e p
 
 - `?formato=xlsx|csv` su elenco progetti, scheda del progetto, report costi e pianificato: stessi filtri e stessa riservatezza delle pagine (gli euro escono solo a chi li vede).
 - `GET /api/consuntivazione/report/righe?da=&a=&progetto=&centroCosto=&risorsa=&formato=` — righe di dettaglio approvate e chiuse (data, risorsa, ruolo, progetto, attività, centro di costo, tipologia, ore, tariffa e costo a chi può, nota, stato, approvazione), al massimo un anno per volta.
-- Excel con una scheda per livello e i totali; CSV con separatore `;` e decimali con la virgola, come li apre Excel in italiano. Pulsante **Scarica** nelle pagine.
+- Excel con una scheda per livello e i totali; CSV con separatore `;` e decimali con la virgola, come li apre Excel in italiano. Ogni file riporta la vista (dati approvati o provvisori), il periodo e la data e ora di estrazione; il nome del file contiene "provvisorio" per la vista provvisoria. Pulsante **Scarica** nelle pagine.
 
 ### E7 — Test e documentazione
 
@@ -129,7 +134,8 @@ Ogni blocco si chiude con codice, test, documentazione in `docs/` aggiornata e p
 - [ ] La scheda del progetto mostra stime e consuntivato (giorni ed euro) dall'inizio e nel periodo, con il dettaglio per attività ("senza attività" compresa), risorsa, ruolo, tipologia e mese; i totali coincidono con la somma delle righe approvate.
 - [ ] Gli indicatori EVM dell'esempio TIMBUFE danno gli stessi valori dell'analisi; i casi senza stima o senza date sono "non calcolabili" senza errori.
 - [ ] Stato di tempi e costi colorato nella scheda e nell'elenco dei progetti; soglie lette dai parametri.
-- [ ] L'andamento giornaliero si salva ogni notte e si recupera dopo un fermo; la scheda lo mostra nei grafici.
+- [ ] L'andamento giornaliero si salva ogni notte nelle due viste, riparte dall'ultimo giorno completato dopo un fermo, registra ogni esecuzione con esito e motivo; la scheda lo mostra nei grafici con "aggiornato al".
+- [ ] Ogni report si vede nella vista approvata (predefinita) e in quella provvisoria, chiaramente indicata in pagina e nelle esportazioni.
 - [ ] Il report dei costi per centro di costo, progetto e attività non conta due volte nessuna riga e rispetta la visibilità di ogni profilo.
 - [ ] Il confronto pianificato/consuntivato usa giorni lavorativi e ore contrattuali e segnala le ore su progetti non allocati.
 - [ ] Ogni report e le righe di dettaglio si scaricano in Excel e CSV, con la stessa riservatezza delle pagine.
@@ -152,14 +158,21 @@ Confermate il 25/11/2026, tutte come proposte. Colmano punti che l'analisi lasci
 9. **Giorni dai minuti.** Nei report e nell'EVM un giorno vale `oreGiorno` ore (8), come le stime; le ore contrattuali della risorsa servono solo al pianificato. Come nell'analisi.
 10. **Nessun dato precalcolato oltre all'andamento.** Report e indicatori si calcolano al momento dalla collection dei consuntivi; si salvano solo gli indicatori giornalieri per i grafici. Se le prove di prestazione lo richiedessero, si aggiungerebbe un riepilogo mensile.
 
+Aggiunte il 25/11/2026 dalla revisione dei rischi, su proposta dell'utente:
+
+11. **Due viste: dati approvati e dati provvisori.** Ogni report, la scheda, gli indicatori, l'andamento e le esportazioni esistono in due viste. La **approvata** (predefinita e ufficiale) somma le righe approvate e chiuse; la **provvisoria** aggiunge le righe in bozza, inviate e con via libera, mai le respinte. Si passa dall'una all'altra con un interruttore; la vista provvisoria è sempre etichettata come tale, anche nei file. Le righe da valorizzare restano segnalate a parte in entrambe.
+12. **La procedura notturna riparte da dove era arrivata.** Un registro delle esecuzioni (`esecuzioni_batch`) dice fin dove è arrivata l'ultima esecuzione completa e, se non ha completato, perché; la successiva riprende dal giorno dopo fino a ieri, un giorno per volta, con blocco contro le esecuzioni contemporanee. Il controller vede l'ultima esecuzione e può lanciarla a mano.
+13. **"Dati aggiornati al".** Dove i dati vengono dalla procedura (l'andamento), la pagina e le esportazioni indicano l'ultimo giorno completato e avvisano se l'ultima esecuzione non si è conclusa; le schede e i report calcolati al momento indicano la data e l'ora del calcolo.
+
 ## Rischi
 
 | Rischio | Effetto | Contromisura |
 | --- | --- | --- |
 | Report annuali lenti | Pagine che si caricano in molti secondi | Aggregazioni sugli indici esistenti, prova con 130.000 righe in E7, riepilogo mensile solo se serve (decisione 10) |
-| Indicatori fuorvianti con dati incompleti | Un progetto sembra sotto budget perché le ore non sono ancora approvate | Righe in attesa e da valorizzare mostrate accanto agli indicatori, con un avviso |
+| Indicatori fuorvianti con dati incompleti | Un progetto sembra sotto budget perché le ore non sono ancora approvate | Due viste (decisione 11): approvata, ufficiale, e provvisoria con le ore non ancora approvate, sempre etichettata; righe da valorizzare segnalate a parte |
 | Divisioni per zero e casi limite dell'EVM | Errori o valori assurdi (infinito, negativi) | Funzioni pure provate sui casi dell'analisi; "non calcolabile" invece di numeri senza senso |
-| Fuso orario della procedura notturna | Giorni saltati o doppi | Data calcolata in ora italiana, indice unico su progetto e giorno, recupero all'avvio |
+| Procedura notturna non eseguita o interrotta (PC spento, errore, fuso orario) | Giorni saltati, doppi o andamento fermo senza che nessuno se ne accorga | Ripresa dall'ultimo giorno completato con registro delle esecuzioni (decisione 12), un giorno per transazione, indice unico su progetto e giorno, giorni in ora italiana, blocco contro le esecuzioni contemporanee; "aggiornato al" e avviso nelle pagine (decisione 13), esito visibile al controller con **Esegui ora** |
 | Euro esposti al TL in un'esportazione | Violazione della riservatezza | La stessa funzione decide gli euro per pagine ed esportazioni; test dedicati per ogni profilo |
 | Festività e giorni lavorativi | Pianificato sovrastimato in alcuni mesi | Calendario delle festività nazionali provato con i test; scostamenti presentati come indicazione |
+| Andamento che non riflette approvazioni arrivate dopo | Il grafico di un giorno passato resta com'era la notte in cui è stato salvato | Comportamento voluto (l'andamento è una fotografia di ogni giorno); la scheda mostra sempre i dati aggiornati; detto nella guida |
 | Nuove librerie (`exceljs`, `@nestjs/schedule`) | Build più pesante sul PC | Librerie diffuse e senza dipendenze native; installate con `npm` come le altre |

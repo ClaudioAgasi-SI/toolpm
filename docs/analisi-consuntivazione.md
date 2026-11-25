@@ -120,6 +120,8 @@ La riga di consuntivo appartiene alla giornata di una risorsa, punta sempre a un
 15. **RF-15 Costo per centro di costo.** Totale dei progetti associati, con dettaglio per progetto.
 16. **RF-16 Pianificato e consuntivato.** Confronto tra la percentuale di allocazione del Pianificatore e le ore consuntivate, per risorsa, progetto e mese.
 17. **RF-17 Esportazione.** Excel/CSV dei report e delle righe di dettaglio.
+
+Report, indicatori, andamento ed esportazioni si consultano in due viste: **approvata** (ufficiale, predefinita: righe approvate dal PM e chiuse) e **provvisoria** (anche le righe in bozza, inviate e con via libera, non le respinte), sempre indicata come tale (decisione del 25/11/2026).
 18. **RF-18 Ricalcolo.** Dopo una correzione retroattiva di una tariffa, il sistema mostra le righe interessate e ne ricalcola il costo su conferma del controller, tenendo traccia della modifica.
 
 **Attività di progetto**
@@ -142,7 +144,7 @@ La riga di consuntivo appartiene alla giornata di una risorsa, punta sempre a un
 28. **RF-28 Risorse assegnate alle attività.** Ogni attività ha l'elenco delle risorse assegnate, gestito da TL e PM del progetto e dai PMSenior.
 29. **RF-29 Indicatori EVM del progetto.** A una data di riferimento (di default oggi) il sistema calcola PV, EV, AC, gli scostamenti SV e CV, gli indici SPI e CPI e le previsioni EAC, ETC, VAC e TCPI, in euro e in giorni (vedi "Calcolo dell'avanzamento (EVM)").
 30. **RF-30 Stato di tempi e costi.** Il sistema traduce SPI e CPI in uno stato dei tempi (In anticipo, In linea, In ritardo, In forte ritardo) e uno stato dei costi (Sotto budget, In linea, Sopra budget, Fortemente sopra budget), mostrati con un colore nella scheda del progetto e nell'elenco dei progetti.
-31. **RF-31 Andamento nel tempo.** Ogni notte il sistema salva gli indicatori di ogni progetto In corso, per mostrare l'andamento di PV, EV e AC e degli indici nel tempo.
+31. **RF-31 Andamento nel tempo.** Ogni notte il sistema salva gli indicatori di ogni progetto In corso, per mostrare l'andamento di PV, EV e AC e degli indici nel tempo. La procedura riparte dall'ultimo giorno completato, registra ogni esecuzione con l'esito e il motivo di un'eventuale interruzione, e le pagine indicano fino a quale giorno l'andamento è aggiornato (decisione del 25/11/2026).
 32. **RF-32 Indicatori delle attività.** Per un'attività con stima in giorni il sistema mostra EV, AC e CPI in giorni; SPI e stato dei tempi solo se l'attività ha date di inizio e di fine.
 
 ### Calcolo del costo
@@ -353,7 +355,7 @@ db.consuntivi.aggregate([
 
 Il risultato per attività serve anche agli indicatori delle singole attività; la somma dà l'AC del progetto.
 
-- **Andamento.** Una procedura pianificata notturna, con l'utente tecnico `sistema:evm`, salva in `evm_giornalieri` un documento per progetto In corso e giorno, con tutti gli indicatori e gli stati.
+- **Andamento.** Una procedura pianificata notturna, con l'utente tecnico `sistema:evm`, salva in `evm_giornalieri` un documento per progetto In corso e giorno, con tutti gli indicatori e gli stati nelle due viste (approvata e provvisoria). Riparte dal giorno dopo l'ultimo completato, registrato in `esecuzioni_batch` con inizio, fine, giorni elaborati, esito e motivo; ogni giorno si salva in una transazione insieme al registro; un'esecuzione in corso blocca le altre (decisione del 25/11/2026).
 - **Parametri.** Ore per giorno (8) e soglie degli stati stanno nella collection `parametri`, modificabile dal controller.
 - **Storico dell'avanzamento.** Ogni cambio di percentuale scrive un documento in `avanzamenti` (progetto o attività, valore precedente e nuovo, data, autore).
 
