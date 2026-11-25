@@ -10,7 +10,10 @@
       {{ s.progetto.codice }} — {{ s.progetto.titolo }}
       <span class="stato" [class]="s.progetto.stato">{{ etichettaStato(s.progetto.stato) }}</span>
     </h1>
-    <div class="azioni"><a [routerLink]="['/comuni/progetti', s.progetto._id]">Dati del progetto</a></div>
+    <div class="azioni">
+      <app-pulsante-scarica [percorso]="'report/progetti/' + s.progetto._id" [filtri]="{ da: s.periodo.da.slice(0, 10), a: s.periodo.a.slice(0, 10), vista: s.vista }" />
+      <a [routerLink]="['/comuni/progetti', s.progetto._id]">Dati del progetto</a>
+    </div>
   </header>
   <p class="tenue">
     {{ s.progetto.cliente ?? 'Progetto interno' }} · centro di costo {{ s.progetto.centroCosto }} · dal {{ data(s.progetto.dataInizio) }} al {{ data(s.progetto.dataFine) }} ·

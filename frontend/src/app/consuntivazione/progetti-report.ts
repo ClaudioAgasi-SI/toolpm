@@ -6,6 +6,7 @@ import { messaggioErrore } from '../core/errori';
 import { ConsuntivazioneApiService } from './consuntivazione-api.service';
 import type { ElencoProgettiReport, ProgettoReport, VistaReport } from './modelli';
 import { totaleOre } from './ore';
+import { PulsanteScarica } from './pulsante-scarica';
 import { ETICHETTA_COSTI, ETICHETTA_TEMPI, indice, toneStato } from './evm-testi';
 import { calcolato, euro, gg, quota } from './report-testi';
 
@@ -15,7 +16,7 @@ import { calcolato, euro, gg, quota } from './report-testi';
  */
 @Component({
   selector: 'app-progetti-report',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, PulsanteScarica],
   template: `
     <header class="testata">
       <h1>Progetti: costi e avanzamento</h1>
@@ -58,6 +59,7 @@ import { calcolato, euro, gg, quota } from './report-testi';
           <input type="checkbox" name="provvisoria" [(ngModel)]="provvisoria" (ngModelChange)="carica()" />
           Includi le ore non ancora approvate
         </label>
+        <app-pulsante-scarica percorso="report/progetti" [filtri]="filtriScarica()" />
       </div>
     </header>
     @if (provvisoria) {
@@ -170,6 +172,10 @@ export class ProgettiReport {
 
   constructor() {
     this.carica();
+  }
+
+  protected filtriScarica() {
+    return { vista: this.provvisoria ? 'provvisoria' : 'approvata', stato: this.stato, testo: this.testo.trim(), cliente: this.cliente, centroCosto: this.centroCosto };
   }
 
   protected carica() {

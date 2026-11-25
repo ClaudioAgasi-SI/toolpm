@@ -6,6 +6,7 @@ import { messaggioErrore } from '../core/errori';
 import { ConsuntivazioneApiService } from './consuntivazione-api.service';
 import { AndamentoEvmComponent } from './andamento-evm';
 import { EvmProgettoComponent } from './evm-progetto';
+import { PulsanteScarica } from './pulsante-scarica';
 import type { SchedaProgetto as Scheda, TotaliReport, VistaReport } from './modelli';
 import { oggi, totaleOre } from './ore';
 import { avvisoValorizzare, calcolato, euro, gg, nomeMese, quota } from './report-testi';
@@ -16,7 +17,7 @@ import { avvisoValorizzare, calcolato, euro, gg, nomeMese, quota } from './repor
  */
 @Component({
   selector: 'app-scheda-progetto',
-  imports: [FormsModule, RouterLink, EvmProgettoComponent, AndamentoEvmComponent],
+  imports: [FormsModule, RouterLink, EvmProgettoComponent, AndamentoEvmComponent, PulsanteScarica],
   templateUrl: './scheda-progetto.html',
   styleUrl: './scheda-progetto.scss',
 })

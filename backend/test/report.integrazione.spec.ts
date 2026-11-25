@@ -5,6 +5,7 @@
  * E2: indicatori EVM del progetto e delle attività alla data (percentuale dallo storico, viste, TL senza euro).
  * E4: report dei costi annidato (livelli, ruolo alla data, filtri, visibilità ed euro).
  * E5: pianificato contro consuntivato (giorni lavorativi, ingresso, progetti non allocati, visibilità).
+ * E6: esportazioni in CSV ed Excel (intestazione, riservatezza degli euro, vista provvisoria) e righe di dettaglio.
  * E3: procedura dell'andamento (ripresa dall'ultimo giorno, blocco, esecuzione scaduta), serie giornaliera, registro.
  *
  * Si esegue solo se è impostata MONGODB_URI_TEST, es.:
@@ -18,6 +19,7 @@ import { Test } from '@nestjs/testing';
 import mongoose from 'mongoose';
 import request from 'supertest';
 import { cifraPassword } from '../src/auth/password.js';
+import ExcelJS from 'exceljs';
 import { AndamentoService } from '../src/consuntivazione/report/andamento.service.js';
 import { ReportService } from '../src/consuntivazione/report/report.service.js';
 
@@ -508,6 +510,67 @@ describe.skipIf(!URI_BASE)('Report (fase 4) con MongoDB vero', () => {
         expect((await come('carlo', `${PIAN}?da=2026-09`)).status).toBe(400);
         expect((await come('carlo', `${PIAN}?da=202609&a=202608`)).status).toBe(400);
         expect((await come('carlo', `${PIAN}?da=202401&a=202609`)).status).toBe(400);
+      });
+    });
+
+    describe('E6 — esportazioni', () => {
+      const SET = 'da=2026-09-01&a=2026-09-30';
+      const binario = (res: request.Response, fatto: (e: Error | null, b: Buffer) => void) => {
+        const parti: Buffer[] = [];
+        res.on('data', (c: Buffer) => parti.push(c));
+        res.on('end', () => fatto(null, Buffer.concat(parti)));
+      };
+      const scarica = (chi: string, url: string) => api().get(url).set('Cookie', cookie[chi]).buffer(true).parse(binario);
+      const testo = (r: request.Response) => (r.body as Buffer).toString('utf8');
+      const contenuto = (r: request.Response) => r.body as never;
+
+      it('report dei costi in CSV: intestazione, una colonna per livello, euro solo a chi li vede, vista provvisoria nel nome', async () => {
+        const r = await scarica('carlo', `/api/consuntivazione/report/costi?${SET}&raggruppa=cdc,progetto,attivita&formato=csv`);
+        expect(r.status).toBe(200);
+        expect(r.headers['content-type']).toContain('text/csv');
+        expect(r.headers['content-disposition']).toMatch(/attachment; filename="toolpm-report-costi-\d{4}-\d{2}-\d{2}\.csv"/);
+        const t = testo(r);
+        expect(t.charCodeAt(0)).toBe(0xfeff);
+        expect(t).toContain('Report dei costi\r\nDati approvati dal PM');
+        expect(t).toContain('Periodo: dal 01/09/2026 al 30/09/2026');
+        expect(t).toContain('Centro di costo;Progetto;Attività;Ore;Giorni;Costo;Righe da valorizzare');
+        expect(t).toContain('CDC-SVI — Sviluppo;PX — Portale X;ANA — Analisi;8;1;200;0');
+        expect(t).toContain('Totale;;;30;3,75;740;1');
+        const tl = testo(await scarica('tito', `/api/consuntivazione/report/costi?${SET}&formato=csv`));
+        expect(tl).not.toMatch(/Costo|€/);
+        const prov = await scarica('carlo', `/api/consuntivazione/report/costi?${SET}&vista=provvisoria&formato=csv`);
+        expect(prov.headers['content-disposition']).toContain('-provvisorio.csv');
+        expect(testo(prov)).toContain('Dati PROVVISORI');
+        expect((await come('carlo', `/api/consuntivazione/report/costi?formato=pdf`)).status).toBe(400);
+      });
+
+      it('Excel: fogli per livello; scheda, elenco e pianificato', async () => {
+        const libro = new ExcelJS.Workbook();
+        await libro.xlsx.load(contenuto(await scarica('carlo', `/api/consuntivazione/report/costi?${SET}&raggruppa=cdc,progetto,attivita&formato=xlsx`)));
+        expect(libro.worksheets.map((w) => w.name)).toEqual(['Dettaglio', 'Albero', 'Centri di costo', 'Progetti', 'Attività']);
+        const scheda = new ExcelJS.Workbook();
+        await scheda.xlsx.load(contenuto(await scarica('tito', `${REP}/${px.toHexString()}?${SET}&formato=xlsx`)));
+        expect(scheda.worksheets.map((w) => w.name)).toEqual(['Riepilogo', 'Attività', 'Risorse', 'Ruoli', 'Tipologie', 'Mesi']);
+        expect(JSON.stringify(scheda.getWorksheet('Riepilogo')!.getSheetValues())).not.toContain('Euro');
+        const elenco = testo(await scarica('paola', `${REP}?formato=csv`));
+        expect(elenco).toContain('Codice;Titolo;Cliente');
+        expect(elenco).toMatch(/\r\nPX;Portale X;Interno;CDC-SVI;In corso;30;/);
+        const pian = testo(await scarica('carlo', '/api/consuntivazione/report/pianificato?da=202609&formato=csv'));
+        expect(pian).toContain('rita rita;Settembre 2026;PX — Portale X;50;22;88;18;1;-70;-80;');
+      });
+
+      it('righe di dettaglio: solo approvate e chiuse, ruolo alla data, tariffa e costo a chi li vede, al massimo un anno', async () => {
+        const j = (await come('carlo', `/api/consuntivazione/report/righe?${SET}`)).body;
+        expect(j.totale).toBe(5);
+        expect(j.righe[0]).toMatchObject({ risorsa: 'rita rita', ruolo: 'Sviluppatore junior', progetto: 'PX', attivita: 'ANA — Analisi', minuti: 480, costoCentesimi: 20000, stato: 'approvata' });
+        const tl = (await come('tito', `/api/consuntivazione/report/righe?${SET}`)).body;
+        expect(tl.totale).toBe(4);
+        expect(JSON.stringify(tl)).not.toMatch(/Centesimi/);
+        const c = testo(await scarica('carlo', `/api/consuntivazione/report/righe?${SET}&risorsa=${risorsa.rita.toHexString()}&formato=csv`));
+        expect(c).toContain('Data;Risorsa;Ruolo;Progetto;Titolo del progetto;Attività;Centro di costo;Tipologia;Ore;Tariffa (€/h);Costo;Nota;Stato');
+        expect(c).toContain('10/09/2026;rita rita;Sviluppatore junior;PX;Portale X;ANA — Analisi;CDC-SVI;Ordinaria X;8;;200;;Approvata');
+        expect((await come('carlo', '/api/consuntivazione/report/righe?da=2025-01-01&a=2026-09-30')).status).toBe(400);
+        expect((await come('rita', '/api/consuntivazione/report/righe')).status).toBe(403);
       });
     });
 

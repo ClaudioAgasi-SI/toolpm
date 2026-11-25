@@ -140,6 +140,16 @@ Nella scheda **Pianificato e consuntivato** dei report si confrontano, mese per 
 - Aprendo una risorsa si vede il dettaglio per progetto; **non allocata** segna le ore su un progetto su cui la risorsa non era allocata in quel mese.
 - Controller e PMSenior vedono tutti i progetti; TL e PM i propri. Solo ore, niente euro.
 
+### Scaricare i report in Excel o CSV
+
+Nell'elenco dei progetti, nella scheda del progetto e nelle due schede dei report il pulsante **Scarica** dà il report come lo stai vedendo (stessi filtri, periodo e vista) in **Excel** o in **CSV**.
+
+- Ogni file riporta in testa il nome del report, la vista (dati approvati o PROVVISORI), il periodo e la data e ora di estrazione; nella vista provvisoria il nome del file finisce con "provvisorio".
+- In Excel ogni parte ha il suo foglio: per il report dei costi il dettaglio con una colonna per livello, l'albero con i totali (raggruppabile) e un foglio per livello; per la scheda riepilogo, attività, risorse, ruoli, tipologie e mesi.
+- Il CSV contiene la tabella principale con il separatore `;` e i decimali con la virgola, come lo apre Excel in italiano. Le ore sono in decimali (41:30 diventa 41,5).
+- **Righe di dettaglio** (nel report dei costi) esporta una riga per ogni ora approvata o di un mese chiuso: data, risorsa, ruolo, progetto, attività, centro di costo, tipologia, ore, tariffa e costo, nota, chi ha dato il via libera e approvato. Al massimo un anno per volta.
+- Gli importi in euro escono solo a chi li vede nella pagina; il TL ha file con sole ore e giorni.
+
 ### Andamento nel tempo
 
 Sotto gli indicatori, due grafici mostrano come sono cambiati giorno per giorno: il primo il valore pianificato (PV), il lavoro fatto (EV) e il costo (AC); il secondo gli indici SPI e CPI sulle fasce colorate degli stati. Passando con il mouse si leggono i valori di un giorno; "Vedi i dati in tabella" li elenca.

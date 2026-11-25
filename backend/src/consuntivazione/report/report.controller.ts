@@ -4,6 +4,9 @@ import { Permesso, type UtenteAutenticato, UtenteRichiesta } from '../../auth/de
 import { AndamentoService } from './andamento.service.js';
 import { CostiReportService } from './costi-report.service.js';
 import { PianificatoReportService } from './pianificato-report.service.js';
+import { file, leggiFormato } from './esporta.js';
+import { esportaCosti, esportaElenco, esportaPianificato, esportaScheda } from './esportazioni.js';
+import { RigheReportService } from './righe-report.service.js';
 import { EvmService } from './evm.service.js';
 import { ProgettiReportService } from './progetti-report.service.js';
 
@@ -17,6 +20,7 @@ export class ReportController {
     private readonly andamento: AndamentoService,
     private readonly costiReport: CostiReportService,
     private readonly pianificatoReport: PianificatoReportService,
+    private readonly righeReport: RigheReportService,
   ) {}
 
   @Get('progetti')
@@ -30,8 +34,11 @@ export class ReportController {
   @ApiQuery({ name: 'testo', required: false, description: 'Codice o titolo' })
   @ApiQuery({ name: 'cliente', required: false, description: 'Id del cliente' })
   @ApiQuery({ name: 'centroCosto', required: false, description: 'Id del centro di costo' })
-  elenco(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Query() query: Record<string, unknown>) {
-    return this.progetti.elenco(utente, query);
+  @ApiQuery({ name: 'formato', required: false, description: 'xlsx o csv per scaricare il file' })
+  async elenco(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Query() query: Record<string, unknown>) {
+    const formato = leggiFormato(query.formato);
+    const r = await this.progetti.elenco(utente, query);
+    return formato ? file(esportaElenco(r), formato) : r;
   }
 
   @Get('progetti/:id')
@@ -45,8 +52,11 @@ export class ReportController {
   @ApiQuery({ name: 'da', required: false })
   @ApiQuery({ name: 'a', required: false })
   @ApiQuery({ name: 'vista', required: false })
-  scheda(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Param('id') id: string, @Query() query: Record<string, unknown>) {
-    return this.progetti.scheda(utente, id, query);
+  @ApiQuery({ name: 'formato', required: false, description: 'xlsx o csv per scaricare il file' })
+  async scheda(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Param('id') id: string, @Query() query: Record<string, unknown>) {
+    const formato = leggiFormato(query.formato);
+    const r = await this.progetti.scheda(utente, id, query);
+    return formato ? file(esportaScheda(r), formato) : r;
   }
 
   @Get('progetti/:id/evm')
@@ -109,8 +119,11 @@ export class ReportController {
   @ApiQuery({ name: 'cliente', required: false, description: 'Id separati da virgola' })
   @ApiQuery({ name: 'progetto', required: false, description: 'Id separati da virgola' })
   @ApiQuery({ name: 'vista', required: false })
-  costi(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Query() query: Record<string, unknown>) {
-    return this.costiReport.costi(utente, query);
+  @ApiQuery({ name: 'formato', required: false, description: 'xlsx o csv per scaricare il file' })
+  async costi(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Query() query: Record<string, unknown>) {
+    const formato = leggiFormato(query.formato);
+    const r = await this.costiReport.costi(utente, query);
+    return formato ? file(esportaCosti(r), formato) : r;
   }
 
   @Get('pianificato')
@@ -126,7 +139,31 @@ export class ReportController {
   @ApiQuery({ name: 'a', required: false, description: 'AAAAMM, predefinito uguale a "da"; al massimo 24 mesi' })
   @ApiQuery({ name: 'risorsa', required: false, description: 'Id separati da virgola' })
   @ApiQuery({ name: 'progetto', required: false, description: 'Id separati da virgola' })
-  pianificato(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Query() query: Record<string, unknown>) {
-    return this.pianificatoReport.pianificato(utente, query);
+  @ApiQuery({ name: 'formato', required: false, description: 'xlsx o csv per scaricare il file' })
+  async pianificato(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Query() query: Record<string, unknown>) {
+    const formato = leggiFormato(query.formato);
+    const r = await this.pianificatoReport.pianificato(utente, query);
+    return formato ? file(esportaPianificato(r), formato) : r;
+  }
+
+  @Get('righe')
+  @Permesso('vedereReport')
+  @ApiOperation({
+    summary: 'Righe di dettaglio approvate e chiuse',
+    description:
+      'Una riga per riga di consuntivo approvata dal PM o di un mese chiuso: data, risorsa, ruolo alla data, progetto, attività, centro di costo, tipologia, ore, ' +
+      'tariffa e costo (solo sui progetti di cui si vedono gli importi), nota, stato, via libera e approvazione. Al massimo un anno e 100.000 righe. ' +
+      'Senza formato risponde con un\'anteprima di 200 righe.',
+  })
+  @ApiQuery({ name: 'da', required: false })
+  @ApiQuery({ name: 'a', required: false })
+  @ApiQuery({ name: 'progetto', required: false, description: 'Id separati da virgola' })
+  @ApiQuery({ name: 'centroCosto', required: false, description: 'Id separati da virgola' })
+  @ApiQuery({ name: 'risorsa', required: false, description: 'Id separati da virgola' })
+  @ApiQuery({ name: 'formato', required: false, description: 'xlsx o csv per scaricare il file' })
+  async righe(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Query() query: Record<string, unknown>) {
+    const formato = leggiFormato(query.formato);
+    const r = await this.righeReport.righe(utente, query);
+    return formato ? file(this.righeReport.esportazione(r), formato) : this.righeReport.anteprima(r);
   }
 }

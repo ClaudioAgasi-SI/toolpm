@@ -123,6 +123,12 @@ export class ConsuntivazioneApiService {
     for (const [k, v] of Object.entries(filtri)) if (v) params = params.set(k, v);
     return this.http.get<ReportPianificato>(`${this.base}/report/pianificato`, { params });
   }
+  /** Scarica un report in Excel o CSV (fase 4, E6): il file e il nome dato dal backend. */
+  scarica(percorso: string, filtri: Record<string, string | undefined>, formato: 'xlsx' | 'csv') {
+    let params = new HttpParams().set('formato', formato);
+    for (const [k, v] of Object.entries(filtri)) if (v) params = params.set(k, v);
+    return this.http.get(`${this.base}/${percorso}`, { params, responseType: 'blob', observe: 'response' });
+  }
   esecuzioniBatch() {
     return this.http.get<StatoEsecuzioni>(`${this.base}/report/esecuzioni`);
   }

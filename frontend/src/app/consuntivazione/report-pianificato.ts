@@ -5,6 +5,7 @@ import { messaggioErrore } from '../core/errori';
 import { ConsuntivazioneApiService } from './consuntivazione-api.service';
 import type { OrePianificato, ReportPianificato as Report } from './modelli';
 import { oggi, totaleOre } from './ore';
+import { PulsanteScarica } from './pulsante-scarica';
 import { ReportSchede } from './report-schede';
 import { calcolato, nomeMese } from './report-testi';
 
@@ -24,7 +25,7 @@ const meseApi = (v: string) => v.replace('-', '');
  */
 @Component({
   selector: 'app-report-pianificato',
-  imports: [FormsModule, NgTemplateOutlet, ReportSchede],
+  imports: [FormsModule, NgTemplateOutlet, ReportSchede, PulsanteScarica],
   template: `
     <header class="testata"><h1>Report</h1></header>
     <app-report-schede />
@@ -53,6 +54,9 @@ const meseApi = (v: string) => v.replace('-', '');
         </label>
       }
       <button type="submit">Aggiorna</button>
+      @if (dati(); as d) {
+        <app-pulsante-scarica percorso="report/pianificato" [filtri]="{ da: d.periodo.da, a: d.periodo.a, risorsa: risorsa, progetto: progetto }" />
+      }
     </form>
 
     @if (errore()) {

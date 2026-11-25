@@ -5,6 +5,7 @@ import { messaggioErrore } from '../core/errori';
 import { ConsuntivazioneApiService } from './consuntivazione-api.service';
 import type { LivelloCosti, NodoCosti, ReportCosti as Report, TotaliReport, VistaReport } from './modelli';
 import { oggi, totaleOre } from './ore';
+import { PulsanteScarica } from './pulsante-scarica';
 import { ReportSchede } from './report-schede';
 import { avvisoValorizzare, calcolato, euro, gg } from './report-testi';
 
@@ -68,7 +69,7 @@ const ultimoDelMese = (d: string) => {
  */
 @Component({
   selector: 'app-report-costi',
-  imports: [FormsModule, RouterLink, ReportSchede],
+  imports: [FormsModule, RouterLink, ReportSchede, PulsanteScarica],
   template: `
     <header class="testata"><h1>Report</h1></header>
     <app-report-schede />
@@ -167,9 +168,11 @@ const ultimoDelMese = (d: string) => {
       } @else {
         <div class="comandi">
           <span class="tenue piccolo">{{ percorsoLivelli(d) }}</span>
-          <span>
+          <span class="azioni-albero">
             <button type="button" class="link" (click)="espandi(true)">Espandi tutto</button> ·
             <button type="button" class="link" (click)="espandi(false)">Comprimi tutto</button>
+            <app-pulsante-scarica percorso="report/costi" [filtri]="filtriScarica()" />
+            <app-pulsante-scarica percorso="report/righe" [filtri]="filtriRighe()" etichetta="Righe di dettaglio" />
           </span>
         </div>
         <table class="elenco albero">
@@ -236,7 +239,8 @@ const ultimoDelMese = (d: string) => {
       <p class="tenue piccolo">
         Periodo dal {{ giorno(d.periodo.da) }} al {{ giorno(d.periodo.a) }}. Un giorno vale {{ d.oreGiorno }} ore. Ogni riga di consuntivo conta una volta per livello:
         le ore di un'attività sono nel suo progetto e nel centro di costo del progetto. {{ d.vista === 'provvisoria' ? 'Dati provvisori' : 'Dati approvati dal PM (e dei mesi chiusi)' }},
-        calcolati il {{ calcolato(d.calcolatoIl) }}.
+        calcolati il {{ calcolato(d.calcolatoIl) }}. "Scarica" esporta il report com'è; "Righe di dettaglio" esporta una riga per ogni ora
+        approvata (o di un mese chiuso) del periodo, al massimo un anno.
       </p>
     } @else if (caricamento()) {
       <p class="tenue">Caricamento…</p>
@@ -250,6 +254,7 @@ const ultimoDelMese = (d: string) => {
     .rapidi { display: flex; gap: 0.6rem; padding-bottom: 0.35rem; font-size: 0.85rem; }
     button.link { background: none; border: none; padding: 0; color: #1c63b7; cursor: pointer; text-decoration: underline; font: inherit; }
     .comandi { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; font-size: 0.85rem; }
+    .azioni-albero { display: inline-flex; gap: 0.5rem; align-items: center; }
     .numero { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .piccolo { font-size: 0.8rem; }
     .provvisori, .avviso { background: #fff8e6; border: 1px solid #f3dca8; color: #8a5a00; border-radius: 6px; padding: 4px 10px; margin: 0.35rem 0; }
@@ -316,6 +321,26 @@ export class ReportCosti {
           this.caricamento.set(false);
         },
       });
+  }
+
+  /** Filtri del file: quelli dell'ultimo report caricato (periodo e livelli dalla risposta). */
+  protected filtriScarica() {
+    const d = this.dati();
+    return {
+      vista: d?.vista,
+      da: d?.periodo.da.slice(0, 10),
+      a: d?.periodo.a.slice(0, 10),
+      raggruppa: d?.livelli.join(','),
+      centroCosto: this.centroCosto,
+      cliente: this.cliente,
+      progetto: this.progetto,
+    };
+  }
+
+  /** Righe di dettaglio (sempre approvate e chiuse, al massimo un anno): stesso periodo e filtri. */
+  protected filtriRighe() {
+    const d = this.dati();
+    return { da: d?.periodo.da.slice(0, 10), a: d?.periodo.a.slice(0, 10), centroCosto: this.centroCosto, progetto: this.progetto };
   }
 
   private livelliScelti(): LivelloCosti[] {
