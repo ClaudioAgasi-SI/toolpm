@@ -225,7 +225,7 @@ Esempio sul progetto TIMBUFE: stima definitiva 176.000 € e 440 giorni, dal 01/
 
 Il progetto è **In forte ritardo** sui tempi (SPI 0,80) e **Sopra budget** sui costi (CPI 0,88). Al ritmo attuale costerà 200.000 €, 24.000 € oltre la stima; per rientrare nel budget il lavoro restante dovrebbe rendere il 10% in più (TCPI 1,10).
 
-Casi particolari: senza stima il progetto non ha indicatori; senza data di inizio o di fine PV, SPI e stato dei tempi risultano "Non calcolabili", mentre CPI e stato dei costi restano disponibili. La percentuale del progetto non si ricava da quelle delle attività; la scheda mostra per riferimento la media delle attività pesata sulla loro stima in giorni.
+Casi particolari: senza stima il progetto non ha indicatori; senza data di inizio o di fine PV, SPI e stato dei tempi risultano "Non calcolabili", mentre CPI e stato dei costi restano disponibili. Se nessuna riga fino alla data ha ancora un costo in euro (righe da valorizzare), il CPI in euro non è calcolabile e lo stato dei costi si ricava dagli indici in giorni (precisazione del 25/11/2026, blocco E2). La percentuale del progetto non si ricava da quelle delle attività; la scheda mostra per riferimento la media delle attività pesata sulla loro stima in giorni.
 
 ### Regole di business
 
