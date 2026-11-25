@@ -3,6 +3,7 @@ import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Permesso, type UtenteAutenticato, UtenteRichiesta } from '../../auth/decoratori.js';
 import { AndamentoService } from './andamento.service.js';
 import { CostiReportService } from './costi-report.service.js';
+import { PianificatoReportService } from './pianificato-report.service.js';
 import { EvmService } from './evm.service.js';
 import { ProgettiReportService } from './progetti-report.service.js';
 
@@ -15,6 +16,7 @@ export class ReportController {
     private readonly evm: EvmService,
     private readonly andamento: AndamentoService,
     private readonly costiReport: CostiReportService,
+    private readonly pianificatoReport: PianificatoReportService,
   ) {}
 
   @Get('progetti')
@@ -109,5 +111,22 @@ export class ReportController {
   @ApiQuery({ name: 'vista', required: false })
   costi(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Query() query: Record<string, unknown>) {
     return this.costiReport.costi(utente, query);
+  }
+
+  @Get('pianificato')
+  @Permesso('vedereReport')
+  @ApiOperation({
+    summary: 'Pianificato contro consuntivato, per risorsa, mese e progetto',
+    description:
+      'Ore pianificate (percentuale di allocazione × giorni lavorativi del mese × ore contrattuali, entro ingresso e uscita; lun–ven meno le festività italiane) ' +
+      'contro ore approvate, ore ancora in attesa a parte, scostamento in ore e percentuale; ore su progetti non allocati segnate. Solo ore. ' +
+      'Controller e PMSenior: tutti i progetti; TL e PM: i propri.',
+  })
+  @ApiQuery({ name: 'da', required: false, description: 'AAAAMM, predefinito il mese corrente' })
+  @ApiQuery({ name: 'a', required: false, description: 'AAAAMM, predefinito uguale a "da"; al massimo 24 mesi' })
+  @ApiQuery({ name: 'risorsa', required: false, description: 'Id separati da virgola' })
+  @ApiQuery({ name: 'progetto', required: false, description: 'Id separati da virgola' })
+  pianificato(@UtenteRichiesta() utente: UtenteAutenticato | undefined, @Query() query: Record<string, unknown>) {
+    return this.pianificatoReport.pianificato(utente, query);
   }
 }

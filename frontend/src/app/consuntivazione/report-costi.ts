@@ -5,6 +5,7 @@ import { messaggioErrore } from '../core/errori';
 import { ConsuntivazioneApiService } from './consuntivazione-api.service';
 import type { LivelloCosti, NodoCosti, ReportCosti as Report, TotaliReport, VistaReport } from './modelli';
 import { oggi, totaleOre } from './ore';
+import { ReportSchede } from './report-schede';
 import { avvisoValorizzare, calcolato, euro, gg } from './report-testi';
 
 export const NOMI_LIVELLO: Record<LivelloCosti, string> = {
@@ -67,11 +68,10 @@ const ultimoDelMese = (d: string) => {
  */
 @Component({
   selector: 'app-report-costi',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, ReportSchede],
   template: `
-    <header class="testata">
-      <h1>Report dei costi</h1>
-    </header>
+    <header class="testata"><h1>Report</h1></header>
+    <app-report-schede />
 
     <form class="filtri" (ngSubmit)="carica()">
       <div class="gruppo">

@@ -19,7 +19,7 @@ const TONO: Record<StatoEsecuzione, string> = { inCorso: 'linea', completata: 'b
 @Component({
   selector: 'app-esecuzioni-andamento',
   template: `
-    <section class="pannello" aria-label="Andamento EVM">
+    <section class="riquadro-batch" aria-label="Andamento EVM">
       <header class="riga">
         <h2>Andamento degli indicatori (procedura notturna)</h2>
         <button type="button" (click)="esegui()" [disabled]="lavoro() || stato()?.ultima?.stato === 'inCorso'">Esegui ora</button>
@@ -87,7 +87,7 @@ const TONO: Record<StatoEsecuzione, string> = { inCorso: 'linea', completata: 'b
     </section>
   `,
   styles: `
-    .pannello { border: 1px solid #d5dbe7; background: #fbfcfe; border-radius: 6px; padding: 8px 14px; margin: 1.5rem 0 0.75rem; }
+    .riquadro-batch { border: 1px solid #d5dbe7; background: #fbfcfe; border-radius: 6px; padding: 8px 14px; margin: 1.5rem 0 0.75rem; }
     .riga { display: flex; justify-content: space-between; align-items: center; gap: 1rem; h2 { font-size: 1.05rem; margin: 0.25rem 0; } }
     .piccolo { font-size: 0.8rem; }
     .numero { text-align: right; font-variant-numeric: tabular-nums; }

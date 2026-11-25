@@ -80,11 +80,12 @@ export class ConsuntivazioneInizio {
     if (this.sessione.puo('gestirePeriodi')) {
       voci.push({ titolo: 'Periodi', descrizione: 'Chiusura e riapertura dei mesi.', percorso: 'periodi' });
     }
-    // Fase 4: Progetti (E1); Report dei costi (E4); pianificato ed esportazioni in preparazione (E5–E6).
+    // Fase 4: Progetti (E1); Report dei costi (E4); pianificato e consuntivato (E5); esportazioni in preparazione (E6).
     if (this.sessione.puo('vedereReport')) {
       voci.push({ titolo: 'Progetti: costi e avanzamento', descrizione: 'Stime e consuntivato, dettaglio per attività, risorsa, ruolo, tipologia e mese dei tuoi progetti.', percorso: 'progetti' });
       voci.push({ titolo: 'Report dei costi', descrizione: 'Ore e costi del periodo per centro di costo, progetto, attività, risorsa, ruolo, tipologia e mese, con i totali di ogni livello.', percorso: 'report/costi' });
-      voci.push({ titolo: 'Pianificato e consuntivato, esportazioni', descrizione: 'Confronto con il Pianificatore; esportazioni in Excel e CSV.' });
+      voci.push({ titolo: 'Pianificato e consuntivato', descrizione: 'Ore pianificate nel Pianificatore contro ore approvate, per risorsa, mese e progetto, con gli scostamenti.', percorso: 'report/pianificato' });
+      voci.push({ titolo: 'Esportazioni', descrizione: 'Report e dettaglio delle righe in Excel e CSV.' });
     }
     if (this.sessione.puo('consultareStorico')) {
       voci.push({ titolo: 'Storico delle modifiche', descrizione: 'Chi ha cambiato consuntivi, mesi, progetti, attività, tipologie e tariffe, e quando.', percorso: 'storico' });

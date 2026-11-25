@@ -301,7 +301,7 @@ I moduli si registrano come oggi con `RouterModule` in `app.module.ts`. Lo spost
 | POST | `/api/consuntivazione/periodi/:mese/chiudi`, `/riapri` | Controller | Chiusura del mese |
 | GET | `/api/consuntivazione/report/progetti/:id?da=&a=` | Approvatore del progetto, PMSenior, controller | Scheda del progetto: stime e consuntivato a confronto (giorni ed euro), totale, dettaglio per attività con la loro stima in giorni (più la voce "senza attività"), risorsa, tipologia, mese |
 | GET | `/api/consuntivazione/report/costi?raggruppa=cdc\|progetto\|attivita\|risorsa\|ruolo\|tipologia&da&a` | Approvatore (propri progetti), controller | Totali ore e costi, anche annidati (es. centro di costo → progetto → attività) |
-| GET | `/api/consuntivazione/report/pianificato-vs-consuntivato?mese=AAAAMM` | Approvatore, controller | Confronto con il Pianificatore |
+| GET | `/api/consuntivazione/report/pianificato?da=AAAAMM&a=AAAAMM` | Approvatore (propri progetti), PMSenior, controller | Confronto con il Pianificatore per risorsa, mese e progetto: ore pianificate (allocazione × giorni lavorativi, lun–ven meno le festività nazionali compresi Pasquetta e, dal 2026, San Francesco, × ore contrattuali) contro ore approvate, in attesa a parte |
 | POST | `/api/consuntivazione/ricalcolo` | Controller | Anteprima e applicazione del ricalcolo dopo una correzione di tariffa |
 | PUT | `/api/comuni/progetti/:id/completamento` | TL e PM del progetto, PMSenior | Percentuale di completamento del progetto (0–100), registrata nello storico |
 | PUT | `/api/comuni/progetti/:id/attivita/:attivitaId/completamento` | Risorse assegnate all'attività, TL e PM del progetto, PMSenior | Percentuale di completamento dell'attività, registrata nello storico |

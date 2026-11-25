@@ -131,6 +131,15 @@ Da **Consuntivazione › Report** si vedono ore, giorni e costi di un periodo (d
 - Come nelle schede, di norma contano le ore approvate dal PM; "Includi le ore non ancora approvate" mostra i dati provvisori.
 - Nell'elenco **Progetti** si filtra anche per centro di costo e cliente.
 
+### Pianificato e consuntivato
+
+Nella scheda **Pianificato e consuntivato** dei report si confrontano, mese per mese, le ore pianificate nel Pianificatore con le ore approvate.
+
+- Ore pianificate = percentuale di allocazione × giorni lavorativi del mese × ore contrattuali al giorno della risorsa (altrimenti 8). I giorni lavorativi vanno da lunedì a venerdì, tolte le festività nazionali (Pasquetta compresa e, dal 2026, il 4 ottobre) e i giorni prima dell'ingresso o dopo l'uscita della risorsa. Le ferie non sono tolte.
+- In ogni casella: ore approvate / ore pianificate, sotto lo scostamento e le ore non ancora approvate. Le caselle con uno scostamento oltre il 10% sono in arancio, oltre il 25% in rosso.
+- Aprendo una risorsa si vede il dettaglio per progetto; **non allocata** segna le ore su un progetto su cui la risorsa non era allocata in quel mese.
+- Controller e PMSenior vedono tutti i progetti; TL e PM i propri. Solo ore, niente euro.
+
 ### Andamento nel tempo
 
 Sotto gli indicatori, due grafici mostrano come sono cambiati giorno per giorno: il primo il valore pianificato (PV), il lavoro fatto (EV) e il costo (AC); il secondo gli indici SPI e CPI sulle fasce colorate degli stati. Passando con il mouse si leggono i valori di un giorno; "Vedi i dati in tabella" li elenca.

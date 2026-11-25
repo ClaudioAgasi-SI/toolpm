@@ -554,3 +554,31 @@ export interface ReportCosti {
   inAttesa: { righe: number; minuti: number; giorni: number };
   righe: NodoCosti[];
 }
+
+// ---- Pianificato e consuntivato (fase 4, blocco E5) ----
+
+export interface OrePianificato {
+  pianificati: number;
+  consuntivati: number;
+  inAttesa: number;
+  scostamento: { minuti: number; percentuale: number | null };
+}
+
+export interface ReportPianificato {
+  periodo: { da: string; a: string };
+  mesi: string[];
+  oreGiorno: number;
+  calcolatoIl: string;
+  opzioni: { progetti: OpzioneFiltro[]; risorse: OpzioneFiltro[] };
+  totali: OrePianificato;
+  risorse: (OrePianificato & {
+    risorsaId: string;
+    risorsa: string;
+    oreGiorno: number;
+    mesi: (OrePianificato & {
+      mese: string;
+      giorniLavorativi: number;
+      progetti: (OrePianificato & { progettoId: string; progetto: string; percentuale: number | null; nonAllocato: boolean })[];
+    })[];
+  })[];
+}

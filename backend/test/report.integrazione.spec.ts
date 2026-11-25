@@ -4,6 +4,7 @@
  * E1: elenco dei progetti e scheda costi (totali, dettagli, ruolo alla data, viste, riservatezza degli euro).
  * E2: indicatori EVM del progetto e delle attività alla data (percentuale dallo storico, viste, TL senza euro).
  * E4: report dei costi annidato (livelli, ruolo alla data, filtri, visibilità ed euro).
+ * E5: pianificato contro consuntivato (giorni lavorativi, ingresso, progetti non allocati, visibilità).
  * E3: procedura dell'andamento (ripresa dall'ultimo giorno, blocco, esecuzione scaduta), serie giornaliera, registro.
  *
  * Si esegue solo se è impostata MONGODB_URI_TEST, es.:
@@ -456,6 +457,57 @@ describe.skipIf(!URI_BASE)('Report (fase 4) con MongoDB vero', () => {
         expect(e.progetti.map((p: { codice: string }) => p.codice)).toEqual(['PE', 'PX', 'PY']);
         expect(e.opzioni.centriCosto).toEqual([{ _id: cdc.toHexString(), etichetta: 'CDC-SVI — Sviluppo' }]);
         expect((await come('carlo', `${REP}?cliente=${new mongoose.Types.ObjectId().toHexString()}`)).body.progetti).toEqual([]);
+      });
+    });
+
+    describe('E5 — pianificato e consuntivato', () => {
+      const PIAN = '/api/consuntivazione/report/pianificato';
+      type Voce = { progetto: string; pianificati: number; consuntivati: number; inAttesa: number; nonAllocato: boolean; percentuale: number | null; scostamento: { minuti: number; percentuale: number | null } };
+      type RisorsaT = { risorsa: string; pianificati: number; mesi: { mese: string; giorniLavorativi: number; pianificati: number; progetti: Voce[] }[] };
+      const di = (b: { risorse: RisorsaT[] }, nome: string) => b.risorse.find((r) => r.risorsa === nome)!;
+
+      beforeAll(async () => {
+        // Settembre 2026: 22 giorni lavorativi. rita 50% su PX e 25% su PY; tito 100% su PE dal suo ingresso (16/09: 11 giorni).
+        await db.collection('risorse').updateOne({ _id: risorsa.rita }, { $set: { planned: [{ mese: '202609', progettoId: px, percentualeAllocazione: 50 }, { mese: '202609', progettoId: py, percentualeAllocazione: 25 }, { mese: '202610', progettoId: px }] } });
+        await db.collection('risorse').updateOne({ _id: risorsa.tito }, { $set: { dataIngresso: new Date('2026-09-16'), oreContrattualiGiorno: 8, planned: [{ mese: '202609', progettoId: pe, percentualeAllocazione: 100 }] } });
+      });
+
+      it('per risorsa e mese: pianificato, approvato, in attesa, scostamento; ore su progetti non allocati', async () => {
+        const r = await come('carlo', `${PIAN}?da=202609`);
+        expect(r.status).toBe(200);
+        const b = r.body;
+        expect(b.mesi).toEqual(['202609']);
+        expect(JSON.stringify(b)).not.toMatch(/Centesimi/);
+        const rita = di(b, 'rita rita');
+        expect(rita.mesi[0].giorniLavorativi).toBe(22);
+        expect(rita.mesi[0].progetti).toEqual([
+          expect.objectContaining({ progetto: 'PX — Portale X', percentuale: 50, pianificati: 5280, consuntivati: 1080, inAttesa: 60, nonAllocato: false, scostamento: { minuti: -4200, percentuale: -80 } }),
+          expect.objectContaining({ progetto: 'PY — Interno Y', percentuale: 25, pianificati: 2640, consuntivati: 480, inAttesa: 0 }),
+        ]);
+        expect(rita.pianificati).toBe(7920);
+        const tito = di(b, 'tito tito');
+        expect(tito.mesi[0].giorniLavorativi).toBe(11);
+        expect(tito.mesi[0].progetti).toEqual([
+          expect.objectContaining({ progetto: 'PE — Progetto EVM', pianificati: 5280, consuntivati: 0, scostamento: { minuti: -5280, percentuale: -100 } }),
+          expect.objectContaining({ progetto: 'PX — Portale X', percentuale: null, pianificati: 0, consuntivati: 240, inAttesa: 120, nonAllocato: true, scostamento: { minuti: 240, percentuale: null } }),
+        ]);
+        expect(b.totali).toMatchObject({ pianificati: 13200, consuntivati: 1800, inAttesa: 180 });
+        expect(b.opzioni.risorse.map((x: { etichetta: string }) => x.etichetta)).toEqual(['rita rita', 'tito tito']);
+      });
+
+      it('più mesi, filtri, visibilità e errori', async () => {
+        const due = (await come('carlo', `${PIAN}?da=202608&a=202609&risorsa=${risorsa.rita.toHexString()}`)).body;
+        expect(due.mesi).toEqual(['202608', '202609']);
+        expect(due.risorse).toHaveLength(1);
+        expect(due.risorse[0].mesi[0].progetti).toEqual([expect.objectContaining({ progetto: 'PE — Progetto EVM', consuntivati: 480, nonAllocato: true })]);
+        const pm = (await come('paola', `${PIAN}?da=202609`)).body;
+        expect(di(pm, 'rita rita').mesi[0].progetti.map((p: Voce) => p.progetto)).toEqual(['PX — Portale X']);
+        expect((await come('carlo', `${PIAN}?da=202609&progetto=${py.toHexString()}`)).body.risorse.map((x: RisorsaT) => x.risorsa)).toEqual(['rita rita']);
+        expect((await come('piero', `${PIAN}?da=202609`)).body.risorse).toEqual([]);
+        expect((await come('rita', PIAN)).status).toBe(403);
+        expect((await come('carlo', `${PIAN}?da=2026-09`)).status).toBe(400);
+        expect((await come('carlo', `${PIAN}?da=202609&a=202608`)).status).toBe(400);
+        expect((await come('carlo', `${PIAN}?da=202401&a=202609`)).status).toBe(400);
       });
     });
 
