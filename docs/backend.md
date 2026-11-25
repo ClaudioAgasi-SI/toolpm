@@ -471,6 +471,7 @@ npm run start:dev     # avvio con ricaricamento automatico, http://localhost:300
 npm run build         # compilazione in dist/
 npm test              # test Vitest (quelli di integrazione si saltano senza MONGODB_URI_TEST)
 MONGODB_URI_TEST="mongodb://localhost:27017/?directConnection=true" npm test   # anche i test di integrazione
+PRESTAZIONI=1 MONGODB_URI_TEST="mongodb://localhost:27017/?directConnection=true" npx vitest run test/prestazioni.report.spec.ts   # prestazioni dei report (fase 4): un anno, 200 risorse, ~139.000 righe
 npm run verifica-mongodb  # connessione, replica set e transazioni di MongoDB
 npm run migra         # migrazioni dei dati non ancora eseguite (--elenco per vederle)
 npm run seed          # import dei dati di esempio (solo collection vuote)

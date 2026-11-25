@@ -2,7 +2,7 @@
 
 25/11/2026 · Claudio Agasi
 
-> Piano di lavoro della fase 4, confermato il 25/11/2026 (decisioni 1–10 e, dalla revisione dei rischi, 11–13). Versione di lavoro con commenti: [documento su Claude](https://claude.ai/artifact/4S4oqSmfAKxDCETE85qP4v). Le regole da cui parte sono in [analisi-consuntivazione.md](analisi-consuntivazione.md) (requisiti RF-14…17, RF-21, RF-22, RF-24, RF-25, RF-29…32, "Calcolo dell'avanzamento (EVM)", "Aggregazione dei costi"); il modo di lavorare è quello delle fasi [2](piano-fase2.md) e [3](piano-fase3.md).
+> Piano di lavoro della fase 4, confermato il 25/11/2026 (decisioni 1–10 e, dalla revisione dei rischi, 11–13) e completato il 25/11/2026: blocchi E0–E7 fatti. Versione di lavoro con commenti: [documento su Claude](https://claude.ai/artifact/4S4oqSmfAKxDCETE85qP4v). Le regole da cui parte sono in [analisi-consuntivazione.md](analisi-consuntivazione.md) (requisiti RF-14…17, RF-21, RF-22, RF-24, RF-25, RF-29…32, "Calcolo dell'avanzamento (EVM)", "Aggregazione dei costi"); il modo di lavorare è quello delle fasi [2](piano-fase2.md) e [3](piano-fase3.md).
 
 La fase 4 trasforma le ore approvate in **informazioni per decidere**: quanto costa ogni progetto e ogni centro di costo, come stanno andando tempi e costi rispetto alle stime (indicatori Earned Value), quanto del pianificato è stato davvero lavorato, con le esportazioni in Excel e CSV. Non cambia come si inseriscono o approvano le ore.
 
@@ -17,7 +17,7 @@ La fase 4 trasforma le ore approvate in **informazioni per decidere**: quanto co
 | E4 — Report dei costi | Fatto | `CostiReportService` e `GET /report/costi` (da 1 a 4 livelli tra centro di costo, progetto, attività, risorsa, ruolo alla data, tipologia, mese; totali di ogni livello, ogni riga una volta per livello; filtri centro di costo, cliente, progetto; valori dei filtri nella risposta; euro solo se visibili su tutti i progetti compresi). Albero in `costi-albero.ts` (funzioni pure con test). Pagina **Report** (`/consuntivazione/report/costi`) con raggruppamenti pronti o personalizzati e albero espandibile. Elenco Progetti: filtri cliente e centro di costo (rimandati da E1). Test: 256 backend, 25 frontend. Sul PC: nessuna migrazione. |
 | E5 — Pianificato e consuntivato | Fatto | Regole pure in `pianificato-regole.ts` (Pasqua, festività nazionali con Pasquetta e San Francesco dal 2026, giorni lavorativi entro ingresso e uscita, minuti pianificati, scostamento; test). `PianificatoReportService` e `GET /report/pianificato?da=&a=` (AAAAMM, al massimo 24 mesi; risorsa × mese × progetto; pianificati, approvati, in attesa, scostamento, non allocato; solo ore; visibilità come E4). Pagina con le schede dei report (Costi / Pianificato e consuntivato) e tabella risorsa × mese espandibile per progetto con gli scostamenti colorati. Analisi: percorso dell'API aggiornato. Corretto un selettore dell'e2e del controllo rotto da E3 (classe del riquadro della procedura). Test: 263 backend, 26 frontend. Sul PC: nessuna migrazione. |
 | E6 — Esportazioni | Fatto | exceljs; `esporta.ts` (CSV con BOM, `;`, virgola decimale, intestazione con vista, periodo ed estrazione; Excel con un foglio per elemento, filtri, riquadri bloccati, rientri e totali; nome con "provvisorio"; test) ed `esportazioni.ts` (elenco progetti, scheda, report dei costi con dettaglio + albero + un foglio per livello, pianificato). `formato=xlsx|csv` sugli endpoint; `GET /report/righe` (righe approvate e chiuse, ruolo alla data, tariffa e costo solo a chi li vede, approvazioni, al massimo un anno e 100.000 righe; anteprima JSON). Pulsante **Scarica** (Excel / CSV) nelle quattro pagine e **Righe di dettaglio** nel report dei costi. Test: 269 backend, 27 frontend. Sul PC: nessuna migrazione (nuova dipendenza, la installa il build). |
-| E7 — Test e documentazione | Da fare | |
+| E7 — Test e documentazione | Fatto | Prova nel browser `e2e/report.py` (con i dati di `scripts/e2e-report.mjs`): Esegui ora, elenco e scheda con EVM e andamento, Excel della scheda, TL senza euro (pagine e CSV), report per centro di costo, righe di dettaglio in CSV, pianificato con ore non allocate; passano anche `controllo.py` e `consuntivazione.py`. Prova delle prestazioni `test/prestazioni.report.spec.ts` (con `PRESTAZIONI=1`): un anno, 200 risorse, 40 progetti, ~139.000 righe; risposte tra 33 ms e 3,1 s (vedi "Prestazioni"). Documentazione: README, `architettura.md`, `backend.md`, `e2e/README.md`, guida. Test: 269 backend (+3 di prestazioni facoltativi), 27 frontend. |
 
 ## Obiettivo e perimetro
 
@@ -131,17 +131,37 @@ Ogni blocco si chiude con codice, test, documentazione in `docs/` aggiornata e p
 
 ## Criteri di completamento
 
-- [ ] La scheda del progetto mostra stime e consuntivato (giorni ed euro) dall'inizio e nel periodo, con il dettaglio per attività ("senza attività" compresa), risorsa, ruolo, tipologia e mese; i totali coincidono con la somma delle righe approvate.
-- [ ] Gli indicatori EVM dell'esempio TIMBUFE danno gli stessi valori dell'analisi; i casi senza stima o senza date sono "non calcolabili" senza errori.
-- [ ] Stato di tempi e costi colorato nella scheda e nell'elenco dei progetti; soglie lette dai parametri.
-- [ ] L'andamento giornaliero si salva ogni notte nelle due viste, riparte dall'ultimo giorno completato dopo un fermo, registra ogni esecuzione con esito e motivo; la scheda lo mostra nei grafici con "aggiornato al".
-- [ ] Ogni report si vede nella vista approvata (predefinita) e in quella provvisoria, chiaramente indicata in pagina e nelle esportazioni.
-- [ ] Il report dei costi per centro di costo, progetto e attività non conta due volte nessuna riga e rispetta la visibilità di ogni profilo.
-- [ ] Il confronto pianificato/consuntivato usa giorni lavorativi e ore contrattuali e segnala le ore su progetti non allocati.
-- [ ] Ogni report e le righe di dettaglio si scaricano in Excel e CSV, con la stessa riservatezza delle pagine.
-- [ ] Il TL non riceve mai euro in nessuna risposta o esportazione.
-- [ ] Report annuale su tutte le risorse in pochi secondi.
-- [ ] Documentazione in `docs/` e Swagger aggiornati; `docker compose up` sul PC con la migrazione 009 eseguita.
+- [x] La scheda del progetto mostra stime e consuntivato (giorni ed euro) dall'inizio e nel periodo, con il dettaglio per attività ("senza attività" compresa), risorsa, ruolo, tipologia e mese; i totali coincidono con la somma delle righe approvate.
+- [x] Gli indicatori EVM dell'esempio TIMBUFE danno gli stessi valori dell'analisi; i casi senza stima o senza date sono "non calcolabili" senza errori.
+- [x] Stato di tempi e costi colorato nella scheda e nell'elenco dei progetti; soglie lette dai parametri.
+- [x] L'andamento giornaliero si salva ogni notte nelle due viste, riparte dall'ultimo giorno completato dopo un fermo, registra ogni esecuzione con esito e motivo; la scheda lo mostra nei grafici con "aggiornato al".
+- [x] Ogni report si vede nella vista approvata (predefinita) e in quella provvisoria, chiaramente indicata in pagina e nelle esportazioni. (Il pianificato e consuntivato, per la decisione 3, confronta con le ore approvate e mostra quelle in attesa in una colonna a parte.)
+- [x] Il report dei costi per centro di costo, progetto e attività non conta due volte nessuna riga e rispetta la visibilità di ogni profilo.
+- [x] Il confronto pianificato/consuntivato usa giorni lavorativi e ore contrattuali e segnala le ore su progetti non allocati.
+- [x] Ogni report e le righe di dettaglio si scaricano in Excel e CSV, con la stessa riservatezza delle pagine.
+- [x] Il TL non riceve mai euro in nessuna risposta o esportazione.
+- [x] Report annuale su tutte le risorse in pochi secondi.
+- [x] Documentazione in `docs/` e Swagger aggiornati; `docker compose up` sul PC con la migrazione 009 eseguita.
+
+## Prestazioni
+
+Misurate il 25/11/2026 con `test/prestazioni.report.spec.ts` (MongoDB 8 locale, replica set di un nodo): un anno di dati, 200 risorse, 40 progetti con 3 attività, 4 centri di costo, 139.200 righe di consuntivo (5% non approvate).
+
+| Risposta | Tempo |
+| --- | --- |
+| Report dei costi, anno, centro di costo › progetto › attività | 0,7 s |
+| Report dei costi, anno, ruolo › risorsa (ruolo alla data di ogni giornata) | 3,1 s |
+| Report dei costi, anno, progetto › mese › tipologia, vista provvisoria | 0,9 s |
+| Elenco dei progetti (con gli stati EVM) | 0,5 s |
+| Scheda di un progetto, anno | 0,2 s |
+| Indicatori EVM di un progetto | 0,03 s |
+| Pianificato e consuntivato, 12 mesi | 1,1 s |
+| Excel del report dei costi, anno | 1,1 s |
+| CSV delle righe di dettaglio, un mese (~11.600 righe) | 1,5 s |
+| Andamento: un giorno (la notte) | 0,1 s |
+| Andamento: recupero di 31 giorni | 1,6 s (un anno intero, solo al primo avvio: circa 20 s, in background) |
+
+Le righe di dettaglio di un anno intero con questi volumi superano il limite di 100.000 righe per estrazione: si scaricano per periodi più brevi o con un filtro.
 
 ## Decisioni confermate
 

@@ -12,9 +12,9 @@
 
 | Componente | Tecnologia | Ruolo |
 |---|---|---|
-| frontend | Angular 22 (standalone components, signals), SCSS | Interfaccia utente: accesso, Pianificatore (griglia, risorse, catalogo), Anagrafiche comuni (progetti, risorse, clienti, centri di costo, ruoli, utenti) |
+| frontend | Angular 22 (standalone components, signals), SCSS | Interfaccia utente: accesso, Pianificatore (griglia, risorse, catalogo), Anagrafiche comuni (progetti, risorse, clienti, centri di costo, ruoli, utenti), Consuntivazione (ore, approvazioni, periodi, report con grafici SVG fatti in casa, senza librerie) |
 | web server | nginx 1.27 | Serve i file statici di Angular e fa da reverse proxy verso il backend per i percorsi `/api/` |
-| backend | NestJS 12, Node.js 22, TypeScript 6 (ESM) | API REST, autenticazione (JWT in cookie httpOnly), permessi per profilo, tracciamento dei salvataggi, calcoli della griglia, validazione, migrazioni, documentazione Swagger |
+| backend | NestJS 12, Node.js 22, TypeScript 6 (ESM) | API REST, autenticazione (JWT in cookie httpOnly), permessi per profilo, tracciamento dei salvataggi, calcoli della griglia, validazione, migrazioni, documentazione Swagger; procedure pianificate con `@nestjs/schedule` (andamento EVM ogni notte alle 2:00); file Excel con `exceljs` |
 | ORM | Mongoose 9 (`@nestjs/mongoose`) | Schemi, validazione dei documenti, accesso a MongoDB |
 | database | MongoDB (istanza esistente su Docker Desktop, replica set `rs0`) | Persistenza: collection del Pianificatore, dei dati comuni e tecniche (vedi [database.md](database.md)) |
 
@@ -29,7 +29,7 @@ Il frontend chiama sempre l'indirizzo **relativo** `/api/...`: nessun URL del ba
 |---|---|---|---|
 | Pianificatore risorse | `app/pianificatore/` → `/toolpm/pianificatore` | `src/pianificatore/` → `/api/pianificatore` | griglia, skill e allocazioni; legge risorse e progetti dal modulo Comuni |
 | Anagrafiche (Comuni) | `app/comuni/` → `/toolpm/comuni` | `src/comuni/` → `/api/comuni`, `src/auth/` → `/api/utenti` | dati condivisi da tutte le sezioni |
-| Consuntivazione | `app/consuntivazione/` → `/toolpm/consuntivazione` | `src/consuntivazione/` → `/api/consuntivazione` | fasi 2 e 3 completate ([piano-fase2.md](piano-fase2.md), [piano-fase3.md](piano-fase3.md), guida in [consuntivazione.md](consuntivazione.md)): tipologie di costo, tariffe, consuntivi, costi e ricalcolo; invio, approvazioni TL e PM, chiusura dei mesi, storico delle modifiche |
+| Consuntivazione | `app/consuntivazione/` → `/toolpm/consuntivazione` | `src/consuntivazione/` → `/api/consuntivazione` | fasi 2, 3 e 4 completate ([piano-fase2.md](piano-fase2.md), [piano-fase3.md](piano-fase3.md), [piano-fase4.md](piano-fase4.md), guida in [consuntivazione.md](consuntivazione.md)): tipologie di costo, tariffe, consuntivi, costi e ricalcolo; invio, approvazioni TL e PM, chiusura dei mesi, storico delle modifiche; report (scheda costi del progetto, indicatori EVM e andamento giornaliero calcolato ogni notte, report dei costi, pianificato e consuntivato, esportazioni in Excel e CSV) |
 | Trasversali | `app/core/`, `app/accesso/` | `src/auth/`, `src/permessi/`, `src/infrastruttura/` | accesso, permessi, tracciamento, parametri, migrazioni |
 
 ## Flusso tipico: accesso
