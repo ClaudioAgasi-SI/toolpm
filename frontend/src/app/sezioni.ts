@@ -28,4 +28,9 @@ export const SEZIONI: Sezione[] = [
     descrizione:
       'Ore lavorate giorno per giorno su progetti e attività, tipologie di costo e tariffe, costo del personale per progetto.',
   },
+  {
+    percorso: 'offerte',
+    nome: 'Offerte e preventivi',
+    descrizione: 'Stima per ruolo, costo, prezzo e margine delle offerte ai clienti, approvazione, esito e progetto dall\'offerta vinta.',
+  },
 ];

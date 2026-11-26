@@ -38,6 +38,10 @@ export const routes: Routes = [
         path: 'consuntivazione',
         loadChildren: () => import('./consuntivazione/consuntivazione.routes').then((m) => m.CONSUNTIVAZIONE_ROUTES),
       },
+      {
+        path: 'offerte',
+        loadChildren: () => import('./offerte/offerte.routes').then((m) => m.OFFERTE_ROUTES),
+      },
       // Indirizzi del vecchio pianificatore (senza prefisso di sezione).
       { path: 'pianificazione', redirectTo: 'pianificatore/pianificazione' },
       { path: 'risorse', redirectTo: 'pianificatore/risorse' },

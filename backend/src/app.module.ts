@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { ComuniDatiModule } from './comuni/comuni-dati.module.js';
 import { ComuniModule } from './comuni/comuni.module.js';
 import { ConsuntivazioneModule } from './consuntivazione/consuntivazione.module.js';
+import { OfferteModule } from './offerte/offerte.module.js';
 import { HealthController } from './health.controller.js';
 import { ContestoUtenteMiddleware } from './infrastruttura/contesto-utente.middleware.js';
 import { InfrastrutturaModule } from './infrastruttura/infrastruttura.module.js';
@@ -46,9 +47,11 @@ import { RisorseModule } from './pianificatore/risorse/risorse.module.js';
     ComuniModule,
     PianificatoreModule,
     ConsuntivazioneModule,
+    OfferteModule,
     RouterModule.register([
       { path: 'comuni', module: ComuniModule },
       { path: 'consuntivazione', module: ConsuntivazioneModule },
+      { path: 'offerte', module: OfferteModule },
       {
         path: 'pianificatore',
         module: PianificatoreModule,

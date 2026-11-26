@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { firstValueFrom, tap } from 'rxjs';
 
 export type Abilitazione = 'TL' | 'PM' | 'PMSenior';
-export type RuoloApplicativo = 'risorsa' | 'controller' | 'admin';
+export type RuoloApplicativo = 'risorsa' | 'controller' | 'admin' | 'commerciale';
 
 /** Permessi globali calcolati dal backend (permessi/regole.ts), restituiti da /api/auth/me. */
 export type PermessoGlobale =
@@ -22,7 +22,12 @@ export type PermessoGlobale =
   | 'approvare'
   | 'gestirePeriodi'
   | 'consultareStorico'
-  | 'vedereReport';
+  | 'vedereReport'
+  // Offerte e preventivi (fase 5)
+  | 'vedereOfferte'
+  | 'creareOfferte'
+  | 'vedereListino'
+  | 'gestireListino';
 
 /** Utente che ha fatto l'accesso, come lo restituisce GET /api/auth/me. */
 export interface UtenteSessione {

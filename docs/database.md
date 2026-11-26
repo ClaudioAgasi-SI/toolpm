@@ -244,6 +244,16 @@ Indicatori EVM di un progetto in un giorno (fase 4, RF-31), salvati dalla proced
 
 Registro delle esecuzioni delle procedure pianificate (fase 4, decisione 12): `procedura` (es. `evm`), `inizio`, `fine`, `stato` (`inCorso`, `completata`, `completataConAvvisi`, `fallita`, `interrotta`), `avviataDa` (`notturna`, `avvio` o l'id dell'utente che ha premuto "Esegui ora"), `daGiorno`, `ultimoGiornoCompletato`, `giorniElaborati`, `avvisi`, `motivo`. La prossima esecuzione riparte dal giorno dopo l'ultimo completato; ogni giorno si salva in una transazione insieme all'avanzamento di `ultimoGiornoCompletato` e `giorniElaborati`. Un'esecuzione `inCorso` blocca le altre (indice unico parziale `una_in_corso_per_procedura` su `procedura` con `stato: inCorso`, migrazione 010); se resta in corso oltre un'ora la successiva la segna `interrotta`. `avvisi`: al massimo 100.
 
+## Collection `offerte`, `offerte_revisioni`, `listino_vendita`, `contatori` (fase 5)
+
+Sezione Offerte e preventivi, create dalla migrazione `011-offerte` con validatori e indici; modello completo in [analisi-offerte.md](analisi-offerte.md) ("Modello dei dati").
+
+- `offerte`: un'offerta — `numero` (OFF-AAAA-NNNN, unico), `clienteId`, `titolo`, `descrizione`, `tipo` (`corpo`, `consuntivo`, `pacchetto`), `stato` (`bozza`, `inApprovazione`, `approvata`, `inviata`, `vinta`, `persa`, `ritirata`), `responsabile` {utenteId}, `stimatori` [utenteId], `centroCostoId`, `dataRichiesta`, `scadenzaRisposta`, `validitaGiorni`, `inviataIl`, `revisioneCorrente`, `esito` {stato, data, motivo, nota, da}, `progettoId`, `versione`. Indici: `numero` unico; `stato` + `scadenzaRisposta`; `clienteId`; `responsabile.utenteId`; `stimatori`.
+- `offerte_revisioni`: una revisione — `offertaId`, `numero` (unico per offerta), `stato` (`bozza`, `inApprovazione`, `approvata`, `respinta`, `inviata`, `superata`), `gruppi` [{_id, nome, voci [{_id, ruoloId, giorni, descrizione}]}], `contingenzaPercento` e `scontoPercento` (0–100), `prezzoACorpoCentesimi`, `dataRiferimento`, `tariffe` (fotografate all'invio in approvazione), `totali`, `condizioni`, `preparataDa`, `approvazione` e `rifiuto` {da, il, nota|motivo}, `inviataIl`, `versione`.
+- `listino_vendita`: tariffa giornaliera di vendita — `ruoloId`, `clienteId` (null = standard), `validoDal`, `validoAl`, `centesimiGiorno` (≥ 0). Indice unico `ruoloId` + `clienteId` + `validoDal`.
+- `contatori`: `_id` (es. `offerte-2026`) e `valore`, per i numeri progressivi delle offerte.
+- `progetti`: indice sparso su `offertaId` (collegamento al progetto creato da un'offerta vinta, blocco F4).
+
 ## Collection `utenti`
 
 Utenti che accedono a ToolPM (fase 1, blocco B2). Indice unico su `email` (migrazione `003-indici-utenti`).
@@ -255,7 +265,7 @@ Utenti che accedono a ToolPM (fase 1, blocco B2). Indice unico su `email` (migra
 | `nome` | string | | Nome mostrato |
 | `risorsaId` | ObjectId | | Risorsa (persona) collegata |
 | `abilitazione` | string \| null | | `TL`, `PM`, `PMSenior` o `null` |
-| `ruoli` | string[] | | `risorsa`, `controller`, `admin` (default `["risorsa"]`) |
+| `ruoli` | string[] | | `risorsa`, `controller`, `admin`, `commerciale` (fase 5) (default `["risorsa"]`) |
 | `attivo` | boolean | | Default `true`; gli utenti non si cancellano, si disattivano |
 | `deveCambiarePassword` | boolean | | `true` dopo una password provvisoria |
 | `ultimoAccesso` | Date | | Aggiornato a ogni accesso |
@@ -264,12 +274,13 @@ Più i campi di tracciamento.
 
 ## Collection `parametri`
 
-Parametri di sistema, un documento per chiave (indice unico su `chiave`). Valori iniziali creati dalla migrazione `001-parametri`.
+Parametri di sistema, un documento per chiave (indice unico su `chiave`). Valori iniziali creati dalle migrazioni `001-parametri` e `011-offerte`.
 
 | Chiave | Valore iniziale | Uso |
 |---|---|---|
 | `oreGiorno` | `8` | Ore che fanno un giorno, per confrontare ore consuntivate e stime in giorni |
 | `soglieEvm` | `{ anticipo: 1.05, ritardo: 0.95, fortementeInRitardo: 0.85 }` | Soglie degli stati di tempi e costi dell'EVM |
+| `offerte` | `{ margineMinimoPercento: 25, validitaGiorni: 60, motiviPerdita: [Prezzo, Tempi, Concorrente, Rinuncia del cliente, Altro] }` | Offerte (fase 5): margine sotto il quale l'approvazione chiede una nota, validità predefinita dall'invio, motivi di perdita |
 
 Campi: `chiave` (string, unica), `valore` (qualsiasi tipo), `descrizione`, più i campi di tracciamento.
 
@@ -287,6 +298,7 @@ Registro delle migrazioni eseguite da `npm run migra`: `_id` è il nome dello sc
 | `006-allocazioni-progettoid` | Toglie i testi `cliente` e `progetto` dalle allocazioni che hanno `progettoId` (conservando `clienteTesto` e `progettoTesto`); non tocca quelle non collegate |
 | `007-consuntivazione` | Crea `tipologie_costo`, `tariffe_standard`, `tariffe_personalizzate`, `consuntivi` con i validatori `$jsonSchema` e i loro indici; aggiunge le quattro tipologie iniziali (ORDINARIA predefinita) senza toccare quelle già presenti |
 | `008-controllo` | Crea `periodi` e `audit_log` con i validatori `$jsonSchema` e i loro indici (fase 3) |
+| `011-offerte` | Collection `offerte`, `offerte_revisioni`, `listino_vendita`, `contatori` con validatori e indici; indice sparso `offertaId` su `progetti`; parametro `offerte` (margine minimo 25%, validità 60 giorni, motivi di perdita), senza toccarlo se esiste già (fase 5, blocco F0) |
 | `010-blocco-batch` | Indice unico parziale `una_in_corso_per_procedura` su `esecuzioni_batch` (una sola esecuzione `inCorso` per procedura); le eventuali esecuzioni rimaste in corso diventano `interrotta` (fase 4, blocco E3) |
 | `009-report` | Crea `evm_giornalieri` (indice unico progetto + giorno) ed `esecuzioni_batch` con i validatori; indice `consuntivi { "righe.stato": 1, data: 1 }` per i report di periodo (fase 4) |
 

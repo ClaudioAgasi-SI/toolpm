@@ -15,7 +15,7 @@ interface Bozza {
   attivo: boolean;
 }
 
-const RUOLI: RuoloApplicativo[] = ['risorsa', 'controller', 'admin'];
+const RUOLI: RuoloApplicativo[] = ['risorsa', 'controller', 'admin', 'commerciale'];
 
 /** Password provvisoria di 12 caratteri senza caratteri ambigui. */
 function passwordProvvisoria() {

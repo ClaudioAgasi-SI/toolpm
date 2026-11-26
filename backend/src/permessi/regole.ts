@@ -64,6 +64,11 @@ export const PERMESSI_GLOBALI = [
   'gestirePeriodi',
   'consultareStorico',
   'vedereReport',
+  // Offerte e preventivi (fase 5)
+  'vedereOfferte',
+  'creareOfferte',
+  'vedereListino',
+  'gestireListino',
 ] as const;
 export type PermessoGlobale = (typeof PERMESSI_GLOBALI)[number];
 
@@ -71,6 +76,8 @@ const id = (v: string | { toString(): string } | undefined | null) => (v == null
 
 export const ePMSenior = (s: Soggetto) => s.abilitazione === 'PMSenior';
 const ePMoPMSenior = (s: Soggetto) => s.abilitazione === 'PM' || s.abilitazione === 'PMSenior';
+/** Ruolo globale commerciale (fase 5): prepara offerte, non approva. */
+export const eCommerciale = (s: Soggetto) => s.ruoli.includes('commerciale');
 
 /** Profilo del soggetto sul progetto (null se non è approvatore o non ha più un'abilitazione). */
 export function profiloSulProgetto(s: Soggetto, progetto: ProgettoPerPermessi): ProfiloProgetto | null {
@@ -116,6 +123,15 @@ export function permessoGlobale(s: Soggetto, permesso: PermessoGlobale): boolean
     case 'gestireRuoli':
     case 'gestireUtenti':
       return s.ruoli.includes('admin');
+    case 'vedereOfferte':
+      // Offerte (fase 5): commerciali, chi ha un'abilitazione (il TL vede solo dove è stimatore) e il controller.
+      return eCommerciale(s) || s.abilitazione !== null || s.ruoli.includes('controller');
+    case 'creareOfferte':
+      return eCommerciale(s) || ePMoPMSenior(s);
+    case 'vedereListino':
+      return eCommerciale(s) || ePMoPMSenior(s) || s.ruoli.includes('controller');
+    case 'gestireListino':
+      return ePMSenior(s) || s.ruoli.includes('controller');
   }
 }
 
@@ -334,3 +350,48 @@ export function puoVedereReportProgetto(s: Soggetto, progetto: ProgettoPerPermes
 export function vedeEuroProgetto(s: Soggetto, progetto: ProgettoPerPermessi): boolean {
   return s.ruoli.includes('controller') || ePMSenior(s) || profiloDiApprovazione(s, progetto) === 'PM';
 }
+
+// ---- Offerte e preventivi (fase 5, decisioni 5, 6 e 7 dell'analisi) ----
+
+/** Dati dell'offerta che servono alle regole. */
+export interface OffertaPerPermessi {
+  responsabile: { utenteId: string | { toString(): string } };
+  stimatori?: readonly (string | { toString(): string })[];
+}
+
+/** Ruolo del soggetto sull'offerta: responsabile, stimatore o nessuno. */
+export function ruoloSullOfferta(s: Soggetto, o: OffertaPerPermessi): 'responsabile' | 'stimatore' | null {
+  if (id(o.responsabile.utenteId) === s.id) return 'responsabile';
+  return (o.stimatori ?? []).some((x) => id(x) === s.id) ? 'stimatore' : null;
+}
+
+/** Vede l'offerta: controller, PMSenior e commerciali tutte; PM e TL quelle dove sono responsabili o stimatori. */
+export function vedeOfferta(s: Soggetto, o: OffertaPerPermessi): boolean {
+  return s.ruoli.includes('controller') || ePMSenior(s) || eCommerciale(s) || ruoloSullOfferta(s, o) !== null;
+}
+
+/**
+ * Costi, prezzi e margini dell'offerta: il responsabile se è PM, PMSenior o commerciale, i PMSenior e il controller.
+ * Mai gli stimatori (TL) né un commerciale su un'offerta altrui.
+ */
+export function vedeEuroOfferta(s: Soggetto, o: OffertaPerPermessi): boolean {
+  if (s.ruoli.includes('controller') || ePMSenior(s)) return true;
+  return ruoloSullOfferta(s, o) === 'responsabile' && (eCommerciale(s) || ePMoPMSenior(s));
+}
+
+/** Testata, prezzo, sconto, contingenza, invio, nuova revisione: il responsabile e i PMSenior. */
+export function modificaOfferta(s: Soggetto, o: OffertaPerPermessi): boolean {
+  if (ePMSenior(s)) return true;
+  return ruoloSullOfferta(s, o) === 'responsabile' && (eCommerciale(s) || ePMoPMSenior(s));
+}
+
+/** Gruppi e voci della stima (giorni): chi modifica l'offerta e gli stimatori invitati. */
+export function stimaOfferta(s: Soggetto, o: OffertaPerPermessi): boolean {
+  return modificaOfferta(s, o) || ruoloSullOfferta(s, o) === 'stimatore';
+}
+
+/** Approva o respinge una revisione: un PMSenior che non l'ha preparata (decisione 7). */
+export function puoApprovareRevisione(s: Soggetto, revisione: { preparataDa?: string | null }): boolean {
+  return ePMSenior(s) && revisione.preparataDa !== s.id;
+}
+

@@ -70,6 +70,9 @@ frontend/src/
     │   ├── tipologie-costo.ts         tipologie di costo (controller)
     │   ├── tariffe.ts                 tariffe standard (matrice ruolo × tipologia alla data) e personalizzate (con tariffe applicabili)
     │   └── elenco-tariffe.ts          elenco dei periodi di un ruolo o di una risorsa, con inserimento e modifica in riga
+    ├── offerte/                       sezione "Offerte e preventivi" (fase 5)
+    │   ├── offerte.routes.ts          rotte della sezione (sotto /offerte)
+    │   └── offerte-inizio.ts          pagina iniziale: funzioni del profilo, "in preparazione" fino ai blocchi F1–F5
     └── pianificatore/                 sezione "Pianificatore risorse allocate"
         ├── pianificatore.routes.ts    rotte della sezione (sotto /pianificatore)
         ├── pianificatore-layout.ts    sotto-menu della sezione + <router-outlet>
@@ -96,6 +99,7 @@ Tutte le rotte, tranne `/accesso`, sono dietro la guardia `accessoRichiesto`: se
 | `/comuni/risorse`, `/comuni/risorse/:id` (`nuova`) | `RisorseAnagrafica`, `RisorsaAnagraficaDettaglio` | dati anagrafici delle risorse |
 | `/comuni/clienti`, `/comuni/centri-costo`, `/comuni/ruoli` | `AnagraficaSemplice` | anagrafiche semplici (configurazione in `data.definizione`) |
 | `/comuni/utenti` | `Utenti` | gestione utenti, solo ruolo `admin` (`ruoloRichiesto('admin')`) |
+| `/offerte` | `OfferteInizio` | Fase 5, blocco F0; chi ha `vedereOfferte`. Pagina iniziale della sezione Offerte e preventivi con le funzioni del profilo (Offerte, Listino di vendita per chi ha `vedereListino`, Pipeline), ancora in preparazione |
 | `/consuntivazione` | `ConsuntivazioneLayout`, `ConsuntivazioneInizio` | sezione Consuntivazione: pagina iniziale con le funzioni del profilo; sottomenu per permesso (Il mio consuntivo, Approvazioni con il contatore, Tipologie, Tariffe, Consuntivi delle risorse, Da valorizzare, Periodi, Storico); fase 4: "Progetti: costi e avanzamento" (voce **Progetti**) e "Report" in preparazione per chi ha `vedereReport` |
 | `/consuntivazione/progetti` | `ProgettiReport` | Fase 4, blocco E1; chi ha `vedereReport`. Elenco dei progetti visibili con filtri per stato e testo: completato, stima (definitiva, altrimenti manageriale) e consuntivato in giorni, quota della stima, euro (colonne solo se almeno un progetto li mostra; `*` se ci sono righe da valorizzare), righe in attesa. Interruttore **Includi le ore non ancora approvate** (vista provvisoria, con l'etichetta "Dati provvisori"); "Calcolato il" in fondo. Blocco E2: colonne **Tempi** e **Costi** con lo stato a oggi (SPI e CPI nel suggerimento). Blocco E4: filtri **Centro di costo** (se più di uno) e **Cliente**. Blocco E6: **Scarica** in Excel o CSV |
 | `/consuntivazione/report/costi` | `ReportCosti` | Fase 4, blocco E4; chi ha `vedereReport` (voce **Report** del sottomenu). Periodo (predefinito il mese corrente; scorciatoie mese corrente, mese scorso, anno in corso), raggruppamento pronto (es. Centro di costo › Progetto › Attività) o **Personalizzato** con fino a quattro livelli, filtri per centro di costo, cliente e progetto (valori da `opzioni`), interruttore della vista. Tabella ad albero: voce con il nome del livello, ore, giorni, costo (se si vede), quota del totale con barra (sul costo, altrimenti sulle ore), righe da valorizzare (solo con gli euro); **Espandi tutto / Comprimi tutto**; dal progetto il collegamento alla scheda; riga del totale. Avvisi per righe in attesa, costo incompleto, euro nascosti perché il report comprende progetti dove si è TL. Blocco E6: **Scarica** (il report come mostrato, in Excel con un foglio di dettaglio, l'albero e un foglio per livello, o in CSV) e **Righe di dettaglio** (righe approvate e chiuse del periodo, stessi filtri di centro di costo e progetto) |
@@ -219,7 +223,7 @@ Il catalogo lo modificano PM e PMSenior; per gli altri la pagina è in sola lett
   - *Storico del completamento*: i cambi di percentuale del progetto e delle attività.
 - **Risorse** (`RisorseAnagrafica`, `RisorsaAnagraficaDettaglio`): email (o "da completare"), cellulare, ruolo attuale, ore al giorno, uscita; scheda con i dati della persona e lo storico dei ruoli. Modifica: PM e PMSenior.
 - **Clienti, centri di costo, ruoli** (`AnagraficaSemplice`): elenco con aggiunta e modifica in riga, filtro "solo attivi". Il codice non cambia; le voci si disattivano invece di cancellarle. Modifica: PMSenior (clienti, centri di costo), amministratore (ruoli).
-- **Utenti** (`Utenti`, solo amministratore): creazione con password provvisoria generata (proposta email e nome dalla risorsa scelta), modifica di email, nome, risorsa, abilitazione, ruoli e stato attivo, nuova password provvisoria. La password provvisoria si mostra una sola volta, da comunicare alla persona.
+- **Utenti** (`Utenti`, solo amministratore): creazione con password provvisoria generata (proposta email e nome dalla risorsa scelta), modifica di email, nome, risorsa, abilitazione, ruoli (risorsa, controller, admin, commerciale dalla fase 5) e stato attivo, nuova password provvisoria. La password provvisoria si mostra una sola volta, da comunicare alla persona.
 
 ## Componenti riutilizzabili
 

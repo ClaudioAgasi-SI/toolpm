@@ -19,6 +19,18 @@ const VALIDATORI: Record<string, (v: unknown) => string | null> = {
       ? null
       : 'soglieEvm: deve valere anticipo > ritardo > fortementeInRitardo';
   },
+  // Fase 5 (offerte): margine minimo, validità predefinita, motivi di perdita.
+  offerte: (v) => {
+    const o = v as { margineMinimoPercento?: unknown; validitaGiorni?: unknown; motiviPerdita?: unknown } | null;
+    if (!o || typeof o.margineMinimoPercento !== 'number' || o.margineMinimoPercento < 0 || o.margineMinimoPercento > 100)
+      return 'offerte.margineMinimoPercento deve essere un numero tra 0 e 100';
+    if (typeof o.validitaGiorni !== 'number' || !Number.isInteger(o.validitaGiorni) || o.validitaGiorni < 1 || o.validitaGiorni > 365)
+      return 'offerte.validitaGiorni deve essere un intero tra 1 e 365';
+    const motivi = o.motiviPerdita;
+    if (!Array.isArray(motivi) || !motivi.length || !motivi.every((m) => typeof m === 'string' && m.trim()))
+      return 'offerte.motiviPerdita deve essere un elenco non vuoto di testi';
+    return null;
+  },
 };
 
 /** Parametri di sistema (fase 1, blocco B3): li legge chi ha fatto l'accesso, li modifica il controller. */

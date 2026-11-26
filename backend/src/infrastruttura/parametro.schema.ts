@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 
 /**
  * Parametro di sistema (collection "parametri"): un documento per chiave.
- * Valori iniziali creati dalla migrazione 001: oreGiorno, soglieEvm.
+ * Valori iniziali creati dalle migrazioni 001 (oreGiorno, soglieEvm) e 011 (offerte).
  */
 @Schema({ collection: 'parametri', versionKey: false })
 export class Parametro {

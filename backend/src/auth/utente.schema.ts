@@ -7,7 +7,7 @@ export const ABILITAZIONI = ['TL', 'PM', 'PMSenior'] as const;
 export type Abilitazione = (typeof ABILITAZIONI)[number];
 
 /** Ruoli applicativi, indipendenti dall'abilitazione. */
-export const RUOLI = ['risorsa', 'controller', 'admin'] as const;
+export const RUOLI = ['risorsa', 'controller', 'admin', 'commerciale'] as const;
 export type Ruolo = (typeof RUOLI)[number];
 
 /** Utente che accede a ToolPM (collection "utenti"). Il nome utente è l'email. */

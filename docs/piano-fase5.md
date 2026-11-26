@@ -2,13 +2,13 @@
 
 26/11/2026 · Claudio Agasi
 
-> Piano di lavoro della fase 5, da confermare: realizza la sezione **Offerte e preventivi** come descritta in [analisi-offerte.md](analisi-offerte.md), con le dodici decisioni confermate il 26/11/2026. Versione di lavoro con commenti: [documento su Claude](https://claude.ai/artifact/F1wqqffv2ytt7zzNzBBj9j). Il modo di lavorare è quello delle fasi [2](piano-fase2.md), [3](piano-fase3.md) e [4](piano-fase4.md): un blocco alla volta, prova sul PC e ok prima del successivo.
+> Piano di lavoro della fase 5, confermato il 26/11/2026 con le quattro scelte tecniche proposte: realizza la sezione **Offerte e preventivi** come descritta in [analisi-offerte.md](analisi-offerte.md), con le dodici decisioni confermate il 26/11/2026. Versione di lavoro con commenti: [documento su Claude](https://claude.ai/artifact/F1wqqffv2ytt7zzNzBBj9j). Il modo di lavorare è quello delle fasi [2](piano-fase2.md), [3](piano-fase3.md) e [4](piano-fase4.md): un blocco alla volta, prova sul PC e ok prima del successivo.
 
 ## Avanzamento
 
 | Blocco | Stato | Note |
 | --- | --- | --- |
-| F0 — Preparazione | Da fare | |
+| F0 — Preparazione | Fatto | Migrazione `011-offerte` (offerte, revisioni, listino, contatori con validatori e indici; indice `offertaId` su progetti; parametro `offerte`, validato quando lo modifica il controller); ruolo globale `commerciale` (anche nella pagina Utenti); permessi `vedereOfferte`, `creareOfferte`, `vedereListino`, `gestireListino` e regole per offerta con test; `src/offerte/calcoli.ts` con test sull'esempio "Portale ordini" (al centesimo); modulo vuoto sotto `/api/offerte`; sezione **Offerte e preventivi** nel menu con la pagina iniziale. Test: 285 backend (nuovo `test/offerte.integrazione.spec.ts`), 27 frontend. Sul PC: migrazione 011. |
 | F1 — Listino di vendita | Da fare | |
 | F2 — Offerta e stima | Da fare | |
 | F3 — Approvazione, invio, revisioni, esito | Da fare | |
@@ -133,9 +133,9 @@ Ogni blocco finisce con test verdi, documentazione aggiornata (GitHub e document
 
 Le dodici decisioni funzionali sono quelle dell'analisi, confermate il 26/11/2026: tre tipi di offerta; gruppi e voci con contingenza; costo dalle tariffe standard; listino di vendita con sconto o prezzo a corpo; ruolo commerciale; euro solo a responsabile, PMSenior e controller; approvazione sempre di un PMSenior non autore; revisioni congelate dopo l'invio; progetto In valutazione dall'offerta vinta; numerazione OFF-AAAA-NNNN; documento in Word; motivi di perdita nei parametri.
 
-Restano da confermare quattro scelte tecniche del piano:
+Le quattro scelte tecniche del piano, confermate il 26/11/2026:
 
-| N. | Scelta | Proposta |
+| N. | Scelta | Decisione |
 | --- | --- | --- |
 | 1 | Nome e numero della fase | Fase 5 della roadmap di ToolPM, blocchi F0–F6 |
 | 2 | Libreria per il documento Word | `docx` (npm), come exceljs per l'Excel: nessun servizio esterno, file generato dal backend |

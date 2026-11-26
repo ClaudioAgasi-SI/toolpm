@@ -437,6 +437,14 @@ Risposta:
 
 Il tipo determina il campo (`tecnico` → `skillTecnici`, `funzionale` → `skillFunzionali`, `ambito` → `skillAmbiti`); il nome è confrontato con una regex esatta, senza distinzione tra maiuscole e minuscole e con i caratteri speciali protetti. In MongoDB la condizione è un `$elemMatch` su `skillName` e `rate ≠ n.a.`.
 
+### OfferteModule — `/api/offerte` (fase 5)
+
+Sezione Offerte e preventivi; analisi in [analisi-offerte.md](analisi-offerte.md), piano in [piano-fase5.md](piano-fase5.md).
+
+- **Blocco F0.** Modulo vuoto registrato sotto `/api/offerte`; migrazione `011-offerte`; parametro `offerte` (validato dal controller dei parametri: margine 0–100, validità 1–365 giorni, motivi non vuoti).
+- **Calcoli** (`src/offerte/calcoli.ts`, funzioni pure, unico punto in cui si arrotonda): `calcolaStima({tipo, gruppi, contingenzaPercento, scontoPercento, prezzoACorpoCentesimi, oreGiorno, tariffe})` → per ruolo giorni con contingenza (due decimali), costo giornaliero (tariffa oraria × `oreGiorno`), costo e prezzo da listino al centesimo; per gruppo i giorni; totali, prezzo calcolato (listino − sconto), prezzo (a corpo quello deciso), margine in euro e in percentuale (un decimale), ruoli senza tariffa di costo o di vendita (totali null). `sottoMargineMinimo`, `numeroOfferta` (OFF-AAAA-NNNN), `chiaveContatore`. Test sull'esempio "Portale ordini" dell'analisi.
+- **Permessi** (`src/permessi/regole.ts`): globali `vedereOfferte` (commerciale, chi ha un'abilitazione, controller), `creareOfferte` (commerciale, PM, PMSenior), `vedereListino` (commerciale, PM, PMSenior, controller), `gestireListino` (PMSenior, controller); per offerta `ruoloSullOfferta` (responsabile o stimatore), `vedeOfferta`, `vedeEuroOfferta` (responsabile PM, PMSenior o commerciale; PMSenior; controller; mai lo stimatore), `modificaOfferta` (responsabile e PMSenior), `stimaOfferta` (anche gli stimatori), `puoApprovareRevisione` (PMSenior che non ha preparato la revisione). Nuovo ruolo globale `commerciale` in `RUOLI`.
+
 ### Health — `/api/health`
 
 `GET /api/health` → `{ "status": "ok", "database": "toolpm", "mongodb": "connesso" | "non connesso", "replicaSet": "rs0" | null }`. `replicaSet` è il nome del replica set di MongoDB, `null` con un'istanza singola (vedi [mongodb-replica-set.md](mongodb-replica-set.md)).

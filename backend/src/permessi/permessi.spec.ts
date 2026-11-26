@@ -3,6 +3,12 @@ import mongoose from 'mongoose';
 import { PermessiService } from './permessi.service.js';
 import {
   filtroProgettiGestibili,
+  modificaOfferta,
+  puoApprovareRevisione,
+  ruoloSullOfferta,
+  stimaOfferta,
+  vedeEuroOfferta,
+  vedeOfferta,
   motivoNegatoApprovazione,
   puoVedereReportProgetto,
   vedeEuroProgetto,
@@ -184,8 +190,18 @@ describe('permessi globali', () => {
   it('per ogni profilo', () => {
     const riga = (s: Soggetto) => Object.entries(permessiGlobali(s)).filter(([, v]) => v).map(([k]) => k);
     expect(riga(RISORSA)).toEqual(['consuntivare']);
-    expect(riga(TL)).toEqual(['creareProgetto', 'consuntivare', 'approvare', 'vedereReport']);
-    expect(riga(PM)).toEqual(['creareProgetto', 'gestireRisorse', 'gestireCaratteristicheTutteLeRisorse', 'consuntivare', 'approvare', 'vedereReport']);
+    expect(riga(TL)).toEqual(['creareProgetto', 'consuntivare', 'approvare', 'vedereReport', 'vedereOfferte']);
+    expect(riga(PM)).toEqual([
+      'creareProgetto',
+      'gestireRisorse',
+      'gestireCaratteristicheTutteLeRisorse',
+      'consuntivare',
+      'approvare',
+      'vedereReport',
+      'vedereOfferte',
+      'creareOfferte',
+      'vedereListino',
+    ]);
     expect(riga(PMSENIOR)).toEqual([
       'gestireClienti',
       'gestireCentriDiCosto',
@@ -196,8 +212,25 @@ describe('permessi globali', () => {
       'approvare',
       'consultareStorico',
       'vedereReport',
+      'vedereOfferte',
+      'creareOfferte',
+      'vedereListino',
+      'gestireListino',
     ]);
-    expect(riga(CONTROLLER)).toEqual(['gestireParametri', 'gestireTipologieCosto', 'gestireTariffe', 'consuntivare', 'gestirePeriodi', 'consultareStorico', 'vedereReport']);
+    expect(riga(CONTROLLER)).toEqual([
+      'gestireParametri',
+      'gestireTipologieCosto',
+      'gestireTariffe',
+      'consuntivare',
+      'gestirePeriodi',
+      'consultareStorico',
+      'vedereReport',
+      'vedereOfferte',
+      'vedereListino',
+      'gestireListino',
+    ]);
+    // Commerciale (fase 5): offerte e listino in lettura, nient'altro.
+    expect(riga(persona('cora', null, ['risorsa', 'commerciale']))).toEqual(['consuntivare', 'vedereOfferte', 'creareOfferte', 'vedereListino']);
     // L'amministratore senza risorsa collegata non consuntiva.
     expect(riga(ADMIN)).toEqual(['gestireRuoli', 'gestireUtenti']);
   });
@@ -294,3 +327,47 @@ describe('report di un progetto (fase 4)', () => {
     }
   });
 });
+
+describe('offerte (fase 5)', () => {
+  const COMM = persona('cora', null, ['risorsa', 'commerciale']);
+  const COMM2 = persona('ugo', null, ['risorsa', 'commerciale']);
+  const OFFERTA_PM = { responsabile: { utenteId: PM.id }, stimatori: [TL.id] };
+  const OFFERTA_COMM = { responsabile: { utenteId: new mongoose.Types.ObjectId() }, stimatori: [] as string[] };
+  const comm = { ...COMM, id: String(OFFERTA_COMM.responsabile.utenteId) };
+
+  it('ruolo sull\'offerta, anche con ObjectId', () => {
+    expect(ruoloSullOfferta(PM, OFFERTA_PM)).toBe('responsabile');
+    expect(ruoloSullOfferta(TL, OFFERTA_PM)).toBe('stimatore');
+    expect(ruoloSullOfferta(PM_ESTERNO, OFFERTA_PM)).toBeNull();
+    expect(ruoloSullOfferta(comm, OFFERTA_COMM)).toBe('responsabile');
+  });
+
+  it('chi vede l\'offerta: controller, PMSenior e commerciali tutte; PM e TL solo le proprie', () => {
+    for (const s of [CONTROLLER, PMSENIOR, COMM, PM, TL]) expect(vedeOfferta(s, OFFERTA_PM)).toBe(true);
+    for (const s of [PM_ESTERNO, TL_ESTERNO, RISORSA, ADMIN]) expect(vedeOfferta(s, OFFERTA_PM)).toBe(false);
+  });
+
+  it('euro: responsabile (PM o commerciale), PMSenior e controller; mai lo stimatore né un commerciale su un\'offerta altrui', () => {
+    for (const s of [PM, PMSENIOR, CONTROLLER]) expect(vedeEuroOfferta(s, OFFERTA_PM)).toBe(true);
+    for (const s of [TL, COMM, COMM2, PM_ESTERNO]) expect(vedeEuroOfferta(s, OFFERTA_PM)).toBe(false);
+    expect(vedeEuroOfferta(comm, OFFERTA_COMM)).toBe(true);
+    // Un TL nominato responsabile non vede comunque gli euro (decisione 6).
+    expect(vedeEuroOfferta(TL, { responsabile: { utenteId: TL.id } })).toBe(false);
+  });
+
+  it('modifica e stima: responsabile e PMSenior; gli stimatori solo la stima; il controller niente', () => {
+    expect(modificaOfferta(PM, OFFERTA_PM)).toBe(true);
+    expect(modificaOfferta(PMSENIOR, OFFERTA_PM)).toBe(true);
+    for (const s of [TL, COMM, CONTROLLER, PM_ESTERNO]) expect(modificaOfferta(s, OFFERTA_PM)).toBe(false);
+    expect(stimaOfferta(TL, OFFERTA_PM)).toBe(true);
+    expect(stimaOfferta(PM, OFFERTA_PM)).toBe(true);
+    for (const s of [COMM, CONTROLLER, TL_ESTERNO]) expect(stimaOfferta(s, OFFERTA_PM)).toBe(false);
+  });
+
+  it('approvazione: un PMSenior che non ha preparato la revisione', () => {
+    expect(puoApprovareRevisione(PMSENIOR, { preparataDa: PM.id })).toBe(true);
+    expect(puoApprovareRevisione(PMSENIOR, { preparataDa: PMSENIOR.id })).toBe(false);
+    for (const s of [PM, COMM, CONTROLLER, TL]) expect(puoApprovareRevisione(s, { preparataDa: 'altri' })).toBe(false);
+  });
+});
+
