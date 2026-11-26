@@ -2,7 +2,7 @@
 
 26/11/2026 · Claudio Agasi
 
-> Proposta da confermare (vedi "Decisioni da confermare"); non è stato ancora scritto codice. Versione di lavoro con commenti: [documento su Claude](https://claude.ai/artifact/WA3QAbTu62tPRXkM49UY18). Il modo di lavorare è quello di [analisi-consuntivazione.md](analisi-consuntivazione.md) e dei piani delle fasi 1–4.
+> Analisi definitiva: le dodici decisioni sono state confermate il 26/11/2026 (vedi "Decisioni confermate"); il lavoro segue il [piano della fase 5](piano-fase5.md). Versione di lavoro con commenti: [documento su Claude](https://claude.ai/artifact/WA3QAbTu62tPRXkM49UY18). Il modo di lavorare è quello di [analisi-consuntivazione.md](analisi-consuntivazione.md) e dei piani delle fasi 1–4.
 
 ## Scopo e perimetro
 
@@ -186,11 +186,11 @@ Nuova sezione **Offerte** nel menu principale, con le pagine sotto `/toolpm/offe
 
 Nella scheda del progetto in Consuntivazione compare un collegamento all'offerta d'origine con ricavo e margine previsti, solo per chi vede gli euro.
 
-## Decisioni da confermare
+## Decisioni confermate
 
-Con queste dodici risposte l'analisi diventa definitiva e si può scrivere il piano a blocchi. Per ognuna c'è la proposta; basta un sì o la correzione.
+Tutte e dodici le proposte sono state confermate così come sono il 26/11/2026.
 
-| N. | Domanda | Proposta |
+| N. | Domanda | Decisione |
 | --- | --- | --- |
 | 1 | Quali tipi di offerta servono? | A corpo, a consuntivo, pacchetto di giornate |
 | 2 | Come si struttura la stima? | Gruppi (diventano attività) con voci ruolo × giorni; contingenza unica sulla revisione |
