@@ -1,4 +1,4 @@
-import { risolviCostoOra, risolviVendita, tariffeRuoli, tipologiaOrdinaria, type TariffaCostoPeriodo, type VoceListinoPeriodo } from './risoluzione-listino.js';
+import { tariffaCostoAllaData, risolviCostoOra, risolviVendita, tariffeRuoli, tipologiaOrdinaria, type TariffaCostoPeriodo, type VoceListinoPeriodo } from './risoluzione-listino.js';
 
 const d = (s: string) => new Date(`${s}T00:00:00Z`);
 const SVIL = 'r-svil';
@@ -33,6 +33,7 @@ describe('listino di vendita: risoluzione (F1)', () => {
     expect(risolviCostoOra(SVIL, d('2026-07-15'), costi)).toBe(3500);
     expect(risolviCostoOra(SVIL, d('2025-07-15'), costi)).toBeNull();
     expect(risolviCostoOra(PM, d('2026-07-15'), costi)).toBeNull();
+    expect(tariffaCostoAllaData(SVIL, d('2026-07-15'), costi)?._id).toBe('t1');
   });
 
   it('sceglie la tipologia ordinaria predefinita, altrimenti la prima ordinaria attiva', () => {

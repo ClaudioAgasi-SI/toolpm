@@ -7,7 +7,7 @@ import type { VoceAnagrafica } from '../comuni/modelli';
 import { messaggioErrore } from '../core/errori';
 import { SessioneService } from '../core/sessione.service';
 import { ElencoListino, type ModificaVoceListino } from './elenco-listino';
-import { type DatiVoceListino, euroGiorno, type ListinoApplicabile, margineGiorno, type RuoloApplicabile, type VoceListino } from './modelli';
+import { type DatiVoceListino, euroGiorno, type ListinoApplicabile, margineGiorno, periodoBreve, type RuoloApplicabile, type VoceListino } from './modelli';
 import { OfferteApiService } from './offerte-api.service';
 
 /**
@@ -84,7 +84,12 @@ import { OfferteApiService } from './offerte-api.service';
                   @default { <span class="mancante">senza tariffa</span> }
                 }
               </td>
-              <td class="importo" [class.mancante]="!r.costoPresente">{{ r.costoPresente ? euroGiorno(r.costoCentesimiGiorno) : 'manca' }}</td>
+              <td class="importo" [class.mancante]="!r.costoPresente">
+                {{ r.costoPresente ? euroGiorno(r.costoCentesimiGiorno) : 'manca' }}
+                @if (r.costoPresente) {
+                  <small class="periodo">{{ periodoBreve(r.costoValidoDal, r.costoValidoAl) }}</small>
+                }
+              </td>
               <td class="importo">{{ margine(r) }}</td>
             </tr>
           } @empty {
@@ -92,7 +97,15 @@ import { OfferteApiService } from './offerte-api.service';
           }
         </tbody>
       </table>
-      <p class="nota">Costo: tariffa standard del ruolo per la tipologia ordinaria × {{ a.oreGiorno }} ore. Margine della giornata venduta a listino, prima di sconti e contingenza.</p>
+      <p class="nota">
+        Costo: tariffa standard del ruolo per la tipologia ordinaria valida alla data scelta, × {{ a.oreGiorno }} ore; anche le tariffe di costo hanno un periodo di validità e
+        @if (gestisceTariffe()) {
+          si gestiscono in <a routerLink="/consuntivazione/tariffe">Consuntivazione › Tariffe</a>.
+        } @else {
+          le gestisce il controller in Consuntivazione › Tariffe.
+        }
+        Margine della giornata venduta a listino, prima di sconti e contingenza.
+      </p>
     }
 
     @if (ruoloScelto(); as id) {
@@ -116,6 +129,7 @@ import { OfferteApiService } from './offerte-api.service';
     .avvisi { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
     .importo { text-align: right; font-variant-numeric: tabular-nums; }
     .mancante { color: #b4561f; }
+    .periodo { display: block; font-size: 0.75rem; color: var(--testo-tenue); }
     .cliccabile { cursor: pointer; }
     .cliccabile:hover td { background: #f4f7fc; }
     .scelto td { background: #e7f1fb; }
@@ -132,6 +146,8 @@ export class Listino {
 
   protected readonly euroGiorno = euroGiorno;
   protected readonly modificabile = computed(() => this.sessione.puo('gestireListino'));
+  protected readonly gestisceTariffe = computed(() => this.sessione.puo('gestireTariffe'));
+  protected readonly periodoBreve = periodoBreve;
   protected readonly data = signal(new Date().toISOString().slice(0, 10));
   /** Id del cliente scelto; '' = listino standard. */
   protected readonly cliente = signal('');

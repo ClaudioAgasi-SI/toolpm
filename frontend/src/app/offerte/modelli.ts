@@ -27,6 +27,9 @@ export interface RuoloApplicabile {
   vendita: { fonte: FonteVendita | null; voceId: string | null; centesimiGiorno: number | null };
   costoPresente: boolean;
   costoCentesimiGiorno: number | null;
+  /** Periodo della tariffa di costo usata ("AAAA-MM-GG"; al null = senza fine). */
+  costoValidoDal: string | null;
+  costoValidoAl: string | null;
 }
 
 export interface ListinoApplicabile {
@@ -36,6 +39,13 @@ export interface ListinoApplicabile {
   ruoli: RuoloApplicabile[];
   senzaVendita: number;
   senzaCosto: number;
+}
+
+/** "dal 01/01/2026" oppure "dal 01/01/2026 al 31/12/2026". */
+export function periodoBreve(dal: string | null, al: string | null): string {
+  if (!dal) return '';
+  const it = (d: string) => d.slice(0, 10).split('-').reverse().join('/');
+  return al ? `dal ${it(dal)} al ${it(al)}` : `dal ${it(dal)}`;
 }
 
 export const euroGiorno = (c: number | null | undefined) =>

@@ -222,8 +222,8 @@ describe.skipIf(!URI_BASE)('Offerte (fase 5) con MongoDB vero', () => {
       expect(r.status).toBe(200);
       expect(r.body).toMatchObject({ data: '2026-07-15', clienteId: cliente.acme.toHexString(), oreGiorno: 8, senzaVendita: 1, senzaCosto: 2 });
       const per = (b: { ruoli: { ruoloCodice: string }[] }, c: string) => b.ruoli.find((x) => x.ruoloCodice === c) as Record<string, unknown>;
-      expect(per(r.body, 'SVIL-SR')).toMatchObject({ vendita: { fonte: 'cliente', centesimiGiorno: 43000 }, costoPresente: true, costoCentesimiGiorno: 28000 });
-      expect(per(r.body, 'PM')).toMatchObject({ vendita: { fonte: 'standard', centesimiGiorno: 60000 }, costoPresente: false, costoCentesimiGiorno: null });
+      expect(per(r.body, 'SVIL-SR')).toMatchObject({ vendita: { fonte: 'cliente', centesimiGiorno: 43000 }, costoPresente: true, costoCentesimiGiorno: 28000, costoValidoDal: '2026-01-01', costoValidoAl: null });
+      expect(per(r.body, 'PM')).toMatchObject({ vendita: { fonte: 'standard', centesimiGiorno: 60000 }, costoPresente: false, costoCentesimiGiorno: null, costoValidoDal: null });
       expect(per(r.body, 'TEST')).toMatchObject({ vendita: { fonte: null, centesimiGiorno: null }, costoPresente: false });
       const beta = await come('cora', url(cliente.beta.toHexString(), '2027-02-01'));
       expect(per(beta.body, 'SVIL-SR')).toMatchObject({ vendita: { fonte: 'standard', centesimiGiorno: 47000 }, costoPresente: true, costoCentesimiGiorno: 28000 });

@@ -62,9 +62,14 @@ export function risolviVendita(ruoloId: Id, clienteId: Id | null, data: Date, vo
   return { fonte: null, voceId: null, centesimiGiorno: null };
 }
 
-/** Costo orario del ruolo alla data (tariffa standard della tipologia ordinaria), null se manca. */
+/** Tariffa di costo del ruolo valida alla data (tariffa standard della tipologia ordinaria), null se manca. */
+export function tariffaCostoAllaData<T extends TariffaCostoPeriodo>(ruoloId: Id, data: Date, tariffeOrdinaria: readonly T[]): T | null {
+  return tariffeOrdinaria.find((t) => stesso(t.ruoloId, ruoloId) && inPeriodo(t, data)) ?? null;
+}
+
+/** Costo orario del ruolo alla data, null se manca. */
 export function risolviCostoOra(ruoloId: Id, data: Date, tariffeOrdinaria: readonly TariffaCostoPeriodo[]): number | null {
-  return tariffeOrdinaria.find((t) => stesso(t.ruoloId, ruoloId) && inPeriodo(t, data))?.centesimiOra ?? null;
+  return tariffaCostoAllaData(ruoloId, data, tariffeOrdinaria)?.centesimiOra ?? null;
 }
 
 /**

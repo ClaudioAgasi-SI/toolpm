@@ -8,7 +8,7 @@ import { periodiSovrapposti } from '../../consuntivazione/tariffe/risoluzione.js
 import { TipologiaCosto } from '../../consuntivazione/tipologie/tipologia-costo.schema.js';
 import { AuditService, differenze } from '../../infrastruttura/audit.service.js';
 import { ParametriService } from '../../infrastruttura/parametri.service.js';
-import { risolviCostoOra, risolviVendita, tariffeRuoli, tipologiaOrdinaria, type TariffaCostoPeriodo, type TariffeRuoloRisolte, type VoceListinoPeriodo } from './risoluzione-listino.js';
+import { risolviVendita, tariffaCostoAllaData, tariffeRuoli, tipologiaOrdinaria, type TariffaCostoPeriodo, type TariffeRuoloRisolte, type VoceListinoPeriodo } from './risoluzione-listino.js';
 import { VoceListino } from './voce-listino.schema.js';
 
 /** Massimo 100.000 €/giorno: un importo oltre è quasi certamente un errore di battitura. */
@@ -117,14 +117,17 @@ export class ListinoService {
     ]);
     const righe = ruoli.map((r) => {
       const v = risolviVendita(r._id, clienteId, giorno, voci);
-      const ora = risolviCostoOra(r._id, giorno, costi);
+      const costo = tariffaCostoAllaData(r._id, giorno, costi);
       return {
         ruoloId: String(r._id),
         ruoloCodice: r.codice,
         ruoloDescrizione: r.descrizione,
         vendita: v,
-        costoPresente: ora != null,
-        costoCentesimiGiorno: ora == null ? null : Math.round(ora * oreGiorno),
+        costoPresente: costo != null,
+        costoCentesimiGiorno: costo ? Math.round(costo.centesimiOra * oreGiorno) : null,
+        /** Periodo della tariffa di costo usata (le tariffe di costo si gestiscono in Consuntivazione › Tariffe). */
+        costoValidoDal: costo ? costo.validoDal.toISOString().slice(0, 10) : null,
+        costoValidoAl: costo?.validoAl ? costo.validoAl.toISOString().slice(0, 10) : null,
       };
     });
     return {
