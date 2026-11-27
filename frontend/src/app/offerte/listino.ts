@@ -14,8 +14,8 @@ import { OfferteApiService } from './offerte-api.service';
  * Listino di vendita (fase 5, blocco F1), sotto /offerte/listino.
  * - In alto si sceglie il listino (standard o di un cliente) e la data: la tabella mostra per ogni ruolo la
  *   tariffa giornaliera che un'offerta userebbe in quella data, con la provenienza (del cliente o standard), e
- *   segnala i ruoli senza tariffa di vendita o senza costo. PMSenior e controller vedono anche il costo
- *   giornaliero e il margine della giornata a listino.
+ *   segnala i ruoli senza tariffa di vendita o senza costo; mostra anche il costo giornaliero e il margine
+ *   della giornata a listino (a tutti quelli che leggono il listino, decisione del 27/11/2026).
  * - Cliccando un ruolo si vedono i suoi periodi nel listino scelto; PMSenior e controller li gestiscono.
  */
 @Component({
@@ -68,12 +68,8 @@ import { OfferteApiService } from './offerte-api.service';
             <th>Ruolo</th>
             <th class="importo">Vendita</th>
             <th>Provenienza</th>
-            @if (vedeCosti()) {
-              <th class="importo">Costo ({{ a.oreGiorno }} h)</th>
-              <th class="importo">Margine</th>
-            } @else {
-              <th>Costo</th>
-            }
+            <th class="importo">Costo ({{ a.oreGiorno }} h)</th>
+            <th class="importo">Margine</th>
           </tr>
         </thead>
         <tbody>
@@ -88,27 +84,15 @@ import { OfferteApiService } from './offerte-api.service';
                   @default { <span class="mancante">senza tariffa</span> }
                 }
               </td>
-              @if (vedeCosti()) {
-                <td class="importo" [class.mancante]="!r.costoPresente">{{ euroGiorno(r.costoCentesimiGiorno) }}</td>
-                <td class="importo">{{ margine(r) }}</td>
-              } @else {
-                <td>
-                  @if (r.costoPresente) {
-                    presente
-                  } @else {
-                    <span class="mancante">manca</span>
-                  }
-                </td>
-              }
+              <td class="importo" [class.mancante]="!r.costoPresente">{{ r.costoPresente ? euroGiorno(r.costoCentesimiGiorno) : 'manca' }}</td>
+              <td class="importo">{{ margine(r) }}</td>
             </tr>
           } @empty {
-            <tr><td [attr.colspan]="vedeCosti() ? 5 : 4" class="tenue">Nessun ruolo attivo: i ruoli si creano in Anagrafiche.</td></tr>
+            <tr><td colspan="5" class="tenue">Nessun ruolo attivo: i ruoli si creano in Anagrafiche.</td></tr>
           }
         </tbody>
       </table>
-      @if (vedeCosti()) {
-        <p class="nota">Costo: tariffa standard del ruolo per la tipologia ordinaria × {{ a.oreGiorno }} ore. Margine della giornata venduta a listino, prima di sconti e contingenza.</p>
-      }
+      <p class="nota">Costo: tariffa standard del ruolo per la tipologia ordinaria × {{ a.oreGiorno }} ore. Margine della giornata venduta a listino, prima di sconti e contingenza.</p>
     }
 
     @if (ruoloScelto(); as id) {
@@ -158,7 +142,6 @@ export class Listino {
   protected readonly voci = signal<VoceListino[]>([]);
   protected readonly applicabile = signal<ListinoApplicabile | null>(null);
 
-  protected readonly vedeCosti = computed(() => this.applicabile()?.ruoli.some((r) => 'costoCentesimiGiorno' in r) ?? false);
   protected readonly vociDelRuolo = computed(() => this.voci().filter((v) => v.ruoloId === this.ruoloScelto()));
 
   constructor() {

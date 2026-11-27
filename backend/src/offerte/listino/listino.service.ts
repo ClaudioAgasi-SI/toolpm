@@ -102,10 +102,10 @@ export class ListinoService {
 
   /**
    * Tariffe di ogni ruolo attivo alla data per un cliente (o lo standard): vendita con la provenienza e
-   * costo giornaliero (tipologia ordinaria × oreGiorno). Il costo in euro lo riceve solo chi può gestire il
-   * listino (PMSenior e controller): agli altri arriva solo se c'è o manca.
+   * costo giornaliero (tipologia ordinaria × oreGiorno). Il costo lo vede chiunque legge il listino
+   * (commerciali, PM, PMSenior, controller: decisione del 27/11/2026).
    */
-  async applicabili(filtro: { cliente?: string; data?: string }, vedeCosti: boolean) {
+  async applicabili(filtro: { cliente?: string; data?: string }) {
     const clienteId = filtro.cliente && filtro.cliente !== 'standard' ? objectId(filtro.cliente, 'cliente')! : null;
     if (clienteId && !(await this.clienti.exists({ _id: clienteId }))) throw new NotFoundException(`Cliente ${filtro.cliente} non trovato`);
     const giorno = data(filtro.data ?? oggi(), 'data', true)!;
@@ -124,7 +124,7 @@ export class ListinoService {
         ruoloDescrizione: r.descrizione,
         vendita: v,
         costoPresente: ora != null,
-        ...(vedeCosti ? { costoCentesimiGiorno: ora == null ? null : Math.round(ora * oreGiorno) } : {}),
+        costoCentesimiGiorno: ora == null ? null : Math.round(ora * oreGiorno),
       };
     });
     return {

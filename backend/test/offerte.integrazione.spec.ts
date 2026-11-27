@@ -216,7 +216,7 @@ describe.skipIf(!URI_BASE)('Offerte (fase 5) con MongoDB vero', () => {
       expect(storico.map((v) => v.operazione as string).sort((a, b) => a.localeCompare(b))).toEqual(['creazione', 'modifica']);
     });
 
-    it('tariffe applicabili alla data: cliente, poi standard; costo in euro solo a PMSenior e controller', async () => {
+    it('tariffe applicabili alla data: cliente, poi standard; costo giornaliero a chi legge il listino', async () => {
       const url = (c: string, d: string) => `/api/offerte/listino/applicabili?cliente=${c}&data=${d}`;
       const r = await come('sara', url(cliente.acme.toHexString(), '2026-07-15'));
       expect(r.status).toBe(200);
@@ -226,8 +226,8 @@ describe.skipIf(!URI_BASE)('Offerte (fase 5) con MongoDB vero', () => {
       expect(per(r.body, 'PM')).toMatchObject({ vendita: { fonte: 'standard', centesimiGiorno: 60000 }, costoPresente: false, costoCentesimiGiorno: null });
       expect(per(r.body, 'TEST')).toMatchObject({ vendita: { fonte: null, centesimiGiorno: null }, costoPresente: false });
       const beta = await come('cora', url(cliente.beta.toHexString(), '2027-02-01'));
-      expect(per(beta.body, 'SVIL-SR')).toMatchObject({ vendita: { fonte: 'standard', centesimiGiorno: 47000 }, costoPresente: true });
-      expect(per(beta.body, 'SVIL-SR')).not.toHaveProperty('costoCentesimiGiorno');
+      expect(per(beta.body, 'SVIL-SR')).toMatchObject({ vendita: { fonte: 'standard', centesimiGiorno: 47000 }, costoPresente: true, costoCentesimiGiorno: 28000 });
+      expect(per((await come('paola', url(cliente.acme.toHexString(), '2026-07-15'))).body, 'SVIL-SR')).toMatchObject({ costoCentesimiGiorno: 28000 });
       expect((await come('paola', url('standard', '2026-07-15'))).body.clienteId).toBeNull();
       expect((await come('paola', url(new mongoose.Types.ObjectId().toHexString(), '2026-07-15'))).status).toBe(404);
       expect((await come('tito', url('standard', '2026-07-15'))).status).toBe(403);

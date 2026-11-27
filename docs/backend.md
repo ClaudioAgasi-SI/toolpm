@@ -449,7 +449,7 @@ Sezione Offerte e preventivi; analisi in [analisi-offerte.md](analisi-offerte.md
   | Metodo | Percorso | Permesso | Descrizione |
   |---|---|---|---|
   | GET | `/api/offerte/listino?cliente=&ruolo=` | `vedereListino` | Voci del listino; `cliente` = id o `standard`, senza = tutto |
-  | GET | `/api/offerte/listino/applicabili?cliente=&data=` | `vedereListino` | Per ogni ruolo attivo: vendita alla data (del cliente, altrimenti standard, con `fonte` e `voceId`), `costoPresente`; `costoCentesimiGiorno` solo a chi ha `gestireListino`; conteggi `senzaVendita`, `senzaCosto`; `oreGiorno` |
+  | GET | `/api/offerte/listino/applicabili?cliente=&data=` | `vedereListino` | Per ogni ruolo attivo: vendita alla data (del cliente, altrimenti standard, con `fonte` e `voceId`), `costoPresente`, `costoCentesimiGiorno` (tipologia ordinaria × `oreGiorno`, a tutti quelli che leggono il listino); conteggi `senzaVendita`, `senzaCosto`; `oreGiorno` |
   | POST | `/api/offerte/listino` | `gestireListino` | Nuova voce `{ruoloId, clienteId, validoDal, validoAl, centesimiGiorno}`; 409 se il periodo si sovrappone a un'altra voce dello stesso ruolo e cliente (o standard) |
   | PUT | `/api/offerte/listino/:id` | `gestireListino` | Validità o importo; ruolo e cliente non cambiano (409) |
   | DELETE | `/api/offerte/listino/:id` | `gestireListino` | Cancellazione (le revisioni approvate tengono gli importi fotografati) |

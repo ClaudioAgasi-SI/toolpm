@@ -1,7 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from '@nestjs/common';
 import { ApiBody, ApiConflictResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { Permesso, type UtenteAutenticato, UtenteRichiesta } from '../../auth/decoratori.js';
-import { permessoGlobale } from '../../permessi/regole.js';
+import { Permesso } from '../../auth/decoratori.js';
 import { ListinoService } from './listino.service.js';
 
 /**
@@ -26,12 +25,12 @@ export class ListinoController {
   @Permesso('vedereListino')
   @ApiOperation({
     summary: 'Tariffa di vendita (del cliente, altrimenti standard) e costo giornaliero di ogni ruolo alla data; segnala i ruoli senza tariffa',
-    description: 'Il costo giornaliero in euro arriva solo a PMSenior e controller; agli altri solo costoPresente.',
+    description: 'Il costo giornaliero (tipologia ordinaria × oreGiorno) arriva a tutti quelli che leggono il listino (decisione del 27/11/2026).',
   })
   @ApiQuery({ name: 'cliente', required: false, description: 'Id del cliente; se manca o "standard", il listino standard' })
   @ApiQuery({ name: 'data', required: false, description: 'AAAA-MM-GG; se manca, oggi' })
-  applicabili(@UtenteRichiesta() utente: UtenteAutenticato, @Query('cliente') cliente?: string, @Query('data') data?: string) {
-    return this.service.applicabili({ cliente, data }, permessoGlobale(utente, 'gestireListino'));
+  applicabili(@Query('cliente') cliente?: string, @Query('data') data?: string) {
+    return this.service.applicabili({ cliente, data });
   }
 
   @Post()

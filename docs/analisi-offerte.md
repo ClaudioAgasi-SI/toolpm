@@ -114,7 +114,7 @@ Costi e margini restano riservati come in Consuntivazione: li vedono solo chi è
 | TL | quelle di cui è stimatore | no | sì, dove invitato | no | no | no | no |
 | Controller | tutte, in lettura | no | no | tutte | no | no | no |
 
-Il listino di vendita lo gestiscono il controller e i PMSenior; commerciali e PM lo leggono. Le tariffe di costo restano come oggi, modificate solo dal controller; chi vede costi e margini di un'offerta vede anche il costo giornaliero di ogni ruolo, che si ricava comunque dai totali.
+Il listino di vendita lo gestiscono il controller e i PMSenior; commerciali e PM lo leggono. Le tariffe di costo restano come oggi, modificate solo dal controller; chi vede costi e margini di un'offerta vede anche il costo giornaliero di ogni ruolo, che si ricava comunque dai totali. Nella pagina del listino, chi lo legge (commerciali, PM, PMSenior, controller) vede per ogni ruolo anche il costo giornaliero e il margine della giornata venduta a listino (deciso il 27/11/2026).
 
 ## Dall'offerta vinta al progetto
 

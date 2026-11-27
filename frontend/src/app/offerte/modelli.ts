@@ -26,8 +26,7 @@ export interface RuoloApplicabile {
   ruoloDescrizione: string;
   vendita: { fonte: FonteVendita | null; voceId: string | null; centesimiGiorno: number | null };
   costoPresente: boolean;
-  /** Solo per PMSenior e controller. */
-  costoCentesimiGiorno?: number | null;
+  costoCentesimiGiorno: number | null;
 }
 
 export interface ListinoApplicabile {
