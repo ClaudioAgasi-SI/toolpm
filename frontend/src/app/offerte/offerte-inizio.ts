@@ -63,7 +63,11 @@ export class OfferteInizio {
         : 'Le offerte su cui sei invitato a stimare i giorni.',
     });
     if (this.sessione.puo('vedereListino')) {
-      voci.push({ titolo: 'Listino di vendita', descrizione: 'Tariffe giornaliere di vendita per ruolo, standard e per cliente, con validità.' });
+      voci.push({
+        titolo: 'Listino di vendita',
+        descrizione: 'Tariffe giornaliere di vendita per ruolo, standard e per cliente, con validità.',
+        percorso: 'listino',
+      });
     }
     voci.push({ titolo: 'Pipeline', descrizione: 'Valore delle offerte aperte per stato, offerte in scadenza e tasso di successo.' });
     return voci;

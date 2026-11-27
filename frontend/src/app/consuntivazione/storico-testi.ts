@@ -29,6 +29,7 @@ export const NOMI_COLLEZIONE: Record<string, string> = {
   tipologie_costo: 'Tipologia di costo',
   tariffe_standard: 'Tariffa standard',
   tariffe_personalizzate: 'Tariffa personalizzata',
+  listino_vendita: 'Tariffa di vendita',
 };
 
 const NOMI_CAMPO: Record<string, string> = {
@@ -37,6 +38,7 @@ const NOMI_CAMPO: Record<string, string> = {
   nota: 'nota',
   tipologiaCodice: 'tipologia',
   centesimiOra: 'tariffa',
+  centesimiGiorno: 'tariffa',
   costo: 'costo',
   validoDal: 'dal',
   validoAl: 'al',
@@ -47,14 +49,15 @@ const NOMI_CAMPO: Record<string, string> = {
   rifiuto: 'rifiuto',
 };
 
-const NASCOSTI = new Set(['_id', 'tariffaId', 'progettoId', 'attivitaId', 'fonte', 'ruoloId', 'risorsaId', 'tipologiaId']);
+const NASCOSTI = new Set(['_id', 'tariffaId', 'progettoId', 'attivitaId', 'fonte', 'ruoloId', 'risorsaId', 'tipologiaId', 'clienteId']);
 
 /** Un valore dello storico in breve. */
 export function valore(campo: string, v: unknown): string {
   if (v === null || v === undefined || v === '') return '—';
   if (campo === 'minuti' && typeof v === 'number') return scriviOre(v) || '0:00';
-  if ((campo === 'centesimiOra' || campo === 'costo') && typeof v === 'number') {
-    return `${(v / 100).toLocaleString('it-IT', { minimumFractionDigits: 2 })} €${campo === 'centesimiOra' ? '/h' : ''}`;
+  if ((campo === 'centesimiOra' || campo === 'centesimiGiorno' || campo === 'costo') && typeof v === 'number') {
+    const unita = campo === 'centesimiOra' ? '/h' : campo === 'centesimiGiorno' ? '/gg' : '';
+    return `${(v / 100).toLocaleString('it-IT', { minimumFractionDigits: 2 })} €${unita}`;
   }
   if (campo === 'stato' && typeof v === 'string' && v in NOMI_STATO) return NOMI_STATO[v as StatoRiga];
   if (campo === 'rifiuto' && typeof v === 'object') return `“${(v as { motivazione?: string }).motivazione ?? ''}”`;

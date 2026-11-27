@@ -2,6 +2,7 @@
  * Test di integrazione della fase 5 (Offerte e preventivi) contro un MongoDB vero (replica set).
  * F0: migrazione 011 (collection, validatori, indici, parametro "offerte"), parametro modificabile dal controller,
  * ruolo globale commerciale assegnato dall'amministratore e permessi della sezione in /api/auth/me.
+ * F1: listino di vendita (permessi, sovrapposizioni, storico) e tariffe applicabili alla data.
  *
  * Si esegue solo se è impostata MONGODB_URI_TEST, es.:
  *   MONGODB_URI_TEST="mongodb://localhost:27017/?directConnection=true" npm test
@@ -153,6 +154,96 @@ describe.skipIf(!URI_BASE)('Offerte (fase 5) con MongoDB vero', () => {
       expect(await permessi('tito')).toEqual(['vedereOfferte']);
       expect(await permessi('carlo')).toEqual(['vedereOfferte', 'vedereListino', 'gestireListino']);
       expect(await permessi('adele')).toEqual([]);
+    });
+  });
+  describe('F1 — listino di vendita', () => {
+    const ruolo: Record<string, mongoose.Types.ObjectId> = {};
+    const cliente: Record<string, mongoose.Types.ObjectId> = {};
+    const invia = (chi: string, metodo: 'post' | 'put' | 'delete', url: string, corpo?: unknown) =>
+      api()[metodo](url).set('Cookie', cookie[chi]).send(corpo as object);
+
+    beforeAll(async () => {
+      for (const [k, codice, descrizione] of [['svil', 'SVIL-SR', 'Sviluppatore senior'], ['pm', 'PM', 'Project manager'], ['tester', 'TEST', 'Tester']]) {
+        ruolo[k] = (await db.collection('ruoli').insertOne({ codice, descrizione, attivo: true })).insertedId;
+      }
+      for (const [k, codice] of [['acme', 'ACME'], ['beta', 'BETA']]) {
+        cliente[k] = (await db.collection('clienti').insertOne({ codice, ragioneSociale: `${codice} S.p.A.`, attivo: true })).insertedId;
+      }
+      const ordinaria = await db.collection('tipologie_costo').findOne({ codice: 'ORDINARIA' });
+      const straord = await db.collection('tipologie_costo').findOne({ codice: 'STRAORDINARIA' });
+      await db.collection('tariffe_standard').insertMany([
+        { ruoloId: ruolo.svil, tipologiaId: ordinaria!._id, validoDal: new Date('2026-01-01'), validoAl: null, centesimiOra: 3500 },
+        { ruoloId: ruolo.pm, tipologiaId: straord!._id, validoDal: new Date('2026-01-01'), validoAl: null, centesimiOra: 6000 },
+      ]);
+    });
+
+    it('PMSenior e controller gestiscono il listino; commerciali e PM lo leggono; gli altri no', async () => {
+      const voce = { ruoloId: ruolo.svil.toHexString(), clienteId: null, validoDal: '2026-01-01', validoAl: '2026-12-31', centesimiGiorno: 45000 };
+      expect((await invia('cora', 'post', '/api/offerte/listino', voce)).status).toBe(403);
+      expect((await invia('paola', 'post', '/api/offerte/listino', voce)).status).toBe(403);
+      const r = await invia('sara', 'post', '/api/offerte/listino', voce);
+      expect(r.status).toBe(201);
+      expect(r.body).toMatchObject({ clienteId: null, centesimiGiorno: 45000 });
+      expect((await invia('carlo', 'post', '/api/offerte/listino', { ...voce, ruoloId: ruolo.pm.toHexString(), validoAl: null, centesimiGiorno: 60000 })).status).toBe(201);
+      for (const chi of ['cora', 'paola', 'sara', 'carlo']) expect((await come(chi, '/api/offerte/listino')).body).toHaveLength(2);
+      expect((await come('tito', '/api/offerte/listino')).status).toBe(403);
+      expect((await come('adele', '/api/offerte/listino')).status).toBe(403);
+    });
+
+    it('controlla dati e sovrapposizioni per ruolo e cliente; ruolo e cliente non cambiano', async () => {
+      const base = { ruoloId: ruolo.svil.toHexString(), clienteId: null, validoDal: '2026-06-01', validoAl: null, centesimiGiorno: 47000 };
+      const conflitto = await invia('sara', 'post', '/api/offerte/listino', base);
+      expect(conflitto.status).toBe(409);
+      expect(conflitto.body.message).toMatch(/sovrapposto.*listino standard/);
+      expect((await invia('sara', 'post', '/api/offerte/listino', { ...base, validoDal: '2027-01-01' })).status).toBe(201);
+      const acme = await invia('sara', 'post', '/api/offerte/listino', { ...base, clienteId: cliente.acme.toHexString(), validoAl: '2026-12-31', centesimiGiorno: 42000 });
+      expect(acme.status).toBe(201);
+      expect((await invia('sara', 'post', '/api/offerte/listino', { ...base, clienteId: cliente.acme.toHexString(), validoDal: '2026-12-01' })).status).toBe(409);
+      expect((await invia('sara', 'post', '/api/offerte/listino', { ...base, validoDal: '2028-01-01', validoAl: '2027-12-31' })).status).toBe(400);
+      expect((await invia('sara', 'post', '/api/offerte/listino', { ...base, validoDal: '2028-01-01', centesimiGiorno: 12.5 })).status).toBe(400);
+      expect((await invia('sara', 'post', '/api/offerte/listino', { ...base, validoDal: '2028-01-01', clienteId: new mongoose.Types.ObjectId().toHexString() })).status).toBe(400);
+      expect((await invia('sara', 'post', '/api/offerte/listino', { ...base, validoDal: '2028-01-01', ruoloId: new mongoose.Types.ObjectId().toHexString() })).status).toBe(400);
+      const id = acme.body._id as string;
+      expect((await invia('sara', 'put', `/api/offerte/listino/${id}`, { clienteId: cliente.beta.toHexString() })).status).toBe(409);
+      expect((await invia('paola', 'put', `/api/offerte/listino/${id}`, { centesimiGiorno: 1 })).status).toBe(403);
+      const m = await invia('carlo', 'put', `/api/offerte/listino/${id}`, { centesimiGiorno: 43000, clienteId: cliente.acme.toHexString() });
+      expect(m.status).toBe(200);
+      expect(m.body.centesimiGiorno).toBe(43000);
+      expect((await come('paola', `/api/offerte/listino?cliente=${cliente.acme.toHexString()}`)).body).toHaveLength(1);
+      expect((await come('paola', '/api/offerte/listino?cliente=standard')).body).toHaveLength(3);
+      expect((await come('paola', `/api/offerte/listino?ruolo=${ruolo.svil.toHexString()}`)).body).toHaveLength(3);
+      const storico = await db.collection('audit_log').find({ collezione: 'listino_vendita', documentoId: id }).toArray();
+      expect(storico.map((v) => v.operazione as string).sort((a, b) => a.localeCompare(b))).toEqual(['creazione', 'modifica']);
+    });
+
+    it('tariffe applicabili alla data: cliente, poi standard; costo in euro solo a PMSenior e controller', async () => {
+      const url = (c: string, d: string) => `/api/offerte/listino/applicabili?cliente=${c}&data=${d}`;
+      const r = await come('sara', url(cliente.acme.toHexString(), '2026-07-15'));
+      expect(r.status).toBe(200);
+      expect(r.body).toMatchObject({ data: '2026-07-15', clienteId: cliente.acme.toHexString(), oreGiorno: 8, senzaVendita: 1, senzaCosto: 2 });
+      const per = (b: { ruoli: { ruoloCodice: string }[] }, c: string) => b.ruoli.find((x) => x.ruoloCodice === c) as Record<string, unknown>;
+      expect(per(r.body, 'SVIL-SR')).toMatchObject({ vendita: { fonte: 'cliente', centesimiGiorno: 43000 }, costoPresente: true, costoCentesimiGiorno: 28000 });
+      expect(per(r.body, 'PM')).toMatchObject({ vendita: { fonte: 'standard', centesimiGiorno: 60000 }, costoPresente: false, costoCentesimiGiorno: null });
+      expect(per(r.body, 'TEST')).toMatchObject({ vendita: { fonte: null, centesimiGiorno: null }, costoPresente: false });
+      const beta = await come('cora', url(cliente.beta.toHexString(), '2027-02-01'));
+      expect(per(beta.body, 'SVIL-SR')).toMatchObject({ vendita: { fonte: 'standard', centesimiGiorno: 47000 }, costoPresente: true });
+      expect(per(beta.body, 'SVIL-SR')).not.toHaveProperty('costoCentesimiGiorno');
+      expect((await come('paola', url('standard', '2026-07-15'))).body.clienteId).toBeNull();
+      expect((await come('paola', url(new mongoose.Types.ObjectId().toHexString(), '2026-07-15'))).status).toBe(404);
+      expect((await come('tito', url('standard', '2026-07-15'))).status).toBe(403);
+    });
+
+    it('cancella una voce con traccia nello storico', async () => {
+      const voci = (await come('sara', `/api/offerte/listino?ruolo=${ruolo.pm.toHexString()}`)).body as { _id: string }[];
+      expect((await invia('paola', 'delete', `/api/offerte/listino/${voci[0]._id}`)).status).toBe(403);
+      expect((await invia('sara', 'delete', `/api/offerte/listino/${voci[0]._id}`)).status).toBe(204);
+      expect((await invia('sara', 'delete', `/api/offerte/listino/${voci[0]._id}`)).status).toBe(404);
+      expect(await db.collection('audit_log').countDocuments({ collezione: 'listino_vendita', operazione: 'cancellazione' })).toBe(1);
+      const storico = await come('sara', '/api/consuntivazione/storico?collezione=listino_vendita');
+      expect(storico.status).toBe(200);
+      const documenti = (storico.body.voci ?? storico.body) as { documento: string; operazione: string }[];
+      expect(documenti.find((v) => v.operazione === 'cancellazione')?.documento).toBe('PM · standard · dal 01/01/2026');
+      expect(documenti.map((v) => v.documento)).toContain('SVIL-SR · ACME · dal 01/06/2026');
     });
   });
 });

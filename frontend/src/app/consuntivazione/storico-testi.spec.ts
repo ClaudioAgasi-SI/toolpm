@@ -4,6 +4,7 @@ describe('testi dello storico', () => {
   it('valori in breve: ore, importi, stati, elenchi', () => {
     expect(valore('minuti', 450)).toBe('7:30');
     expect(valore('centesimiOra', 3250)).toBe('32,50 €/h');
+    expect(valore('centesimiGiorno', 45000)).toBe('450,00 €/gg');
     expect(valore('stato', 'approvataTL')).toBe('Via libera del TL');
     expect(valore('risorseAssegnateIds', ['a', 'b'])).toBe('2 elementi');
     expect(valore('nota', null)).toBe('—');

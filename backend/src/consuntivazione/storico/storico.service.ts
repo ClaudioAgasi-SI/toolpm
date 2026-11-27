@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { type Model } from 'mongoose';
 import type { UtenteAutenticato } from '../../auth/decoratori.js';
 import { Utente } from '../../auth/utente.schema.js';
+import { Cliente, Ruolo } from '../../comuni/schemi/anagrafiche.schema.js';
 import { Attivita, Progetto } from '../../comuni/schemi/progetto.schema.js';
 import { Risorsa } from '../../comuni/schemi/risorsa.schema.js';
 import { data as leggiData, idRotta, numero } from '../../comuni/validazione.js';
@@ -37,6 +38,8 @@ export class StoricoService {
     @InjectModel(Progetto.name) private readonly progetti: Model<Progetto>,
     @InjectModel(Attivita.name) private readonly attivita: Model<Attivita>,
     @InjectModel(TipologiaCosto.name) private readonly tipologie: Model<TipologiaCosto>,
+    @InjectModel(Ruolo.name) private readonly ruoli: Model<Ruolo>,
+    @InjectModel(Cliente.name) private readonly clienti: Model<Cliente>,
     private readonly permessi: PermessiService,
   ) {}
 
@@ -149,6 +152,29 @@ export class StoricoService {
     for (const a of attivita) mappa.set(`attivita|${String(a._id)}`, `${np.get(String(a.progettoId)) ?? '?'} › ${a.codice}`);
     for (const t of tipologie) mappa.set(`tipologie_costo|${String(t._id)}`, t.codice);
     for (const v of voci) if (v.collezione === 'periodi') mappa.set(`periodi|${v.documentoId}`, nomeMese(v.documentoId));
+    await this.etichetteListino(voci, mappa, giorno);
     return mappa;
+  }
+
+  /** Tariffe di vendita (fase 5, F1): "ruolo · cliente o standard · dal"; per le cancellate si usa la fotografia "prima". */
+  private async etichetteListino(voci: Voce[], mappa: Map<string, string>, giorno: (d: Date) => string) {
+    const delListino = voci.filter((v) => v.collezione === 'listino_vendita');
+    if (!delListino.length) return;
+    type DatiVoce = { ruoloId?: Id | string; clienteId?: Id | string | null; validoDal?: Date | string };
+    const ids = [...new Set(delListino.map((v) => v.documentoId))].filter((x) => mongoose.isValidObjectId(x)).map((x) => new mongoose.Types.ObjectId(x));
+    const presenti = await this.voci.db.collection<DatiVoce & { _id: Id }>('listino_vendita').find({ _id: { $in: ids } }).toArray();
+    const dati = new Map<string, DatiVoce>(presenti.map((d) => [String(d._id), d]));
+    for (const v of delListino) if (!dati.has(v.documentoId) && v.prima) dati.set(v.documentoId, v.prima as DatiVoce);
+    const idsDi = (campo: 'ruoloId' | 'clienteId') => [...new Set([...dati.values()].map((d) => d[campo]).filter((x) => x && mongoose.isValidObjectId(x)).map(String))];
+    const [ruoli, clienti] = await Promise.all([
+      this.ruoli.find({ _id: { $in: idsDi('ruoloId') } }, { codice: 1 }).lean().exec(),
+      this.clienti.find({ _id: { $in: idsDi('clienteId') } }, { codice: 1 }).lean().exec(),
+    ]);
+    const nr = new Map(ruoli.map((r) => [String(r._id), r.codice]));
+    const nc = new Map(clienti.map((c) => [String(c._id), c.codice]));
+    for (const [id, d] of dati) {
+      const dal = d.validoDal ? giorno(new Date(d.validoDal)) : '?';
+      mappa.set(`listino_vendita|${id}`, `${nr.get(String(d.ruoloId)) ?? '?'} · ${d.clienteId ? (nc.get(String(d.clienteId)) ?? '?') : 'standard'} · dal ${dal}`);
+    }
   }
 }

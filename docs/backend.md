@@ -441,9 +441,20 @@ Il tipo determina il campo (`tecnico` → `skillTecnici`, `funzionale` → `skil
 
 Sezione Offerte e preventivi; analisi in [analisi-offerte.md](analisi-offerte.md), piano in [piano-fase5.md](piano-fase5.md).
 
-- **Blocco F0.** Modulo vuoto registrato sotto `/api/offerte`; migrazione `011-offerte`; parametro `offerte` (validato dal controller dei parametri: margine 0–100, validità 1–365 giorni, motivi non vuoti).
+- **Blocco F0.** Modulo registrato sotto `/api/offerte`; migrazione `011-offerte`; parametro `offerte` (validato dal controller dei parametri: margine 0–100, validità 1–365 giorni, motivi non vuoti).
 - **Calcoli** (`src/offerte/calcoli.ts`, funzioni pure, unico punto in cui si arrotonda): `calcolaStima({tipo, gruppi, contingenzaPercento, scontoPercento, prezzoACorpoCentesimi, oreGiorno, tariffe})` → per ruolo giorni con contingenza (due decimali), costo giornaliero (tariffa oraria × `oreGiorno`), costo e prezzo da listino al centesimo; per gruppo i giorni; totali, prezzo calcolato (listino − sconto), prezzo (a corpo quello deciso), margine in euro e in percentuale (un decimale), ruoli senza tariffa di costo o di vendita (totali null). `sottoMargineMinimo`, `numeroOfferta` (OFF-AAAA-NNNN), `chiaveContatore`. Test sull'esempio "Portale ordini" dell'analisi.
 - **Permessi** (`src/permessi/regole.ts`): globali `vedereOfferte` (commerciale, chi ha un'abilitazione, controller), `creareOfferte` (commerciale, PM, PMSenior), `vedereListino` (commerciale, PM, PMSenior, controller), `gestireListino` (PMSenior, controller); per offerta `ruoloSullOfferta` (responsabile o stimatore), `vedeOfferta`, `vedeEuroOfferta` (responsabile PM, PMSenior o commerciale; PMSenior; controller; mai lo stimatore), `modificaOfferta` (responsabile e PMSenior), `stimaOfferta` (anche gli stimatori), `puoApprovareRevisione` (PMSenior che non ha preparato la revisione). Nuovo ruolo globale `commerciale` in `RUOLI`.
+- **Listino di vendita (blocco F1)** (`src/offerte/listino/`): schema `VoceListino` (collection `listino_vendita`), `ListinoService`, `ListinoController`.
+
+  | Metodo | Percorso | Permesso | Descrizione |
+  |---|---|---|---|
+  | GET | `/api/offerte/listino?cliente=&ruolo=` | `vedereListino` | Voci del listino; `cliente` = id o `standard`, senza = tutto |
+  | GET | `/api/offerte/listino/applicabili?cliente=&data=` | `vedereListino` | Per ogni ruolo attivo: vendita alla data (del cliente, altrimenti standard, con `fonte` e `voceId`), `costoPresente`; `costoCentesimiGiorno` solo a chi ha `gestireListino`; conteggi `senzaVendita`, `senzaCosto`; `oreGiorno` |
+  | POST | `/api/offerte/listino` | `gestireListino` | Nuova voce `{ruoloId, clienteId, validoDal, validoAl, centesimiGiorno}`; 409 se il periodo si sovrappone a un'altra voce dello stesso ruolo e cliente (o standard) |
+  | PUT | `/api/offerte/listino/:id` | `gestireListino` | Validità o importo; ruolo e cliente non cambiano (409) |
+  | DELETE | `/api/offerte/listino/:id` | `gestireListino` | Cancellazione (le revisioni approvate tengono gli importi fotografati) |
+
+  Regole: importi interi in centesimi al giorno (massimo 100.000 €), ruolo e cliente esistenti, `validoAl` non prima di `validoDal`; creazioni, modifiche e cancellazioni nello storico (`audit_log`, collezione `listino_vendita`, con etichetta "ruolo · cliente o standard · dal" nella pagina Storico). Regole pure in `risoluzione-listino.ts`: `risolviVendita` (cliente, poi standard), `risolviCostoOra` (tariffa standard del ruolo per la tipologia ordinaria), `tipologiaOrdinaria` (la ordinaria predefinita, altrimenti la prima ordinaria attiva), `tariffeRuoli`. `ListinoService.tariffePerStima(ruoli, cliente, data)` dà le tariffe nella forma di `calcolaStima` (usata dalle stime in F2). Il modulo registra anche i modelli `TariffaStandard` e `TipologiaCosto` della Consuntivazione per leggere i costi.
 
 ### Health — `/api/health`
 
